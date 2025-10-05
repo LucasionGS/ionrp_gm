@@ -1,0 +1,8 @@
+# Environment variables
+.env
+
+# Steam token should never be committed
+docker/.env
+
+# Database credentials
+gamemode/database/credentials.lua

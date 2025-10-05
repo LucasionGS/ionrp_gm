@@ -1,0 +1,9 @@
+# Docker-specific files
+.env
+
+# Server data (if using persistent volumes)
+data/
+logs/
+
+# Docker volumes
+docker/volumes/

@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  gmod-server:
+    build: .
+    container_name: ionrp-server
+    restart: unless-stopped
+    
+    # Port mappings
+    ports:
+      - "27015:27015/udp"  # Game server port
+      - "27015:27015/tcp"  # RCON port
+    
+    # Environment variables
+    environment:
+      - GMOD_PORT=27015
+      - GMOD_MAXPLAYERS=32
+      - GMOD_MAP=rp_evocity_v33x
+      - GMOD_GAMEMODE=ionrp
+      - GMOD_HOSTNAME=IonRP Server - Roleplay
+      # Get your Steam Web API key from: https://steamcommunity.com/dev/apikey
+      # This is required for your server to appear in the server browser
+      - GMOD_STEAMTOKEN=${STEAM_TOKEN:-}
+    
+    # Bind mounts
+    volumes:
+      # Mount the ionrp gamemode into the server's gamemodes folder
+      - ./:/home/steam/gmodserver/garrysmod/gamemodes/ionrp:ro
+      
+      # Mount server.cfg
+      - ./docker/server.cfg:/home/steam/gmodserver/garrysmod/cfg/server.cfg:ro
+      
+      # Persistent data volumes (optional - uncomment if you want to persist data)
+      - gmod-data:/home/steam/gmodserver/garrysmod/data
+      - gmod-addons:/home/steam/gmodserver/garrysmod/addons
+      - gmod-logs:/home/steam/gmodserver/garrysmod/logs
+      - workshop_data:/home/steam/steamapps
+      
+      # MySQL socket for direct database connection
+      - mysql-socket:/var/run/mysqld
+    
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    
+    # Interactive terminal
+    stdin_open: true
+    tty: true
+    
+    # Network dependencies
+    depends_on:
+      - mariadb
+    
+    # Connect to internal network
+    networks:
+      - ionrp-network
+
+  mariadb:
+    image: mariadb:11.2
+    container_name: ionrp-mariadb
+    restart: unless-stopped
+    
+    # Environment variables for database setup
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-ionrp_root_password_change_me}
+      - MYSQL_DATABASE=ionrp
+      - MYSQL_USER=ionrp
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-ionrp}
+      - MARIADB_AUTO_UPGRADE=1
+    
+    # Persist database data
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - mysql-socket:/var/run/mysqld
+    
+    # Only accessible within the docker network (not exposed to host)
+    networks:
+      - ionrp-network
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+# Networks
+networks:
+  ionrp-network:
+    driver: bridge
+
+# Volumes
+volumes:
+  gmod-data:
+  gmod-addons:
+  gmod-logs:
+  workshop_data:
+  mariadb-data:
+  mysql-socket:

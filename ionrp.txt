@@ -1,0 +1,38 @@
+"gamemode"
+{
+	"base"			"base"
+	"title"			"IonRP"
+	"maps"			"^rp_"
+	"category"		"rp"
+	"menusystem"	"1"
+	
+	"settings"
+	{
+		1
+		{
+			"name"		"ionrp_maxplayers"
+			"text"		"Max Players"
+			"help"		"The maximum number of players allowed"
+			"type"		"Numeric"
+			"default"	"32"
+		}
+		
+		2
+		{
+			"name"		"ionrp_friendly_fire"
+			"text"		"Friendly Fire"
+			"help"		"Enable or disable friendly fire"
+			"type"		"CheckBox"
+			"default"	"0"
+		}
+		
+		3
+		{
+			"name"		"ionrp_starting_money"
+			"text"		"Starting Money"
+			"help"		"The amount of money players start with"
+			"type"		"Numeric"
+			"default"	"500"
+		}
+	}
+}
