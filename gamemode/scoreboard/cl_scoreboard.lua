@@ -15,20 +15,20 @@ IonRP.Scoreboard.Config = {
 
   Colors = {
     Background = Color(25, 25, 35, 250),
-    Header = Color(45, 35, 60, 255),           -- Purple tint
-    ColumnHeader = Color(40, 50, 65, 255),      -- Blue-purple tint
+    Header = Color(45, 35, 60, 255),       -- Purple tint
+    ColumnHeader = Color(40, 50, 65, 255), -- Blue-purple tint
     PlayerRow = Color(40, 45, 55, 210),
-    PlayerRowAlt = Color(45, 40, 60, 210),      -- Slight purple alt
+    PlayerRowAlt = Color(45, 40, 60, 210), -- Slight purple alt
     PlayerRowHover = Color(60, 55, 75, 230),
-    Divider = Color(100, 80, 120, 100),         -- Purple divider
+    Divider = Color(100, 80, 120, 100),    -- Purple divider
     Text = Color(255, 255, 255, 255),
     TextDim = Color(200, 200, 210, 255),
     TextMuted = Color(160, 160, 175, 255),
-    Accent = Color(120, 100, 255, 255),         -- Bright purple
-    AccentCyan = Color(100, 200, 255, 255),     -- Cyan
-    AccentPink = Color(255, 100, 180, 255),     -- Hot pink
-    AccentGreen = Color(100, 255, 150, 255),    -- Mint green
-    AccentOrange = Color(255, 150, 80, 255),    -- Orange
+    Accent = Color(120, 100, 255, 255),      -- Bright purple
+    AccentCyan = Color(100, 200, 255, 255),  -- Cyan
+    AccentPink = Color(255, 100, 180, 255),  -- Hot pink
+    AccentGreen = Color(100, 255, 150, 255), -- Mint green
+    AccentOrange = Color(255, 150, 80, 255), -- Orange
   }
 }
 
@@ -62,30 +62,18 @@ function IonRP.Scoreboard:Open()
   frame.Paint = function(self, w, h)
     -- Shadow
     draw.RoundedBox(8, 3, 3, w, h, Color(0, 0, 0, 100))
-    
+
     -- Main background
     draw.RoundedBox(8, 0, 0, w, h, cfg.Colors.Background)
-    
-    -- Colorful gradient border
-    local time = CurTime()
-    
-    -- Top border (animated gradient)
-    for i = 0, w, 4 do
-      local hue = ((i / w * 360) + (time * 50)) % 360
-      local col = HSVToColor(hue, 0.7, 1)
-      col.a = 200
-      surface.SetDrawColor(col)
-      surface.DrawRect(i, 0, 4, 3)
-    end
-    
+
+    -- Blue accent borders (gamemode color)
+    local accentColor = Color(100, 200, 255, 220) -- Bright blue
+
+    -- Top border
+    draw.RoundedBox(0, 0, 0, w, 3, accentColor)
+
     -- Bottom border
-    for i = 0, w, 4 do
-      local hue = ((i / w * 360) + (time * 50) + 180) % 360
-      local col = HSVToColor(hue, 0.7, 1)
-      col.a = 200
-      surface.SetDrawColor(col)
-      surface.DrawRect(i, h - 3, 4, 3)
-    end
+    draw.RoundedBox(0, 0, h - 3, w, 3, accentColor)
   end
 
   -- Header
@@ -98,7 +86,7 @@ function IonRP.Scoreboard:Open()
     -- Gradient header background
     surface.SetDrawColor(cfg.Colors.Header)
     surface.DrawRect(0, 0, w, h)
-    
+
     -- Animated colorful particles effect in header
     local time = CurTime()
     for i = 1, 15 do
@@ -108,7 +96,7 @@ function IonRP.Scoreboard:Open()
       local hue = (i * 24 + time * 100) % 360
       local col = HSVToColor(hue, 0.8, 1)
       col.a = 150
-      
+
       draw.NoTexture()
       surface.SetDrawColor(col)
       surface.DrawTexturedRectRotated(x, y, size, size, time * 50 + i * 10)
@@ -132,18 +120,20 @@ function IonRP.Scoreboard:Open()
 
   columnHeader.Paint = function(self, w, h)
     draw.RoundedBox(2, 0, 0, w, h, cfg.Colors.ColumnHeader)
-    
+
     -- Colorful gradient underline
-    local segmentWidth = w / 4
-    local colors = {cfg.Colors.AccentCyan, cfg.Colors.Accent, cfg.Colors.AccentPink, cfg.Colors.AccentGreen}
-    for i = 1, 4 do
-      local col = colors[i]
-      col = Color(col.r, col.g, col.b, 150)
-      draw.RoundedBox(0, (i - 1) * segmentWidth, h - 2, segmentWidth, 2, col)
-    end
+    -- local colors = {cfg.Colors.AccentCyan, cfg.Colors.Accent, cfg.Colors.AccentPink, cfg.Colors.AccentGreen}
+    local color = Color(
+      cfg.Colors.AccentCyan.r,
+      cfg.Colors.AccentCyan.g,
+      cfg.Colors.AccentCyan.b,
+      150
+    )
+    -- local segmentWidth = w / 4
+    draw.RoundedBox(0, 0, h - 2, w, 2, color)
 
     -- Column titles with better spacing
-    local x = 58  -- After avatar
+    local x = 58 -- After avatar
 
     -- Name
     draw.SimpleText("PLAYER", "DermaDefaultBold", x, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
@@ -182,7 +172,7 @@ function IonRP.Scoreboard:Open()
       surface.SetDrawColor(col)
       surface.DrawRect(0, i, w, 4)
     end
-    
+
     -- Bright outline
     surface.SetDrawColor(255, 255, 255, 100)
     surface.DrawOutlinedRect(0, 0, w, h, 1)
@@ -231,39 +221,39 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
     if not IsValid(self.Player) then return end
 
     local ply = self.Player
-    
+
     -- Get rank and job info
     local rankColor = ply.GetRankColor and ply:GetRankColor() or Color(150, 150, 155)
     local rankName = ply.GetRankName and ply:GetRankName() or "User"
     local jobName = ply:Team() and team.GetName(ply:Team()) or "Citizen"
-    
+
     -- Background with subtle rank tint
     local bgColor = index % 2 == 0 and cfg.Colors.PlayerRow or cfg.Colors.PlayerRowAlt
-    
+
     -- Staff members get subtle rank color accent on left edge
     local isStaff = rankName ~= "User"
-    
+
     if self:IsHovered() then
       bgColor = cfg.Colors.PlayerRowHover
     end
 
     draw.RoundedBox(2, 0, 0, w, h, bgColor)
-    
+
     -- Colorful left accent bar for staff members (thicker and glowing)
     if isStaff then
       -- Main accent bar
       draw.RoundedBox(0, 0, 0, 4, h, rankColor)
-      
+
       -- Glow effect
       local glowCol = Color(rankColor.r, rankColor.g, rankColor.b, 60)
       draw.RoundedBox(0, 4, 0, 12, h, glowCol)
-      
+
       -- Animated pulse on the accent
       local pulse = math.abs(math.sin(CurTime() * 2 + index * 0.3))
       local pulseCol = Color(rankColor.r, rankColor.g, rankColor.b, 30 + pulse * 40)
       draw.RoundedBox(0, 0, 0, 2, h, pulseCol)
     end
-    
+
     -- Colorful gradient bottom divider
     local time = CurTime()
     for i = 0, w, 8 do
@@ -278,7 +268,7 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
     local name = ply.GetRPName and ply:GetRPName() or ply:Nick()
     local ping = ply:Ping()
 
-    local x = 58  -- After avatar
+    local x = 58 -- After avatar
 
     -- Name with clean styling
     draw.SimpleText(name, "DermaDefault", x, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
@@ -293,15 +283,15 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
     -- Ping with better visual feedback
     local pingColor = cfg.Colors.TextDim
     local pingText = tostring(ping)
-    
+
     if ping > 100 then
-      pingColor = Color(255, 100, 100)  -- Red for high ping
+      pingColor = Color(255, 100, 100) -- Red for high ping
     elseif ping > 50 then
-      pingColor = Color(255, 200, 100)  -- Orange for medium ping
+      pingColor = Color(255, 200, 100) -- Orange for medium ping
     else
-      pingColor = Color(100, 255, 150)  -- Green for good ping
+      pingColor = Color(100, 255, 150) -- Green for good ping
     end
-    
+
     draw.SimpleText(pingText, "DermaDefault", w - 70, h / 2, pingColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
 
@@ -310,7 +300,7 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
   avatar:SetPos(12, (cfg.PlayerRowHeight - 36) / 2)
   avatar:SetSize(36, 36)
   avatar:SetPlayer(ply, 64)
-  
+
   -- Custom paint for circular avatar with colorful ring
   local oldPaint = avatar.Paint
   avatar.Paint = function(self, w, h)
@@ -320,23 +310,27 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
     render.SetStencilTestMask(0xFF)
     render.SetStencilWriteMask(0xFF)
     render.SetStencilReferenceValue(1)
-    
+
     render.SetStencilCompareFunction(STENCIL_NEVER)
     render.SetStencilFailOperation(STENCIL_REPLACE)
     render.SetStencilZFailOperation(STENCIL_REPLACE)
-    
+
     draw.NoTexture()
     surface.SetDrawColor(255, 255, 255)
     surface.DrawTexturedRectRotated(w / 2, h / 2, w, h, 0)
-    
+
     render.SetStencilCompareFunction(STENCIL_EQUAL)
     render.SetStencilFailOperation(STENCIL_KEEP)
     render.SetStencilZFailOperation(STENCIL_KEEP)
-    
-    oldPaint(self, w, h)
-    
+
+    if oldPaint then
+      oldPaint(self, w, h)
+    else
+      return
+    end
+
     render.SetStencilEnable(false)
-    
+
     -- Animated colorful border ring
     local time = CurTime()
     local segments = 16
@@ -345,11 +339,11 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
       local hue = ((angle + time * 100 + index * 20) % 360)
       local col = HSVToColor(hue, 0.7, 1)
       col.a = 180
-      
+
       local rad1 = math.rad(angle)
       local rad2 = math.rad(angle + (360 / segments))
       local radius = w / 2
-      
+
       surface.SetDrawColor(col)
       -- Simple outline approximation
       surface.DrawOutlinedRect(0, 0, w, h, 2)
