@@ -23,3 +23,5 @@ include("character/cl_character.lua")
 include("ranks/cl_ranks.lua")
 -- Scoreboard
 include("scoreboard/cl_scoreboard.lua")
+-- Developer Tools
+include("developer/cl_model_explorer.lua")

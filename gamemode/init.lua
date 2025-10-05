@@ -16,6 +16,8 @@ AddCSLuaFile("character/cl_character.lua")
 AddCSLuaFile("ranks/cl_ranks.lua")
 -- Scoreboard
 AddCSLuaFile("scoreboard/cl_scoreboard.lua")
+-- Developer Tools
+AddCSLuaFile("developer/cl_model_explorer.lua")
 
 -- Load shared code
 include("shared.lua")
