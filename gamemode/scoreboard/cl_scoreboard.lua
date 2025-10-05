@@ -7,22 +7,25 @@ IonRP.Scoreboard = IonRP.Scoreboard or {}
 
 -- Config
 IonRP.Scoreboard.Config = {
-  Width = 900,
-  HeaderHeight = 80,
-  PlayerRowHeight = 50,
+  Width = 850,
+  HeaderHeight = 70,
+  PlayerRowHeight = 46,
   MaxPlayersVisible = 16,
-  Padding = 10,
+  Padding = 8,
 
   Colors = {
-    Background = Color(30, 30, 30, 240),
-    Header = Color(40, 40, 40, 255),
-    PlayerRow = Color(45, 45, 45, 220),
-    PlayerRowAlt = Color(40, 40, 40, 220),
-    PlayerRowHover = Color(55, 55, 55, 230),
-    Border = Color(60, 60, 60, 255),
+    Background = Color(26, 26, 30, 245),
+    Header = Color(35, 35, 40, 255),
+    ColumnHeader = Color(30, 30, 35, 255),
+    PlayerRow = Color(40, 40, 45, 200),
+    PlayerRowAlt = Color(36, 36, 41, 200),
+    PlayerRowHover = Color(48, 48, 54, 220),
+    Divider = Color(60, 60, 65, 100),
     Text = Color(255, 255, 255, 255),
-    TextDim = Color(200, 200, 200, 255),
-    Accent = Color(52, 152, 219, 255),
+    TextDim = Color(180, 180, 185, 255),
+    TextMuted = Color(130, 130, 135, 255),
+    Accent = Color(100, 180, 255, 255),
+    AccentDark = Color(70, 130, 200, 255),
   }
 }
 
@@ -54,12 +57,9 @@ function IonRP.Scoreboard:Open()
 
   -- Custom paint
   frame.Paint = function(self, w, h)
-    -- Background
-    draw.RoundedBox(8, 0, 0, w, h, cfg.Colors.Background)
-
-    -- Border
-    surface.SetDrawColor(cfg.Colors.Border)
-    surface.DrawOutlinedRect(0, 0, w, h, 2)
+    -- Background with subtle shadow effect
+    draw.RoundedBox(6, 2, 2, w, h, Color(0, 0, 0, 80))
+    draw.RoundedBox(6, 0, 0, w, h, cfg.Colors.Background)
   end
 
   -- Header
@@ -69,16 +69,19 @@ function IonRP.Scoreboard:Open()
   header:DockMargin(cfg.Padding, cfg.Padding, cfg.Padding, 0)
 
   header.Paint = function(self, w, h)
-    draw.RoundedBox(6, 0, 0, w, h, cfg.Colors.Header)
+    draw.RoundedBox(4, 0, 0, w, h, cfg.Colors.Header)
 
-    -- Server name
-    draw.SimpleText("IonRP Server", "DermaLarge", w / 2, 15, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    -- Accent line at top
+    draw.RoundedBox(0, 0, 0, w, 2, cfg.Colors.Accent)
 
-    -- Player count
+    -- Server name with modern styling
+    draw.SimpleText("IONRP", "DermaLarge", w / 2, 18, cfg.Colors.Accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+
+    -- Player count with icon-like prefix
     local plyCount = #player.GetAll()
     local maxPlayers = game.MaxPlayers()
-    draw.SimpleText(plyCount .. " / " .. maxPlayers .. " Players", "DermaDefault", w / 2, 45, cfg.Colors.TextDim,
-      TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    local countText = string.format("● %d / %d Players Online", plyCount, maxPlayers)
+    draw.SimpleText(countText, "DermaDefault", w / 2, 46, cfg.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
   end
 
   -- Column headers
@@ -88,20 +91,25 @@ function IonRP.Scoreboard:Open()
   columnHeader:DockMargin(cfg.Padding, cfg.Padding, cfg.Padding, 0)
 
   columnHeader.Paint = function(self, w, h)
-    -- Column titles
-    local x = 10
+    draw.RoundedBox(2, 0, 0, w, h, cfg.Colors.ColumnHeader)
+    
+    -- Divider line at bottom
+    draw.RoundedBox(0, 0, h - 1, w, 1, cfg.Colors.Divider)
 
-    -- Avatar space
-    x = x + 40
+    -- Column titles with better spacing
+    local x = 58  -- After avatar
 
     -- Name
-    draw.SimpleText("Name", "DermaDefaultBold", x, h / 2, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText("PLAYER", "DermaDefaultBold", x, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Rank
-    draw.SimpleText("Rank", "DermaDefaultBold", w - 250, h / 2, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText("RANK", "DermaDefaultBold", w - 280, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+    -- Job (for RP)
+    draw.SimpleText("JOB", "DermaDefaultBold", w - 180, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Ping
-    draw.SimpleText("Ping", "DermaDefaultBold", w - 80, h / 2, cfg.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("PING", "DermaDefaultBold", w - 70, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
 
   -- Player list scroll panel
@@ -166,62 +174,98 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
 
     local ply = self.Player
     
-    -- Get rank info
-    local rankColor = ply.GetRankColor and ply:GetRankColor() or Color(200, 200, 200)
+    -- Get rank and job info
+    local rankColor = ply.GetRankColor and ply:GetRankColor() or Color(150, 150, 155)
     local rankName = ply.GetRankName and ply:GetRankName() or "User"
+    local jobName = ply:Team() and team.GetName(ply:Team()) or "Citizen"
     
-    -- Color the row background based on rank
-    local bgColor
-    if rankName ~= "User" then
-      -- Use rank color with low opacity for background
-      bgColor = Color(rankColor.r, rankColor.g, rankColor.b, 30)
-    else
-      -- Alternate colors for users
-      bgColor = index % 2 == 0 and cfg.Colors.PlayerRow or cfg.Colors.PlayerRowAlt
-    end
-
+    -- Background with subtle rank tint
+    local bgColor = index % 2 == 0 and cfg.Colors.PlayerRow or cfg.Colors.PlayerRowAlt
+    
+    -- Staff members get subtle rank color accent on left edge
+    local isStaff = rankName ~= "User"
+    
     if self:IsHovered() then
-      if rankName ~= "User" then
-        bgColor = Color(rankColor.r, rankColor.g, rankColor.b, 50)
-      else
-        bgColor = cfg.Colors.PlayerRowHover
-      end
+      bgColor = cfg.Colors.PlayerRowHover
     end
 
-    draw.RoundedBox(4, 0, 0, w, h, bgColor)
-
-    local x = 10
+    draw.RoundedBox(2, 0, 0, w, h, bgColor)
+    
+    -- Left accent bar for staff members
+    if isStaff then
+      draw.RoundedBox(0, 0, 0, 3, h, rankColor)
+    end
+    
+    -- Bottom divider
+    draw.RoundedBox(0, 0, h - 1, w, 1, cfg.Colors.Divider)
 
     -- Player info
     local name = ply.GetRPName and ply:GetRPName() or ply:Nick()
     local ping = ply:Ping()
 
-    -- Avatar
-    x = x + 40
+    local x = 58  -- After avatar
 
-    -- Name
+    -- Name with clean styling
     draw.SimpleText(name, "DermaDefault", x, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-    -- Rank (always show, colored)
-    draw.SimpleText(rankName, "DermaDefault", w - 250, h / 2, rankColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    -- Rank badge (colored for staff)
+    local displayRankColor = isStaff and rankColor or cfg.Colors.TextDim
+    draw.SimpleText(rankName, "DermaDefault", w - 280, h / 2, displayRankColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-    -- Ping with color coding
-    local pingColor = cfg.Colors.Text
+    -- Job name
+    draw.SimpleText(jobName, "DermaDefault", w - 180, h / 2, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+    -- Ping with better visual feedback
+    local pingColor = cfg.Colors.TextDim
+    local pingText = tostring(ping)
+    
     if ping > 100 then
-      pingColor = Color(231, 76, 60)        -- Red for high ping
+      pingColor = Color(255, 100, 100)  -- Red for high ping
     elseif ping > 50 then
-      pingColor = Color(241, 196, 15)       -- Yellow for medium ping
+      pingColor = Color(255, 200, 100)  -- Orange for medium ping
     else
-      pingColor = Color(46, 204, 113)       -- Green for low ping
+      pingColor = Color(100, 255, 150)  -- Green for good ping
     end
-    draw.SimpleText(ping .. " ms", "DermaDefault", w - 80, h / 2, pingColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    
+    draw.SimpleText(pingText, "DermaDefault", w - 70, h / 2, pingColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
 
-  -- Avatar
+  -- Avatar with modern circular mask effect
   local avatar = vgui.Create("AvatarImage", row)
-  avatar:SetPos(10, (cfg.PlayerRowHeight - 32) / 2)
-  avatar:SetSize(32, 32)
-  avatar:SetPlayer(ply, 32)
+  avatar:SetPos(12, (cfg.PlayerRowHeight - 36) / 2)
+  avatar:SetSize(36, 36)
+  avatar:SetPlayer(ply, 64)
+  
+  -- Custom paint for circular avatar
+  local oldPaint = avatar.Paint
+  avatar.Paint = function(self, w, h)
+    -- Draw circular mask
+    render.ClearStencil()
+    render.SetStencilEnable(true)
+    render.SetStencilTestMask(0xFF)
+    render.SetStencilWriteMask(0xFF)
+    render.SetStencilReferenceValue(1)
+    
+    render.SetStencilCompareFunction(STENCIL_NEVER)
+    render.SetStencilFailOperation(STENCIL_REPLACE)
+    render.SetStencilZFailOperation(STENCIL_REPLACE)
+    
+    draw.NoTexture()
+    surface.SetDrawColor(255, 255, 255)
+    surface.DrawTexturedRectRotated(w / 2, h / 2, w, h, 0)
+    
+    render.SetStencilCompareFunction(STENCIL_EQUAL)
+    render.SetStencilFailOperation(STENCIL_KEEP)
+    render.SetStencilZFailOperation(STENCIL_KEEP)
+    
+    oldPaint(self, w, h)
+    
+    render.SetStencilEnable(false)
+    
+    -- Subtle border
+    surface.SetDrawColor(cfg.Colors.Divider)
+    surface.DrawOutlinedRect(0, 0, w, h, 1)
+  end
 
   -- Right click menu
   row.DoRightClick = function(self)
