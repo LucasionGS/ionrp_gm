@@ -14,18 +14,21 @@ IonRP.Scoreboard.Config = {
   Padding = 8,
 
   Colors = {
-    Background = Color(26, 26, 30, 245),
-    Header = Color(35, 35, 40, 255),
-    ColumnHeader = Color(30, 30, 35, 255),
-    PlayerRow = Color(40, 40, 45, 200),
-    PlayerRowAlt = Color(36, 36, 41, 200),
-    PlayerRowHover = Color(48, 48, 54, 220),
-    Divider = Color(60, 60, 65, 100),
+    Background = Color(25, 25, 35, 250),
+    Header = Color(45, 35, 60, 255),           -- Purple tint
+    ColumnHeader = Color(40, 50, 65, 255),      -- Blue-purple tint
+    PlayerRow = Color(40, 45, 55, 210),
+    PlayerRowAlt = Color(45, 40, 60, 210),      -- Slight purple alt
+    PlayerRowHover = Color(60, 55, 75, 230),
+    Divider = Color(100, 80, 120, 100),         -- Purple divider
     Text = Color(255, 255, 255, 255),
-    TextDim = Color(180, 180, 185, 255),
-    TextMuted = Color(130, 130, 135, 255),
-    Accent = Color(100, 180, 255, 255),
-    AccentDark = Color(70, 130, 200, 255),
+    TextDim = Color(200, 200, 210, 255),
+    TextMuted = Color(160, 160, 175, 255),
+    Accent = Color(120, 100, 255, 255),         -- Bright purple
+    AccentCyan = Color(100, 200, 255, 255),     -- Cyan
+    AccentPink = Color(255, 100, 180, 255),     -- Hot pink
+    AccentGreen = Color(100, 255, 150, 255),    -- Mint green
+    AccentOrange = Color(255, 150, 80, 255),    -- Orange
   }
 }
 
@@ -57,9 +60,32 @@ function IonRP.Scoreboard:Open()
 
   -- Custom paint
   frame.Paint = function(self, w, h)
-    -- Background with subtle shadow effect
-    draw.RoundedBox(6, 2, 2, w, h, Color(0, 0, 0, 80))
-    draw.RoundedBox(6, 0, 0, w, h, cfg.Colors.Background)
+    -- Shadow
+    draw.RoundedBox(8, 3, 3, w, h, Color(0, 0, 0, 100))
+    
+    -- Main background
+    draw.RoundedBox(8, 0, 0, w, h, cfg.Colors.Background)
+    
+    -- Colorful gradient border
+    local time = CurTime()
+    
+    -- Top border (animated gradient)
+    for i = 0, w, 4 do
+      local hue = ((i / w * 360) + (time * 50)) % 360
+      local col = HSVToColor(hue, 0.7, 1)
+      col.a = 200
+      surface.SetDrawColor(col)
+      surface.DrawRect(i, 0, 4, 3)
+    end
+    
+    -- Bottom border
+    for i = 0, w, 4 do
+      local hue = ((i / w * 360) + (time * 50) + 180) % 360
+      local col = HSVToColor(hue, 0.7, 1)
+      col.a = 200
+      surface.SetDrawColor(col)
+      surface.DrawRect(i, h - 3, 4, 3)
+    end
   end
 
   -- Header
@@ -69,19 +95,33 @@ function IonRP.Scoreboard:Open()
   header:DockMargin(cfg.Padding, cfg.Padding, cfg.Padding, 0)
 
   header.Paint = function(self, w, h)
-    draw.RoundedBox(4, 0, 0, w, h, cfg.Colors.Header)
+    -- Gradient header background
+    surface.SetDrawColor(cfg.Colors.Header)
+    surface.DrawRect(0, 0, w, h)
+    
+    -- Animated colorful particles effect in header
+    local time = CurTime()
+    for i = 1, 15 do
+      local x = (w / 15 * i + math.sin(time * 2 + i) * 30) % w
+      local y = 5 + math.sin(time * 3 + i * 0.5) * 10
+      local size = 3 + math.sin(time * 4 + i) * 2
+      local hue = (i * 24 + time * 100) % 360
+      local col = HSVToColor(hue, 0.8, 1)
+      col.a = 150
+      
+      draw.NoTexture()
+      surface.SetDrawColor(col)
+      surface.DrawTexturedRectRotated(x, y, size, size, time * 50 + i * 10)
+    end
 
-    -- Accent line at top
-    draw.RoundedBox(0, 0, 0, w, 2, cfg.Colors.Accent)
+    -- Server name
+    draw.SimpleText("IONRP", "DermaLarge", w / 2, 20, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
 
-    -- Server name with modern styling
-    draw.SimpleText("IONRP", "DermaLarge", w / 2, 18, cfg.Colors.Accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-
-    -- Player count with icon-like prefix
+    -- Player count
     local plyCount = #player.GetAll()
     local maxPlayers = game.MaxPlayers()
-    local countText = string.format("● %d / %d Players Online", plyCount, maxPlayers)
-    draw.SimpleText(countText, "DermaDefault", w / 2, 46, cfg.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    local countText = string.format("%d / %d Players Online", plyCount, maxPlayers)
+    draw.SimpleText(countText, "DermaDefault", w / 2, 48, cfg.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
   end
 
   -- Column headers
@@ -93,23 +133,29 @@ function IonRP.Scoreboard:Open()
   columnHeader.Paint = function(self, w, h)
     draw.RoundedBox(2, 0, 0, w, h, cfg.Colors.ColumnHeader)
     
-    -- Divider line at bottom
-    draw.RoundedBox(0, 0, h - 1, w, 1, cfg.Colors.Divider)
+    -- Colorful gradient underline
+    local segmentWidth = w / 4
+    local colors = {cfg.Colors.AccentCyan, cfg.Colors.Accent, cfg.Colors.AccentPink, cfg.Colors.AccentGreen}
+    for i = 1, 4 do
+      local col = colors[i]
+      col = Color(col.r, col.g, col.b, 150)
+      draw.RoundedBox(0, (i - 1) * segmentWidth, h - 2, segmentWidth, 2, col)
+    end
 
     -- Column titles with better spacing
     local x = 58  -- After avatar
 
     -- Name
-    draw.SimpleText("PLAYER", "DermaDefaultBold", x, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText("PLAYER", "DermaDefaultBold", x, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Rank
-    draw.SimpleText("RANK", "DermaDefaultBold", w - 280, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText("RANK", "DermaDefaultBold", w - 280, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Job (for RP)
-    draw.SimpleText("JOB", "DermaDefaultBold", w - 180, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText("JOB", "DermaDefaultBold", w - 180, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Ping
-    draw.SimpleText("PING", "DermaDefaultBold", w - 70, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("PING", "DermaDefaultBold", w - 70, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
 
   -- Player list scroll panel
@@ -123,11 +169,23 @@ function IonRP.Scoreboard:Open()
   sbar:SetHideButtons(true)
 
   function sbar:Paint(w, h)
-    draw.RoundedBox(4, 0, 0, w, h, Color(20, 20, 20, 200))
+    draw.RoundedBox(4, 0, 0, w, h, Color(20, 20, 30, 220))
   end
 
   function sbar.btnGrip:Paint(w, h)
-    draw.RoundedBox(4, 0, 0, w, h, cfg.Colors.Accent)
+    -- Rainbow gradient scrollbar grip
+    local time = CurTime()
+    for i = 0, h, 4 do
+      local hue = ((i / h * 180) + (time * 80)) % 360
+      local col = HSVToColor(hue, 0.7, 1)
+      col.a = 220
+      surface.SetDrawColor(col)
+      surface.DrawRect(0, i, w, 4)
+    end
+    
+    -- Bright outline
+    surface.SetDrawColor(255, 255, 255, 100)
+    surface.DrawOutlinedRect(0, 0, w, h, 1)
   end
 
   -- Get and sort players
@@ -191,13 +249,30 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
 
     draw.RoundedBox(2, 0, 0, w, h, bgColor)
     
-    -- Left accent bar for staff members
+    -- Colorful left accent bar for staff members (thicker and glowing)
     if isStaff then
-      draw.RoundedBox(0, 0, 0, 3, h, rankColor)
+      -- Main accent bar
+      draw.RoundedBox(0, 0, 0, 4, h, rankColor)
+      
+      -- Glow effect
+      local glowCol = Color(rankColor.r, rankColor.g, rankColor.b, 60)
+      draw.RoundedBox(0, 4, 0, 12, h, glowCol)
+      
+      -- Animated pulse on the accent
+      local pulse = math.abs(math.sin(CurTime() * 2 + index * 0.3))
+      local pulseCol = Color(rankColor.r, rankColor.g, rankColor.b, 30 + pulse * 40)
+      draw.RoundedBox(0, 0, 0, 2, h, pulseCol)
     end
     
-    -- Bottom divider
-    draw.RoundedBox(0, 0, h - 1, w, 1, cfg.Colors.Divider)
+    -- Colorful gradient bottom divider
+    local time = CurTime()
+    for i = 0, w, 8 do
+      local hue = ((i / w * 120) + (time * 30) + (index * 15)) % 360
+      local col = HSVToColor(hue, 0.4, 0.8)
+      col.a = 40
+      surface.SetDrawColor(col)
+      surface.DrawRect(i, h - 1, 8, 1)
+    end
 
     -- Player info
     local name = ply.GetRPName and ply:GetRPName() or ply:Nick()
@@ -230,13 +305,13 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
     draw.SimpleText(pingText, "DermaDefault", w - 70, h / 2, pingColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
 
-  -- Avatar with modern circular mask effect
+  -- Avatar with colorful animated border
   local avatar = vgui.Create("AvatarImage", row)
   avatar:SetPos(12, (cfg.PlayerRowHeight - 36) / 2)
   avatar:SetSize(36, 36)
   avatar:SetPlayer(ply, 64)
   
-  -- Custom paint for circular avatar
+  -- Custom paint for circular avatar with colorful ring
   local oldPaint = avatar.Paint
   avatar.Paint = function(self, w, h)
     -- Draw circular mask
@@ -262,9 +337,23 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
     
     render.SetStencilEnable(false)
     
-    -- Subtle border
-    surface.SetDrawColor(cfg.Colors.Divider)
-    surface.DrawOutlinedRect(0, 0, w, h, 1)
+    -- Animated colorful border ring
+    local time = CurTime()
+    local segments = 16
+    for i = 0, segments - 1 do
+      local angle = (i / segments) * 360
+      local hue = ((angle + time * 100 + index * 20) % 360)
+      local col = HSVToColor(hue, 0.7, 1)
+      col.a = 180
+      
+      local rad1 = math.rad(angle)
+      local rad2 = math.rad(angle + (360 / segments))
+      local radius = w / 2
+      
+      surface.SetDrawColor(col)
+      -- Simple outline approximation
+      surface.DrawOutlinedRect(0, 0, w, h, 2)
+    end
   end
 
   -- Right click menu
