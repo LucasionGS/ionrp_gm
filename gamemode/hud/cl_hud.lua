@@ -53,7 +53,7 @@ function GM:DrawIonRPHUD()
   draw.RoundedBox(cornerRadius, x, y, barWidth, totalHeight, Color(borderColor.r, borderColor.g, borderColor.b, 100))
 
   -- Player name
-  draw.SimpleText(name, "DermaLarge", x + barWidth / 2, y + 15, textColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+  draw.SimpleText(name, "DermaLarge", x + barWidth / 2, y + 10, textColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
 
   local barY = y + 45
 
@@ -123,14 +123,25 @@ function GM:HUDDrawTargetID()
 
     local screenPos = pos:ToScreen()
     local x, y = screenPos.x, screenPos.y
+    
+    -- Get player info
+    local name = targetPly.GetRPName and targetPly:GetRPName() or targetPly:Nick()
+    local rankName = targetPly.GetRankName and targetPly:GetRankName() or ""
+    local rankColor = targetPly.GetRankColor and targetPly:GetRankColor() or Color(200, 200, 200)
+    local health = targetPly:Health()
+    
+    -- Draw rank (if not User)
+    local yOffset = y
+    if rankName ~= "" and rankName ~= "User" then
+      draw.SimpleText(rankName, "DermaDefault", x, yOffset, rankColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+      yOffset = yOffset + 15
+    end
 
     -- Draw player name
-    draw.SimpleText(targetPly:Nick(), "DermaDefault", x, y, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(name, "DermaDefault", x, yOffset, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     -- Draw player health
-    local health = targetPly:Health()
-    draw.SimpleText("Health: " .. health, "DermaDefault", x, y + 15, Color(255, 0, 0), TEXT_ALIGN_CENTER,
-      TEXT_ALIGN_CENTER)
+    draw.SimpleText("Health: " .. health, "DermaDefault", x, yOffset + 15, Color(255, 0, 0), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
 end
 

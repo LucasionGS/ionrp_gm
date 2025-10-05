@@ -11,6 +11,11 @@ IonRP.Database = IonRP.Database or {}
 function IonRP.Database:InitializeTables()
   print("[IonRP] Initializing database tables...")
 
+  -- Initialize rank tables if available
+  if IonRP.Ranks and IonRP.Ranks.InitializeTables then
+    IonRP.Ranks:InitializeTables()
+  end
+
   -- Create characters table
   local query = self:query([[
         CREATE TABLE IF NOT EXISTS ionrp_characters (

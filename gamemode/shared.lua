@@ -25,9 +25,10 @@ end
 
 --[[
   Allow or deny noclip
+  This will be overridden by the rank system in sv_ranks.lua
 --]]
 function GM:PlayerNoClip(ply, desiredState)
-  -- Only allow admins to noclip
+  -- Fallback if rank system not loaded
   if ply:IsAdmin() then
     return true
   end

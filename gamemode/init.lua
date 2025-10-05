@@ -12,17 +12,23 @@ AddCSLuaFile("interface/cl_dialog.lua")
 AddCSLuaFile("interface/cl_bank.lua")
 -- Character
 AddCSLuaFile("character/cl_character.lua")
+-- Ranks
+AddCSLuaFile("ranks/cl_ranks.lua")
+-- Scoreboard
+AddCSLuaFile("scoreboard/cl_scoreboard.lua")
 
 -- Load shared code
 include("shared.lua")
 
 -- Load database
 include("database/Database.lua")
+include("ranks/sv_ranks_schema.lua")
 include("database/sv_schema.lua")
 
 -- Load server modules
 include("interface/sv_dialog.lua")
 include("interface/sv_bank.lua")
+include("ranks/sv_ranks.lua")
 include("character/sv_character.lua")
 
 function GM:Initialize()

@@ -19,3 +19,7 @@ include("interface/cl_dialog.lua")
 include("interface/cl_bank.lua")
 -- Character
 include("character/cl_character.lua")
+-- Ranks
+include("ranks/cl_ranks.lua")
+-- Scoreboard
+include("scoreboard/cl_scoreboard.lua")
