@@ -7,7 +7,88 @@ IonRP.ModelExplorer = IonRP.ModelExplorer or {}
 
 -- Cache models for performance
 IonRP.ModelExplorer.ModelCache = {}
+IonRP.ModelExplorer.Categories = {}
 IonRP.ModelExplorer.IsLoading = false
+
+--[[
+    Categorize a model path
+]]--
+local function CategorizeModel(modelPath)
+  local lower = modelPath:lower()
+  
+  -- Player models
+  if string.find(lower, "models/player") then
+    return "Players"
+  end
+  
+  -- NPCs and characters
+  if string.find(lower, "combine") or string.find(lower, "police") or 
+     string.find(lower, "zombie") or string.find(lower, "vortigaunt") or
+     string.find(lower, "alyx") or string.find(lower, "barney") or
+     string.find(lower, "citizens") or string.find(lower, "refugee") then
+    return "NPCs & Characters"
+  end
+  
+  -- Vehicles
+  if string.find(lower, "vehicle") or string.find(lower, "airboat") or
+     string.find(lower, "buggy") or string.find(lower, "jeep") then
+    return "Vehicles"
+  end
+  
+  -- Weapons
+  if string.find(lower, "weapon") or string.find(lower, "/w_") then
+    return "Weapons"
+  end
+  
+  -- Props - specific categories
+  if string.find(lower, "props_c17") then
+    return "Props - City"
+  elseif string.find(lower, "props_junk") then
+    return "Props - Junk"
+  elseif string.find(lower, "props_lab") then
+    return "Props - Lab"
+  elseif string.find(lower, "props_interiors") then
+    return "Props - Interiors"
+  elseif string.find(lower, "props_wasteland") then
+    return "Props - Wasteland"
+  elseif string.find(lower, "props_combine") then
+    return "Props - Combine"
+  elseif string.find(lower, "props_") then
+    return "Props - Other"
+  end
+  
+  -- Items
+  if string.find(lower, "items/") then
+    return "Items"
+  end
+  
+  -- Effects
+  if string.find(lower, "effects/") then
+    return "Effects"
+  end
+  
+  -- Everything else
+  return "Other"
+end
+
+--[[
+    Recursively scan a directory for models
+]]--
+local function ScanDirectory(dir, models)
+  local files, folders = file.Find(dir .. "*", "GAME")
+  
+  -- Add all .mdl files
+  for _, fileName in ipairs(files) do
+    if string.EndsWith(fileName, ".mdl") then
+      table.insert(models, dir .. fileName)
+    end
+  end
+  
+  -- Recursively scan subdirectories
+  for _, folder in ipairs(folders) do
+    ScanDirectory(dir .. folder .. "/", models)
+  end
+end
 
 --[[
     Scan for models in the game
@@ -17,51 +98,34 @@ function IonRP.ModelExplorer:ScanModels()
   
   self.IsLoading = true
   self.ModelCache = {}
+  self.Categories = {}
   
-  -- Common model directories to scan
-  local directories = {
-    "models/player/",
-    "models/props_c17/",
-    "models/props_junk/",
-    "models/props_combine/",
-    "models/props_lab/",
-    "models/props_interiors/",
-    "models/props_wasteland/",
-    "models/props_vehicles/",
-    "models/weapons/",
-    "models/items/",
-    "models/combine_soldier/",
-    "models/police/",
-  }
+  print("[IonRP] Model Explorer: Scanning all models...")
   
-  -- Scan each directory for .mdl files
-  for _, dir in ipairs(directories) do
-    local files, folders = file.Find(dir .. "*", "GAME")
+  -- Scan the entire models directory recursively
+  ScanDirectory("models/", self.ModelCache)
+  
+  -- Organize into categories
+  for _, modelPath in ipairs(self.ModelCache) do
+    local category = CategorizeModel(modelPath)
     
-    -- Add models from this directory
-    for _, fileName in ipairs(files) do
-      if string.EndsWith(fileName, ".mdl") then
-        local modelPath = dir .. fileName
-        table.insert(self.ModelCache, modelPath)
-      end
+    if not self.Categories[category] then
+      self.Categories[category] = {}
     end
     
-    -- Recursively scan subdirectories (one level deep)
-    for _, folder in ipairs(folders) do
-      local subFiles = file.Find(dir .. folder .. "/*.mdl", "GAME")
-      for _, fileName in ipairs(subFiles) do
-        local modelPath = dir .. folder .. "/" .. fileName
-        table.insert(self.ModelCache, modelPath)
-      end
-    end
+    table.insert(self.Categories[category], modelPath)
   end
   
-  -- Sort alphabetically
-  table.sort(self.ModelCache)
+  -- Sort each category
+  for category, models in pairs(self.Categories) do
+    table.sort(models)
+  end
   
   self.IsLoading = false
   
-  print("[IonRP] Model Explorer: Found " .. #self.ModelCache .. " models")
+  local totalModels = #self.ModelCache
+  local categoryCount = table.Count(self.Categories)
+  print(string.format("[IonRP] Model Explorer: Found %d models in %d categories", totalModels, categoryCount))
 end
 
 --[[
@@ -124,11 +188,49 @@ function IonRP.ModelExplorer:Open()
     frame:Close()
   end
   
+  -- Category selector panel
+  local categoryPanel = vgui.Create("DPanel", frame)
+  categoryPanel:Dock(TOP)
+  categoryPanel:SetTall(50)
+  categoryPanel:DockMargin(10, 40, 10, 5)
+  categoryPanel.Paint = function(self, w, h)
+    draw.RoundedBox(4, 0, 0, w, h, Color(40, 40, 50, 255))
+  end
+  
+  local categoryLabel = vgui.Create("DLabel", categoryPanel)
+  categoryLabel:SetPos(10, 8)
+  categoryLabel:SetText("Category:")
+  categoryLabel:SetTextColor(Color(200, 200, 210))
+  categoryLabel:SizeToContents()
+  
+  local categoryBox = vgui.Create("DComboBox", categoryPanel)
+  categoryBox:SetPos(80, 10)
+  categoryBox:SetSize(300, 30)
+  categoryBox:SetValue("Select a category...")
+  categoryBox.Paint = function(self, w, h)
+    draw.RoundedBox(4, 0, 0, w, h, Color(50, 50, 60, 255))
+  end
+  
+  -- Add "All Models" option
+  categoryBox:AddChoice("All Models")
+  
+  -- Add all categories sorted
+  local sortedCategories = {}
+  for category, _ in pairs(self.Categories) do
+    table.insert(sortedCategories, category)
+  end
+  table.sort(sortedCategories)
+  
+  for _, category in ipairs(sortedCategories) do
+    local count = #self.Categories[category]
+    categoryBox:AddChoice(string.format("%s (%d)", category, count))
+  end
+  
   -- Search bar
   local searchPanel = vgui.Create("DPanel", frame)
   searchPanel:Dock(TOP)
   searchPanel:SetTall(50)
-  searchPanel:DockMargin(10, 40, 10, 5)
+  searchPanel:DockMargin(10, 5, 10, 5)
   searchPanel.Paint = function(self, w, h)
     draw.RoundedBox(4, 0, 0, w, h, Color(40, 40, 50, 255))
   end
@@ -152,7 +254,7 @@ function IonRP.ModelExplorer:Open()
   local refreshBtn = vgui.Create("DButton", searchPanel)
   refreshBtn:SetPos(searchPanel:GetWide() - 140, 10)
   refreshBtn:SetSize(130, 30)
-  refreshBtn:SetText("🔄 Refresh Models")
+  refreshBtn:SetText("🔄 Refresh")
   refreshBtn:SetTextColor(Color(255, 255, 255))
   refreshBtn.Paint = function(self, w, h)
     local bgCol = self:IsHovered() and Color(120, 220, 255) or Color(100, 200, 255)
@@ -190,15 +292,37 @@ function IonRP.ModelExplorer:Open()
     draw.RoundedBox(4, 0, 0, w, h, col)
   end
   
+  -- Store current category
+  local currentCategory = nil
+  
   -- Function to populate the list
-  local function PopulateList(filter)
+  local function PopulateList(category, filter)
     scroll:Clear()
     
     filter = filter and filter:lower() or ""
     local displayedCount = 0
+    local totalCount = 0
     
-    for _, modelPath in ipairs(self.ModelCache) do
-      -- Apply filter
+    -- Determine which models to show
+    local modelsToShow = {}
+    
+    if not category or category == "All Models" then
+      -- Show all models
+      modelsToShow = self.ModelCache
+      totalCount = #self.ModelCache
+    else
+      -- Extract category name (remove count)
+      local categoryName = category:match("(.+)%s%(%d+%)") or category
+      
+      -- Show models from specific category
+      if self.Categories[categoryName] then
+        modelsToShow = self.Categories[categoryName]
+        totalCount = #modelsToShow
+      end
+    end
+    
+    -- Apply filter and display
+    for _, modelPath in ipairs(modelsToShow) do
       if filter == "" or string.find(modelPath:lower(), filter, 1, true) then
         displayedCount = displayedCount + 1
         
@@ -247,23 +371,59 @@ function IonRP.ModelExplorer:Open()
     infoPanel.Paint = function(self, w, h)
       draw.RoundedBox(4, 0, 0, w, h, Color(45, 45, 55, 200))
       
-      local text = string.format("Showing %d / %d models | Click a model to copy its path", displayedCount, #IonRP.ModelExplorer.ModelCache)
+      local text
+      if filter ~= "" then
+        text = string.format("Showing %d / %d models | Click to copy", displayedCount, totalCount)
+      else
+        text = string.format("Showing %d models | Click to copy", displayedCount)
+      end
+      
       draw.SimpleText(text, "DermaDefault", w / 2, h / 2, Color(180, 180, 190), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
   end
   
-  -- Initial population
-  PopulateList()
+  -- Initial population (show all)
+  PopulateList("All Models", "")
+  categoryBox:SetValue("All Models")
+  
+  -- Category selection functionality
+  categoryBox.OnSelect = function(self, index, value)
+    currentCategory = value
+    PopulateList(value, searchBox:GetValue())
+  end
   
   -- Search functionality
   searchBox.OnValueChange = function(self, value)
-    PopulateList(value)
+    PopulateList(currentCategory or "All Models", value)
   end
   
   -- Refresh functionality
   refreshBtn.DoClick = function()
+    -- Store current selections
+    local oldCategory = currentCategory
+    local oldSearch = searchBox:GetValue()
+    
+    -- Rescan
     IonRP.ModelExplorer:ScanModels()
-    PopulateList(searchBox:GetValue())
+    
+    -- Rebuild category dropdown
+    categoryBox:Clear()
+    categoryBox:AddChoice("All Models")
+    
+    local sortedCategories = {}
+    for category, _ in pairs(IonRP.ModelExplorer.Categories) do
+      table.insert(sortedCategories, category)
+    end
+    table.sort(sortedCategories)
+    
+    for _, category in ipairs(sortedCategories) do
+      local count = #IonRP.ModelExplorer.Categories[category]
+      categoryBox:AddChoice(string.format("%s (%d)", category, count))
+    end
+    
+    -- Restore selections
+    categoryBox:SetValue(oldCategory or "All Models")
+    PopulateList(oldCategory or "All Models", oldSearch)
     surface.PlaySound("buttons/button9.wav")
   end
 end
