@@ -56,6 +56,8 @@ function IonRP.Scoreboard:Open()
   frame:ShowCloseButton(false)
   frame:SetAlpha(0)
   frame:AlphaTo(255, 0.2, 0)
+  frame:SetKeyboardInputEnabled(false)
+  frame:SetMouseInputEnabled(true)
   self.Frame = frame
 
   -- Custom paint
@@ -435,11 +437,13 @@ end
 -- Hook into scoreboard
 function GM:ScoreboardShow()
   IonRP.Scoreboard:Open()
+  gui.EnableScreenClicker(true)
   return true
 end
 
 function GM:ScoreboardHide()
   IonRP.Scoreboard:Close()
+  gui.EnableScreenClicker(false)
   return true
 end
 
