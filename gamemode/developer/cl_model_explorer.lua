@@ -276,7 +276,7 @@ function IonRP.ModelExplorer:Open()
   -- Model list scroll panel
   local scroll = vgui.Create("DScrollPanel", frame)
   scroll:Dock(FILL)
-  scroll:DockMargin(10, 5, 10, 10)
+  scroll:DockMargin(10, 5, 10, 5)
   
   -- Custom scrollbar
   local sbar = scroll:GetVBar()
@@ -292,14 +292,17 @@ function IonRP.ModelExplorer:Open()
     draw.RoundedBox(4, 0, 0, w, h, col)
   end
   
-  -- Store current category
+  -- Store current category and page
   local currentCategory = nil
+  local currentPage = 1
+  local modelsPerPage = 100
   
   -- Function to populate the list
-  local function PopulateList(category, filter)
+  local function PopulateList(category, filter, page)
     scroll:Clear()
     
     filter = filter and filter:lower() or ""
+    page = page or 1
     local displayedCount = 0
     local totalCount = 0
     
@@ -321,9 +324,31 @@ function IonRP.ModelExplorer:Open()
       end
     end
     
-    -- Apply filter and display
+    -- Apply filter first to get filtered list
+    local filteredModels = {}
     for _, modelPath in ipairs(modelsToShow) do
       if filter == "" or string.find(modelPath:lower(), filter, 1, true) then
+        table.insert(filteredModels, modelPath)
+      end
+    end
+    
+    local filteredCount = #filteredModels
+    local totalPages = math.ceil(filteredCount / modelsPerPage)
+    if totalPages < 1 then totalPages = 1 end
+    
+    -- Clamp page number
+    if page < 1 then page = 1 end
+    if page > totalPages then page = totalPages end
+    currentPage = page
+    
+    -- Calculate range for current page
+    local startIdx = ((page - 1) * modelsPerPage) + 1
+    local endIdx = math.min(page * modelsPerPage, filteredCount)
+    
+    -- Display only models for current page
+    for i = startIdx, endIdx do
+      local modelPath = filteredModels[i]
+      if modelPath then
         displayedCount = displayedCount + 1
         
         -- Create model row
@@ -367,34 +392,92 @@ function IonRP.ModelExplorer:Open()
       end
     end
     
-    -- Update info text
+    -- Update info text with pagination
     infoPanel.Paint = function(self, w, h)
       draw.RoundedBox(4, 0, 0, w, h, Color(45, 45, 55, 200))
       
-      local text
-      if filter ~= "" then
-        text = string.format("Showing %d / %d models | Click to copy", displayedCount, totalCount)
-      else
-        text = string.format("Showing %d models | Click to copy", displayedCount)
-      end
+      local text = string.format("Page %d / %d | Showing %d-%d of %d models | Click to copy", 
+        currentPage, totalPages, startIdx, endIdx, filteredCount)
       
       draw.SimpleText(text, "DermaDefault", w / 2, h / 2, Color(180, 180, 190), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
   end
   
+  -- Pagination controls
+  local paginationPanel = vgui.Create("DPanel", frame)
+  paginationPanel:Dock(BOTTOM)
+  paginationPanel:SetTall(50)
+  paginationPanel:DockMargin(10, 5, 10, 10)
+  paginationPanel.Paint = function(self, w, h)
+    draw.RoundedBox(4, 0, 0, w, h, Color(40, 40, 50, 255))
+  end
+  
+  -- Previous page button
+  local prevBtn = vgui.Create("DButton", paginationPanel)
+  prevBtn:SetPos(20, 10)
+  prevBtn:SetSize(120, 30)
+  prevBtn:SetText("◀ Previous")
+  prevBtn:SetTextColor(Color(255, 255, 255))
+  prevBtn.Paint = function(self, w, h)
+    local bgCol = Color(70, 70, 80, 255)
+    if self:IsHovered() and currentPage > 1 then
+      bgCol = Color(100, 200, 255, 255)
+    elseif currentPage <= 1 then
+      bgCol = Color(50, 50, 60, 255)
+    end
+    draw.RoundedBox(4, 0, 0, w, h, bgCol)
+  end
+  prevBtn.DoClick = function()
+    if currentPage > 1 then
+      PopulateList(currentCategory or "All Models", searchBox:GetValue(), currentPage - 1)
+      surface.PlaySound("buttons/button14.wav")
+    end
+  end
+  
+  -- Page info label
+  local pageLabel = vgui.Create("DLabel", paginationPanel)
+  pageLabel:SetPos(paginationPanel:GetWide() / 2 - 100, 10)
+  pageLabel:SetSize(200, 30)
+  pageLabel:SetText("")
+  pageLabel:SetTextColor(Color(200, 200, 210))
+  pageLabel:SetContentAlignment(5)
+  pageLabel.Paint = function(self, w, h)
+    draw.SimpleText("Page " .. currentPage, "DermaDefault", w / 2, h / 2, Color(100, 200, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+  
+  -- Next page button
+  local nextBtn = vgui.Create("DButton", paginationPanel)
+  nextBtn:SetPos(paginationPanel:GetWide() - 140, 10)
+  nextBtn:SetSize(120, 30)
+  nextBtn:SetText("Next ▶")
+  nextBtn:SetTextColor(Color(255, 255, 255))
+  nextBtn.Paint = function(self, w, h)
+    local bgCol = Color(70, 70, 80, 255)
+    if self:IsHovered() then
+      bgCol = Color(100, 200, 255, 255)
+    end
+    draw.RoundedBox(4, 0, 0, w, h, bgCol)
+  end
+  nextBtn.DoClick = function()
+    PopulateList(currentCategory or "All Models", searchBox:GetValue(), currentPage + 1)
+    surface.PlaySound("buttons/button14.wav")
+  end
+  
   -- Initial population (show all)
-  PopulateList("All Models", "")
+  PopulateList("All Models", "", 1)
   categoryBox:SetValue("All Models")
   
   -- Category selection functionality
   categoryBox.OnSelect = function(self, index, value)
     currentCategory = value
-    PopulateList(value, searchBox:GetValue())
+    currentPage = 1
+    PopulateList(value, searchBox:GetValue(), 1)
   end
   
   -- Search functionality
   searchBox.OnValueChange = function(self, value)
-    PopulateList(currentCategory or "All Models", value)
+    currentPage = 1
+    PopulateList(currentCategory or "All Models", value, 1)
   end
   
   -- Refresh functionality
@@ -423,7 +506,8 @@ function IonRP.ModelExplorer:Open()
     
     -- Restore selections
     categoryBox:SetValue(oldCategory or "All Models")
-    PopulateList(oldCategory or "All Models", oldSearch)
+    currentPage = 1
+    PopulateList(oldCategory or "All Models", oldSearch, 1)
     surface.PlaySound("buttons/button9.wav")
   end
 end
