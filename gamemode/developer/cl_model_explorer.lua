@@ -155,7 +155,7 @@ function IonRP.ModelExplorer:Open()
   frame:SetSize(900, scrH * 0.8)
   frame:SetTitle("")
   frame:SetDraggable(true)
-  frame:ShowCloseButton(true)
+  frame:ShowCloseButton(false)
   frame:Center()
   frame:MakePopup()
   self.Frame = frame
@@ -198,7 +198,7 @@ function IonRP.ModelExplorer:Open()
   end
   
   local categoryLabel = vgui.Create("DLabel", categoryPanel)
-  categoryLabel:SetPos(10, 8)
+  categoryLabel:SetPos(10, 15)
   categoryLabel:SetText("Category:")
   categoryLabel:SetTextColor(Color(200, 200, 210))
   categoryLabel:SizeToContents()
@@ -235,30 +235,33 @@ function IonRP.ModelExplorer:Open()
     draw.RoundedBox(4, 0, 0, w, h, Color(40, 40, 50, 255))
   end
   
-  local searchLabel = vgui.Create("DLabel", searchPanel)
-  searchLabel:SetPos(10, 8)
-  searchLabel:SetText("Search:")
-  searchLabel:SetTextColor(Color(200, 200, 210))
-  searchLabel:SizeToContents()
-  
-  local searchBox = vgui.Create("DTextEntry", searchPanel)
-  searchBox:SetPos(70, 10)
-  searchBox:SetSize(searchPanel:GetWide() - 220, 30)
-  searchBox:SetPlaceholderText("Type to filter models...")
-  searchBox.Paint = function(self, w, h)
-    draw.RoundedBox(4, 0, 0, w, h, Color(50, 50, 60, 255))
-    self:DrawTextEntryText(Color(255, 255, 255), Color(100, 200, 255), Color(255, 255, 255))
-  end
-  
-  -- Refresh button
+  -- Refresh button (dock first so it stays right)
   local refreshBtn = vgui.Create("DButton", searchPanel)
-  refreshBtn:SetPos(searchPanel:GetWide() - 140, 10)
-  refreshBtn:SetSize(130, 30)
+  refreshBtn:Dock(RIGHT)
+  refreshBtn:SetWide(130)
+  refreshBtn:DockMargin(5, 10, 10, 10)
   refreshBtn:SetText("🔄 Refresh")
   refreshBtn:SetTextColor(Color(255, 255, 255))
   refreshBtn.Paint = function(self, w, h)
     local bgCol = self:IsHovered() and Color(120, 220, 255) or Color(100, 200, 255)
     draw.RoundedBox(4, 0, 0, w, h, bgCol)
+  end
+  
+  local searchLabel = vgui.Create("DLabel", searchPanel)
+  searchLabel:Dock(LEFT)
+  searchLabel:SetWide(60)
+  searchLabel:DockMargin(10, 0, 0, 0)
+  searchLabel:SetText("Search:")
+  searchLabel:SetTextColor(Color(200, 200, 210))
+  searchLabel:SetContentAlignment(5) -- Center align
+  
+  local searchBox = vgui.Create("DTextEntry", searchPanel)
+  searchBox:Dock(FILL)
+  searchBox:DockMargin(5, 10, 5, 10)
+  searchBox:SetPlaceholderText("Type to filter models...")
+  searchBox.Paint = function(self, w, h)
+    draw.RoundedBox(4, 0, 0, w, h, Color(50, 50, 60, 255))
+    self:DrawTextEntryText(Color(255, 255, 255), Color(100, 200, 255), Color(255, 255, 255))
   end
   
   -- Info panel
@@ -414,8 +417,9 @@ function IonRP.ModelExplorer:Open()
   
   -- Previous page button
   local prevBtn = vgui.Create("DButton", paginationPanel)
-  prevBtn:SetPos(20, 10)
-  prevBtn:SetSize(120, 30)
+  prevBtn:Dock(LEFT)
+  prevBtn:SetWide(120)
+  prevBtn:DockMargin(10, 10, 5, 10)
   prevBtn:SetText("◀ Previous")
   prevBtn:SetTextColor(Color(255, 255, 255))
   prevBtn.Paint = function(self, w, h)
@@ -434,21 +438,11 @@ function IonRP.ModelExplorer:Open()
     end
   end
   
-  -- Page info label
-  local pageLabel = vgui.Create("DLabel", paginationPanel)
-  pageLabel:SetPos(paginationPanel:GetWide() / 2 - 100, 10)
-  pageLabel:SetSize(200, 30)
-  pageLabel:SetText("")
-  pageLabel:SetTextColor(Color(200, 200, 210))
-  pageLabel:SetContentAlignment(5)
-  pageLabel.Paint = function(self, w, h)
-    draw.SimpleText("Page " .. currentPage, "DermaDefault", w / 2, h / 2, Color(100, 200, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-  end
-  
   -- Next page button
   local nextBtn = vgui.Create("DButton", paginationPanel)
-  nextBtn:SetPos(paginationPanel:GetWide() - 140, 10)
-  nextBtn:SetSize(120, 30)
+  nextBtn:Dock(RIGHT)
+  nextBtn:SetWide(120)
+  nextBtn:DockMargin(5, 10, 10, 10)
   nextBtn:SetText("Next ▶")
   nextBtn:SetTextColor(Color(255, 255, 255))
   nextBtn.Paint = function(self, w, h)
@@ -461,6 +455,14 @@ function IonRP.ModelExplorer:Open()
   nextBtn.DoClick = function()
     PopulateList(currentCategory or "All Models", searchBox:GetValue(), currentPage + 1)
     surface.PlaySound("buttons/button14.wav")
+  end
+  
+  -- Page info label (in center)
+  local pageLabel = vgui.Create("DPanel", paginationPanel)
+  pageLabel:Dock(FILL)
+  pageLabel:DockMargin(5, 10, 5, 10)
+  pageLabel.Paint = function(self, w, h)
+    draw.SimpleText("Page " .. currentPage, "DermaDefault", w / 2, h / 2, Color(100, 200, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
   
   -- Initial population (show all)
