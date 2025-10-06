@@ -357,12 +357,59 @@ function IonRP.ModelExplorer:Open()
         -- Create model row
         local row = vgui.Create("DButton", scroll)
         row:Dock(TOP)
-        row:SetTall(40)
+        row:SetTall(50)
         row:DockMargin(0, 0, 0, 2)
         row:SetText("")
         
         -- Store model path
         row.ModelPath = modelPath
+        
+        -- Model preview icon
+        local modelIcon = vgui.Create("DModelPanel", row)
+        modelIcon:SetPos(8, 5)
+        modelIcon:SetSize(40, 40)
+        modelIcon:SetModel(modelPath)
+        modelIcon:SetMouseInputEnabled(false)
+        
+        -- Auto-calculate camera position based on model size
+        local function UpdateCamera()
+          local ent = modelIcon:GetEntity()
+          if not IsValid(ent) then return end
+          
+          -- Get model bounds
+          local mins, maxs = ent:GetRenderBounds()
+          local size = maxs - mins
+          local center = (mins + maxs) / 2
+          
+          -- Calculate the largest dimension
+          local radius = math.max(size.x, size.y, size.z)
+          
+          -- Adjust camera distance based on model size
+          local distance = radius * 2.5
+          if distance < 20 then distance = 20 end -- Minimum distance
+          if distance > 150 then distance = 150 end -- Maximum distance
+          
+          -- Position camera at an angle
+          local camPos = center + Vector(distance * 0.7, distance * 0.7, distance * 0.5)
+          
+          modelIcon:SetCamPos(camPos)
+          modelIcon:SetLookAt(center)
+          modelIcon:SetFOV(45)
+        end
+        
+        -- Initial camera setup with delay to let model load
+        timer.Simple(0.1, function()
+          if IsValid(modelIcon) then
+            UpdateCamera()
+          end
+        end)
+        
+        -- Rotate the model slowly
+        modelIcon.LayoutEntity = function(self, ent)
+          if IsValid(ent) then
+            ent:SetAngles(Angle(0, RealTime() * 30, 0))
+          end
+        end
         
         row.Paint = function(self, w, h)
           local bgCol = Color(45, 45, 55, 200)
@@ -376,8 +423,8 @@ function IonRP.ModelExplorer:Open()
           -- Left accent
           draw.RoundedBox(0, 0, 0, 3, h, Color(100, 200, 255, 200))
           
-          -- Model path text
-          draw.SimpleText(self.ModelPath, "DermaDefault", 15, h / 2, Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+          -- Model path text (offset to make room for preview)
+          draw.SimpleText(self.ModelPath, "DermaDefault", 60, h / 2, Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
           
           -- Copy hint
           if self:IsHovered() then
