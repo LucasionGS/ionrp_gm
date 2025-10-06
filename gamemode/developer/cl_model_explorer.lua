@@ -439,6 +439,26 @@ function IonRP.ModelExplorer:Open()
           -- Visual feedback
           surface.PlaySound("buttons/button15.wav")
         end
+        
+        row.DoRightClick = function(self)
+          -- Get player's aim trace
+          local ply = LocalPlayer()
+          local trace = ply:GetEyeTrace()
+          
+          if trace.Hit then
+            -- Send spawn request to server
+            net.Start("IonRP_SpawnModel")
+            net.WriteString(self.ModelPath)
+            net.WriteVector(trace.HitPos)
+            net.WriteAngle(Angle(0, ply:EyeAngles().y, 0))
+            net.SendToServer()
+            
+            chat.AddText(Color(100, 200, 255), "[Model Explorer] ", Color(255, 255, 255), "Spawned model at crosshair")
+            surface.PlaySound("buttons/button9.wav")
+          else
+            chat.AddText(Color(231, 76, 60), "[Model Explorer] ", Color(255, 255, 255), "Aim at a surface to spawn the model")
+          end
+        end
       end
     end
     
@@ -561,17 +581,20 @@ function IonRP.ModelExplorer:Open()
   end
 end
 
--- Console command to open model explorer
-concommand.Add("ionrp_models", function()
-  IonRP.ModelExplorer:Open()
-end)
-
--- Chat command
-hook.Add("OnPlayerChat", "IonRP_ModelExplorerCommand", function(ply, text)
-  if ply == LocalPlayer() and string.lower(text) == "!models" then
+-- Network string for spawning models
+if CLIENT then
+  -- Console command to open model explorer
+  concommand.Add("ionrp_models", function()
     IonRP.ModelExplorer:Open()
-    return true
-  end
-end)
+  end)
 
-print("[IonRP] Model Explorer loaded - Type !models or ionrp_models to open")
+  -- Chat command
+  hook.Add("OnPlayerChat", "IonRP_ModelExplorerCommand", function(ply, text)
+    if ply == LocalPlayer() and string.lower(text) == "!models" then
+      IonRP.ModelExplorer:Open()
+      return true
+    end
+  end)
+
+  print("[IonRP] Model Explorer loaded - Type !models or ionrp_models to open")
+end

@@ -32,6 +32,7 @@ include("interface/sv_dialog.lua")
 include("interface/sv_bank.lua")
 include("ranks/sv_ranks.lua")
 include("character/sv_character.lua")
+include("developer/sv_model_explorer.lua")
 
 function GM:Initialize()
   self.BaseClass.Initialize(self)
