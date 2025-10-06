@@ -5,6 +5,148 @@
 
 IonRP.Ranks = IonRP.Ranks or {}
 
+IonRP.Ranks.List = {}
+
+local function AddRank(id, name, color, immunity)
+    table.insert(IonRP.Ranks.List, {id = id, name = name, color = color, immunity = immunity})
+end
+-- Define rank hierarchy (higher number = higher rank)
+-- IonRP.Ranks.List = {
+--     {id = 0, name = "User", color = Color(200, 200, 200), immunity = 0},
+--     {id = 1, name = "Moderator", color = Color(46, 204, 113), immunity = 1},
+--     {id = 2, name = "Admin", color = Color(52, 152, 219), immunity = 2},
+--     {id = 3, name = "Superadmin", color = Color(231, 76, 60), immunity = 3},
+--     {id = 4, name = "Lead Admin", color = Color(155, 89, 182), immunity = 4},
+--     {id = 5, name = "Developer", color = Color(241, 196, 15), immunity = 5},
+-- }
+
+RANK_USER = 0;
+AddRank(RANK_USER, "User", Color(200, 200, 200), 0)
+
+RANK_MODERATOR = 1;
+AddRank(RANK_MODERATOR, "Moderator", Color(46, 204, 113), 1)
+
+RANK_ADMIN = 2;
+AddRank(RANK_ADMIN, "Admin", Color(52, 152, 219), 2)
+
+RANK_SUPERADMIN = 3;
+AddRank(RANK_SUPERADMIN, "Superadmin", Color(231, 76, 60), 3)
+
+RANK_LEAD_ADMIN = 4;
+AddRank(RANK_LEAD_ADMIN, "Lead Admin", Color(155, 89, 182), 4)
+
+RANK_DEVELOPER = 5;
+AddRank(RANK_DEVELOPER, "Developer", Color(241, 196, 15), 5)
+
+
+-- Permission categories
+IonRP.Ranks.Permissions = {
+    -- Basic moderation
+    ["kick"] = {minRank = RANK_MODERATOR, description = "Kick players"},
+    ["ban"] = {minRank = RANK_ADMIN, description = "Ban players"},
+    ["unban"] = {minRank = RANK_ADMIN, description = "Unban players"},
+    ["mute"] = {minRank = RANK_MODERATOR, description = "Mute players in chat"},
+    ["freeze"] = {minRank = RANK_MODERATOR, description = "Freeze players"},
+    ["slay"] = {minRank = RANK_MODERATOR, description = "Slay players"},
+    ["bring"] = {minRank = RANK_MODERATOR, description = "Bring players to you"},
+    ["goto"] = {minRank = RANK_MODERATOR, description = "Go to players"},
+    ["spectate"] = {minRank = RANK_MODERATOR, description = "Spectate players"},
+    
+    -- Advanced moderation
+    ["noclip"] = {minRank = RANK_MODERATOR, description = "Use noclip"},
+    ["god"] = {minRank = RANK_ADMIN, description = "God mode"},
+    ["cloak"] = {minRank = RANK_MODERATOR, description = "Invisibility"},
+    ["health"] = {minRank = RANK_MODERATOR, description = "Set player health"},
+    ["armor"] = {minRank = RANK_MODERATOR, description = "Set player armor"},
+    ["money"] = {minRank = RANK_ADMIN, description = "Give/take money"},
+    
+    -- Server management
+    ["cleanup"] = {minRank = RANK_ADMIN, description = "Clean up entities"},
+    ["physgun_players"] = {minRank = RANK_ADMIN, description = "Physgun players"},
+    ["ignite"] = {minRank = RANK_MODERATOR, description = "Ignite players"},
+    ["respawn"] = {minRank = RANK_MODERATOR, description = "Respawn players"},
+    
+    -- Administrative
+    ["manage_ranks"] = {minRank = RANK_LEAD_ADMIN, description = "Manage player ranks"},
+    ["manage_jobs"] = {minRank = RANK_SUPERADMIN, description = "Manage jobs"},
+    ["manage_props"] = {minRank = RANK_ADMIN, description = "Remove/manage props"},
+    ["seejoinleave"] = {minRank = RANK_MODERATOR, description = "See join/leave messages"},
+    ["seeadminchat"] = {minRank = RANK_MODERATOR, description = "See admin chat"},
+    
+    -- Developer
+    ["lua"] = {minRank = RANK_DEVELOPER, description = "Run Lua code"},
+    ["console"] = {minRank = RANK_LEAD_ADMIN, description = "Run server console commands"},
+    ["workshop"] = {minRank = RANK_SUPERADMIN, description = "Manage workshop addons"},
+
+    -- Rank management
+    ["setrank"] = {minRank = RANK_LEAD_ADMIN, description = "Set player ranks"},
+
+    -- Development
+    ["developer"] = {minRank = RANK_DEVELOPER, description = "Access developer tools"},
+    ["modelexplorer"] = {minRank = RANK_DEVELOPER, description = "Access Model Explorer"},
+}
+
+--[[
+    Get rank data by ID
+    @param rankId number
+    @return table Rank data
+]]--
+function IonRP.Ranks:GetRankData(rankId)
+    for _, rank in ipairs(self.List) do
+        if rank.id == rankId then
+            return rank
+        end
+    end
+    return self.List[1] -- Default to User
+end
+
+--[[
+    Get rank data by name
+    @param rankName string
+    @return table Rank data
+]]--
+function IonRP.Ranks:GetRankByName(rankName)
+    for _, rank in ipairs(self.List) do
+        if string.lower(rank.name) == string.lower(rankName) then
+            return rank
+        end
+    end
+    return nil
+end
+
+--[[
+    Check if a rank has a specific permission
+    @param rankId number
+    @param permission string
+    @return boolean
+]]--
+function IonRP.Ranks:HasPermission(rankId, permission)
+    local perm = self.Permissions[permission]
+    if not perm then return false end
+    
+    return rankId >= perm.minRank
+end
+
+--[[
+    Get all permissions for a rank
+    @param rankId number
+    @return table List of permissions
+]]--
+function IonRP.Ranks:GetRankPermissions(rankId)
+    local perms = {}
+    
+    for permName, permData in pairs(self.Permissions) do
+        if rankId >= permData.minRank then
+            table.insert(perms, {
+                name = permName,
+                description = permData.description
+            })
+        end
+    end
+    
+    return perms
+end
+
 -- Network strings
 util.AddNetworkString("IonRP_RankUpdated")
 util.AddNetworkString("IonRP_SendRankData")

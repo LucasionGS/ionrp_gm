@@ -581,20 +581,16 @@ function IonRP.ModelExplorer:Open()
   end
 end
 
--- Network string for spawning models
 if CLIENT then
+  -- Network receiver to open model explorer
+  net.Receive("IonRP_OpenModelExplorer", function()
+    IonRP.ModelExplorer:Open()
+  end)
+  
   -- Console command to open model explorer
   concommand.Add("ionrp_models", function()
     IonRP.ModelExplorer:Open()
   end)
 
-  -- Chat command
-  hook.Add("OnPlayerChat", "IonRP_ModelExplorerCommand", function(ply, text)
-    if ply == LocalPlayer() and string.lower(text) == "!models" then
-      IonRP.ModelExplorer:Open()
-      return true
-    end
-  end)
-
-  print("[IonRP] Model Explorer loaded - Type !models or ionrp_models to open")
+  print("[IonRP] Model Explorer loaded - Type /models or ionrp_models to open")
 end

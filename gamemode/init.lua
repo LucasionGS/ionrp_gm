@@ -5,6 +5,8 @@ IonRP = IonRP or {}
 -- Send client files to players
 AddCSLuaFile("cl_init.lua")
 AddCSLuaFile("shared.lua")
+-- Commands
+AddCSLuaFile("commands/sh_commands.lua")
 -- Hud
 AddCSLuaFile("hud/cl_hud.lua")
 -- Interface
@@ -22,6 +24,9 @@ AddCSLuaFile("developer/cl_model_explorer.lua")
 -- Load shared code
 include("shared.lua")
 
+-- Load command system
+include("commands/sh_commands.lua")
+
 -- Load database
 include("database/Database.lua")
 include("ranks/sv_ranks_schema.lua")
@@ -33,6 +38,9 @@ include("interface/sv_bank.lua")
 include("ranks/sv_ranks.lua")
 include("character/sv_character.lua")
 include("developer/sv_model_explorer.lua")
+
+-- Load commands
+include("commands/sv_rank_commands.lua")
 
 function GM:Initialize()
   self.BaseClass.Initialize(self)

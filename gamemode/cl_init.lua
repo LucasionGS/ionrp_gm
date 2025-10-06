@@ -5,6 +5,9 @@ IonRP = IonRP or {}
 -- Load shared code
 include("shared.lua")
 
+-- Load command system
+include("commands/sh_commands.lua")
+
 --[[
   Called when the gamemode is loaded on the client
 --]]
