@@ -30,7 +30,7 @@ ITEM.model = "<No model>"
 ITEM.weight = 0
 
 --- The size of the item in inventory grid units (width, height).
---- @type {x: number, y: number}
+--- @type {[1]: number, [2]: number}
 ITEM.size = { 1, 1 }
 
 --- How many of this item can stack in one inventory slot.

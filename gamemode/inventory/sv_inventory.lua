@@ -439,16 +439,16 @@ end)
 
 -- Add player methods
 --- @class Player
-local meta = FindMetaTable("Player")
+local playerMeta = FindMetaTable("Player")
 
 --- Get the player's inventory
 --- @return Inventory|nil
-function meta:GetInventory()
+function playerMeta:GetInventory()
   return self.IonRP_Inventory
 end
 
 --- Open the inventory UI for this player
-function meta:OpenInventory()
+function playerMeta:OpenInventory()
   IonRP.Inventory:Open(self)
 end
 
@@ -456,7 +456,7 @@ end
 --- @param itemIdentifier string
 --- @param quantity number
 --- @return boolean, string|nil
-function meta:GiveItem(itemIdentifier, quantity)
+function playerMeta:GiveItem(itemIdentifier, quantity)
   local inv = self:GetInventory()
   if not inv then return false, "No inventory" end
 
@@ -483,7 +483,7 @@ end
 --- @param itemIdentifier string
 --- @param quantity number
 --- @return boolean, string|nil
-function meta:TakeItem(itemIdentifier, quantity)
+function playerMeta:TakeItem(itemIdentifier, quantity)
   local inv = self:GetInventory()
   if not inv then return false, "No inventory" end
 
@@ -525,7 +525,7 @@ end
 --- @param itemIdentifier string
 --- @param quantity number|nil
 --- @return boolean
-function meta:HasItem(itemIdentifier, quantity)
+function playerMeta:HasItem(itemIdentifier, quantity)
   local inv = self:GetInventory()
   if not inv then return false end
 
@@ -544,7 +544,7 @@ end
 --- Equip a weapon from inventory
 --- @param item ITEM The weapon item to equip
 --- @return boolean
-function meta:SV_EquipWeapon(item)
+function playerMeta:SV_EquipWeapon(item)
   if not item or item.type ~= "weapon" or not item.weaponClass then
     return false
   end
