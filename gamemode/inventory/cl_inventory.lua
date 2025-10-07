@@ -303,16 +303,19 @@ function IonRP.InventoryUI:CreateGrid()
         if not currentInv then return end
         
         local invSlot = currentInv:GetSlot(x, y)
+        --- @type Color|nil
         local bgColor = cfg.Colors.SlotBackground
+        -- local bgColor = nil
 
         -- Check if this is the origin of an item
         local isOrigin = invSlot and invSlot.x == x and invSlot.y == y
 
         if invSlot and invSlot.item then
-          bgColor = cfg.Colors.SlotOccupied
+          -- bgColor = cfg.Colors.SlotOccupied
+          bgColor = nil
         end
 
-        if self:IsHovered() then
+        if self:IsHovered() and not (invSlot and invSlot.item) then
           bgColor = cfg.Colors.SlotHover
         end
 
@@ -332,136 +335,15 @@ function IonRP.InventoryUI:CreateGrid()
           end
         end
 
-        draw.RoundedBox(4, 0, 0, w, h, bgColor)
+        if bgColor then
+          draw.RoundedBox(4, 0, 0, w, h, bgColor)
+        end
 
         -- Border
         surface.SetDrawColor(cfg.Colors.Border)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
-
-        -- Draw item if this is the origin slot
-        if isOrigin and invSlot and invSlot.item then
-          --- @type ITEM
-          local item = invSlot.item
-
-          -- Disable clipping so multi-cell items can render beyond slot boundaries
-          DisableClipping(true)
-
-          -- Calculate total size this item occupies (spans multiple slots)
-          local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-          local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-
-          -- Item background with gradient effect
-          draw.RoundedBox(4, 2, 2, itemW - 4, itemH - 4, Color(50, 50, 60, 240))
-
-          -- Subtle inner highlight
-          surface.SetDrawColor(70, 70, 80, 200)
-          surface.DrawOutlinedRect(2, 2, itemW - 4, itemH - 4, 1)
-
-          -- Model preview area (fills most of the item space)
-          -- local modelW = itemW - 8
-          -- local modelH = itemH - 28 -- Leave room for name at top
-          -- local modelX = 4
-          -- local modelY = 22
-
-          -- Draw 3D model preview
-          -- if item.model then
-          --   -- Create or get cached model panel for this slot
-          --   local modelKey = "model_" .. x .. "_" .. y
-          --   if not self[modelKey] or not IsValid(self[modelKey]) then
-          --     local mdlPanel = vgui.Create("DModelPanel", self)
-          --     mdlPanel:SetModel(item.model)
-          --     mdlPanel:SetMouseInputEnabled(false)
-          --     mdlPanel:SetKeyboardInputEnabled(false)
-
-          --     -- Set camera position to frame the model nicely
-          --     local ent = mdlPanel:GetEntity()
-          --     if IsValid(ent) then
-          --       local mins, maxs = ent:GetRenderBounds()
-          --       local size = maxs - mins
-          --       local radius = math.max(size.x, size.y, size.z)
-          --       local dist = radius / math.tan(math.rad(45 / 2))
-
-          --       mdlPanel:SetCamPos(Vector(dist * 0.6, dist * 0.6, dist * 0.4))
-          --       mdlPanel:SetLookAt((mins + maxs) / 2)
-          --       mdlPanel:SetFOV(45)
-          --     end
-
-          --     self[modelKey] = mdlPanel
-          --   end
-
-          --   local mdlPanel = self[modelKey]
-          --   if IsValid(mdlPanel) then
-          --     mdlPanel:SetPos(modelX, modelY)
-          --     mdlPanel:SetSize(modelW, modelH)
-          --     mdlPanel:SetVisible(true)
-
-          --     -- Custom paint for model panel background
-          --     mdlPanel.Paint = function(pnl, w, h)
-          --       -- Dark background
-          --       draw.RoundedBox(4, 0, 0, w, h, Color(30, 30, 40, 220))
-
-          --       -- Gradient overlay for depth
-          --       surface.SetDrawColor(0, 0, 0, 100)
-          --       surface.DrawRect(0, h * 0.7, w, h * 0.3)
-          --     end
-          --   end
-          -- end
-
-          -- Item name with adaptive sizing
-          local name = item.name
-          local maxNameChars = math.max(8, item.size[1] * 5) -- More characters for wider items
-          if #name > maxNameChars then
-            name = string.sub(name, 1, maxNameChars - 2) .. ".."
-          end
-
-          -- Name background for readability
-          surface.SetFont("DermaDefault")
-          local nameW, nameH = surface.GetTextSize(name)
-          draw.RoundedBox(2, (itemW / 2) - (nameW / 2) - 4, 4, nameW + 8, 16, Color(0, 0, 0, 200))
-
-          draw.SimpleText(name, "DermaDefault", itemW / 2, 6, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-
-          -- Quantity badge (if stackable and more than 1)
-          if item.stackSize > 1 and invSlot.quantity > 1 then
-            local qtyText = "x" .. invSlot.quantity
-            surface.SetFont("DermaDefaultBold")
-            local qtyW = surface.GetTextSize(qtyText)
-
-            -- Badge background with accent color
-            draw.RoundedBox(3, itemW - qtyW - 12, itemH - 20, qtyW + 8, 16, cfg.Colors.AccentCyan)
-            draw.SimpleText(qtyText, "DermaDefaultBold", itemW - 6, itemH - 12, Color(255, 255, 255, 255),
-              TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
-          end
-
-          -- Weight display (bottom left)
-          local weight = item.weight * invSlot.quantity
-          local weightText = string.format("%.1fkg", weight)
-
-          -- Show weight if there's room (at least 2 slots in either dimension)
-          if item.size[2] >= 2 or item.size[1] >= 2 then
-            surface.SetFont("DermaDefault")
-            local weightW = surface.GetTextSize(weightText)
-            draw.RoundedBox(2, 4, itemH - 18, weightW + 6, 14, Color(0, 0, 0, 180))
-            draw.SimpleText(weightText, "DermaDefault", 7, itemH - 16, cfg.Colors.TextMuted,
-              TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-          end
-
-          -- Item type indicator (color-coded border on bottom)
-          local typeColor = Color(120, 120, 120)
-          if item.type == "weapon" then
-            typeColor = Color(255, 100, 100, 200) -- Red for weapons
-          elseif item.type == "consumable" then
-            typeColor = Color(100, 255, 100, 200) -- Green for consumables
-          elseif item.type == "misc" then
-            typeColor = Color(100, 150, 255, 200) -- Blue for misc
-          end
-
-          -- Bottom type indicator bar
-          draw.RoundedBox(0, 2, itemH - 3, itemW - 4, 2, typeColor)
-
-          -- Re-enable clipping after drawing multi-cell items
-          DisableClipping(false)
-        end
+        
+        -- Items are now rendered by the overlay panel (self.ItemOverlay) to ensure proper layering
       end
 
       -- Mouse interaction
@@ -514,6 +396,86 @@ function IonRP.InventoryUI:CreateGrid()
       self.GridSlots[y][x] = slot
     end
   end
+
+  -- Create item overlay panel that renders on top of all slots
+  -- Created AFTER slots so it renders on top
+  local itemOverlay = vgui.Create("DPanel", self.GridPanel)
+  itemOverlay:SetPos(0, 0)
+  itemOverlay:SetSize(self.GridPanel:GetSize())
+  itemOverlay:SetMouseInputEnabled(false) -- Allow clicks to pass through to slots
+  itemOverlay:SetKeyboardInputEnabled(false)
+  itemOverlay.Paint = function(pnl, w, h)
+    -- Render all items on top of the grid
+    local currentInv = IonRP.InventoryUI.CurrentInventory
+    if not currentInv then return end
+
+    for iy = 0, inv.height - 1 do
+      for ix = 0, inv.width - 1 do
+        local invSlot = currentInv:GetSlot(ix, iy)
+        local isOrigin = invSlot and invSlot.x == ix and invSlot.y == iy
+
+        if isOrigin and invSlot and invSlot.item then
+          local item = invSlot.item
+          
+          -- Calculate position and size
+          local slotX = cfg.SlotPadding + (ix * (cfg.SlotSize + cfg.SlotPadding))
+          local slotY = cfg.SlotPadding + (iy * (cfg.SlotSize + cfg.SlotPadding))
+          local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
+          local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
+
+          -- Item background with gradient effect
+          draw.RoundedBox(4, slotX + 2, slotY + 2, itemW - 4, itemH - 4, Color(50, 50, 60, 240))
+
+          -- Subtle inner highlight
+          surface.SetDrawColor(70, 70, 80, 200)
+          surface.DrawOutlinedRect(slotX + 2, slotY + 2, itemW - 4, itemH - 4, 1)
+
+          -- Item name
+          local name = item.name
+          local maxNameChars = math.max(8, item.size[1] * 5)
+          if #name > maxNameChars then
+            name = string.sub(name, 1, maxNameChars - 2) .. ".."
+          end
+
+          surface.SetFont("DermaDefault")
+          local nameW, nameH = surface.GetTextSize(name)
+          draw.RoundedBox(2, slotX + (itemW / 2) - (nameW / 2) - 4, slotY + 4, nameW + 8, 16, Color(0, 0, 0, 200))
+          draw.SimpleText(name, "DermaDefault", slotX + itemW / 2, slotY + 6, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+
+          -- Quantity badge
+          if item.stackSize > 1 and invSlot.quantity > 1 then
+            local qtyText = "x" .. invSlot.quantity
+            surface.SetFont("DermaDefaultBold")
+            local qtyW = surface.GetTextSize(qtyText)
+            draw.RoundedBox(3, slotX + itemW - qtyW - 12, slotY + itemH - 20, qtyW + 8, 16, cfg.Colors.AccentCyan)
+            draw.SimpleText(qtyText, "DermaDefaultBold", slotX + itemW - 6, slotY + itemH - 12, Color(255, 255, 255, 255), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+          end
+
+          -- Weight display
+          if item.size[2] >= 2 or item.size[1] >= 2 then
+            local weight = item.weight * invSlot.quantity
+            local weightText = string.format("%.1fkg", weight)
+            surface.SetFont("DermaDefault")
+            local weightW = surface.GetTextSize(weightText)
+            draw.RoundedBox(2, slotX + 4, slotY + itemH - 18, weightW + 6, 14, Color(0, 0, 0, 180))
+            draw.SimpleText(weightText, "DermaDefault", slotX + 7, slotY + itemH - 16, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+          end
+
+          -- Item type indicator
+          local typeColor = Color(120, 120, 120)
+          if item.type == "weapon" then
+            typeColor = Color(255, 100, 100, 200)
+          elseif item.type == "consumable" then
+            typeColor = Color(100, 255, 100, 200)
+          elseif item.type == "misc" then
+            typeColor = Color(100, 150, 255, 200)
+          end
+          draw.RoundedBox(0, slotX + 2, slotY + itemH - 3, itemW - 4, 2, typeColor)
+        end
+      end
+    end
+  end
+  self.ItemOverlay = itemOverlay
 end
 
 --[[
