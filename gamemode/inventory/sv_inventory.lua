@@ -28,8 +28,8 @@ function IonRP.Inventory:InitializeTables()
     CREATE TABLE IF NOT EXISTS ionrp_inventories (
       id INT AUTO_INCREMENT PRIMARY KEY,
       steam_id VARCHAR(32) NOT NULL,
-      width INT NOT NULL DEFAULT 5,
-      height INT NOT NULL DEFAULT 3,
+      width INT NOT NULL DEFAULT 10,
+      height INT NOT NULL DEFAULT 10,
       max_weight FLOAT NOT NULL DEFAULT 50.0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -123,7 +123,7 @@ function IonRP.Inventory:Create(ply, callback)
 
   IonRP.Database:PreparedQuery(
     "INSERT INTO ionrp_inventories (steam_id, width, height, max_weight) VALUES (?, ?, ?, ?)",
-    { steamID, 5, 3, 50.0 },
+    { steamID, 9, 3, 50.0 },
     function(data)
       print("[IonRP Inventory] Created inventory for " .. ply:Nick())
 
@@ -163,8 +163,8 @@ function IonRP.Inventory:Load(_ply, inventoryID, callback)
 
       local invMeta = invData[1]
       local inv = INVENTORY:New(
-        tonumber(invMeta.width) or 5,
-        tonumber(invMeta.height) or 3,
+        tonumber(invMeta.width) or 10,
+        tonumber(invMeta.height) or 10,
         tonumber(invMeta.max_weight) or 50.0
       )
       inv.owner = ply
@@ -359,11 +359,11 @@ net.Receive("IonRP_MoveItem", function(len, ply)
   local fromY = net.ReadUInt(8)
   local toX = net.ReadUInt(8)
   local toY = net.ReadUInt(8)
-  local quantity = net.ReadUInt(16) -- Read quantity (0 = move all)
+  local quantity = net.ReadUInt(16)        -- Read quantity (0 = move all)
 
   if quantity == 0 then quantity = nil end -- nil means move all
 
-  print(string.format("[IonRP Inventory] Move request: from (%d,%d) to (%d,%d), quantity: %s", 
+  print(string.format("[IonRP Inventory] Move request: from (%d,%d) to (%d,%d), quantity: %s",
     fromX, fromY, toX, toY, tostring(quantity or "all")))
 
   local success, err = inv:MoveItem(fromX, fromY, toX, toY, quantity)
@@ -396,6 +396,8 @@ net.Receive("IonRP_UseItem", function(len, ply)
     ply:ChatPrint("No item at that position")
     return
   end
+
+  PrintTable(slot.item)
 
   -- Create an owned instance of the item
   local itemInstance = slot.item:MakeOwnedInstance(ply)
@@ -554,7 +556,7 @@ function playerMeta:SV_EquipWeapon(item)
   -- TODO: Implement Equip Weapon... and inventory lol
   -- The function should equip the specific weapon and put the item in the player's weapon slot
   -- It should unequip any existing weapon in that slot first as well, if applicable.
-  
+
   if not item or item.type ~= "weapon" or not item.weaponClass then
     return false
   end

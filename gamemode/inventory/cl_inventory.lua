@@ -40,6 +40,10 @@ IonRP.InventoryUI.CurrentInventory = nil
 IonRP.InventoryUI.DraggedItem = nil
 IonRP.InventoryUI.DraggedFrom = nil
 IonRP.InventoryUI.DraggedQuantity = nil -- How many items are being dragged
+IonRP.InventoryUI.MouseDownPos = nil -- Track mouse position when pressed
+IonRP.InventoryUI.MouseDownTime = nil -- Track when mouse was pressed
+IonRP.InventoryUI.MouseDownButton = nil -- Track which button was pressed
+IonRP.InventoryUI.MouseDownSlot = nil -- Track which slot was pressed
 
 --[[
     Receive inventory sync from server
@@ -226,6 +230,46 @@ function IonRP.InventoryUI:Open()
     inv.height * (cfg.SlotSize + cfg.SlotPadding) + cfg.SlotPadding
   )
   self.GridPanel.Paint = function(self, w, h) end
+  
+  -- Think hook to detect drag start
+  self.GridPanel.Think = function(self)
+    -- Check if mouse is down and hasn't started dragging yet
+    if IonRP.InventoryUI.MouseDownPos and not IonRP.InventoryUI.DraggedItem then
+      local mx, my = input.GetCursorPos()
+      local downPos = IonRP.InventoryUI.MouseDownPos
+      
+      -- Calculate distance moved
+      local dx = mx - downPos.x
+      local dy = my - downPos.y
+      local distance = math.sqrt(dx * dx + dy * dy)
+      
+      -- Start drag if moved more than 5 pixels
+      if distance > 5 then
+        local downSlot = IonRP.InventoryUI.MouseDownSlot
+        local downButton = IonRP.InventoryUI.MouseDownButton
+        
+        if downSlot and downSlot.item then
+          if downButton == MOUSE_LEFT then
+            -- Left click = drag full stack
+            IonRP.InventoryUI.DraggedItem = downSlot.item
+            IonRP.InventoryUI.DraggedFrom = { x = downSlot.x, y = downSlot.y }
+            IonRP.InventoryUI.DraggedQuantity = downSlot.quantity
+          elseif downButton == MOUSE_RIGHT then
+            -- Right click = drag single item (or all if only 1)
+            IonRP.InventoryUI.DraggedItem = downSlot.item
+            IonRP.InventoryUI.DraggedFrom = { x = downSlot.x, y = downSlot.y }
+            IonRP.InventoryUI.DraggedQuantity = math.min(1, downSlot.quantity)
+          end
+          
+          -- Clear mouse down state once drag starts
+          IonRP.InventoryUI.MouseDownPos = nil
+          IonRP.InventoryUI.MouseDownTime = nil
+          IonRP.InventoryUI.MouseDownButton = nil
+          IonRP.InventoryUI.MouseDownSlot = nil
+        end
+      end
+    end
+  end
 
   -- Create grid slots
   self:CreateGrid()
@@ -240,7 +284,7 @@ function IonRP.InventoryUI:Open()
     draw.RoundedBoxEx(8, 0, 0, w, h, cfg.Colors.Header, false, false, true, true)
 
     -- Instructions
-    draw.SimpleText("Left Click: Use Item | Right Click: Drop | Drag to move", "DermaDefault",
+    draw.SimpleText("Click: Use Item | Drag: Move Item (Left=All, Right=1)", "DermaDefault",
       w / 2, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
 
@@ -362,38 +406,23 @@ function IonRP.InventoryUI:CreateGrid()
         -- Only interact with origin slots
         if invSlot.x ~= x or invSlot.y ~= y then return end
 
-        if mouse == MOUSE_LEFT then
-          -- Start dragging full stack
-          IonRP.InventoryUI.DraggedItem = invSlot.item
-          IonRP.InventoryUI.DraggedFrom = { x = x, y = y }
-          IonRP.InventoryUI.DraggedQuantity = invSlot.quantity
-        elseif mouse == MOUSE_RIGHT then
-          -- Check if already dragging - if so, this is a drop action
-          if IonRP.InventoryUI.DraggedItem then
-            return -- Let OnMouseReleased handle the drop
-          end
-          
-          -- Start dragging single item (split stack)
-          if invSlot.quantity > 1 then
-            IonRP.InventoryUI.DraggedItem = invSlot.item
-            IonRP.InventoryUI.DraggedFrom = { x = x, y = y }
-            IonRP.InventoryUI.DraggedQuantity = 1
-          else
-            -- If only 1 item, use it instead
-            net.Start("IonRP_UseItem")
-            net.WriteUInt(x, 8)
-            net.WriteUInt(y, 8)
-            net.SendToServer()
-          end
+        -- Check if already dragging - if so, don't start a new drag
+        if IonRP.InventoryUI.DraggedItem then
+          return -- Let OnMouseReleased handle the drop
         end
+
+        -- Track mouse down state (don't start drag yet, wait for movement)
+        local mx, my = input.GetCursorPos()
+        IonRP.InventoryUI.MouseDownPos = { x = mx, y = my }
+        IonRP.InventoryUI.MouseDownTime = SysTime()
+        IonRP.InventoryUI.MouseDownButton = mouse
+        IonRP.InventoryUI.MouseDownSlot = { x = x, y = y, quantity = invSlot.quantity, item = invSlot.item }
       end
 
       slot.OnMouseReleased = function(self, mouse)
-        -- Handle drop for both left and right click
-        if (mouse == MOUSE_LEFT or mouse == MOUSE_RIGHT) and IonRP.InventoryUI.DraggedItem then
-          -- Drop item here
+        -- Handle drop if we're actually dragging
+        if IonRP.InventoryUI.DraggedItem then
           local fromPos = IonRP.InventoryUI.DraggedFrom
-
           if fromPos then
             -- Send move request to server with quantity
             net.Start("IonRP_MoveItem")
@@ -401,7 +430,7 @@ function IonRP.InventoryUI:CreateGrid()
             net.WriteUInt(fromPos.y, 8)
             net.WriteUInt(x, 8)
             net.WriteUInt(y, 8)
-            net.WriteUInt(IonRP.InventoryUI.DraggedQuantity or 0, 16) -- 0 = move all
+            net.WriteUInt(IonRP.InventoryUI.DraggedQuantity or 0, 16)
             net.SendToServer()
           end
 
@@ -409,7 +438,31 @@ function IonRP.InventoryUI:CreateGrid()
           IonRP.InventoryUI.DraggedItem = nil
           IonRP.InventoryUI.DraggedFrom = nil
           IonRP.InventoryUI.DraggedQuantity = nil
+        elseif IonRP.InventoryUI.MouseDownSlot then
+          -- Mouse was pressed but never moved = click action
+          local downSlot = IonRP.InventoryUI.MouseDownSlot
+          local downButton = IonRP.InventoryUI.MouseDownButton
+          
+          -- Check if we released on the same slot we pressed on
+          if downSlot.x == x and downSlot.y == y and downButton == mouse then
+            if mouse == MOUSE_LEFT then
+              -- Left click = use item
+              net.Start("IonRP_UseItem")
+              net.WriteUInt(x, 8)
+              net.WriteUInt(y, 8)
+              net.SendToServer()
+            elseif mouse == MOUSE_RIGHT then
+              -- Right click on single item or stack = drop a single item from the stack
+              -- TODO: implement this
+            end
+          end
         end
+
+        -- Clear mouse down state
+        IonRP.InventoryUI.MouseDownPos = nil
+        IonRP.InventoryUI.MouseDownTime = nil
+        IonRP.InventoryUI.MouseDownButton = nil
+        IonRP.InventoryUI.MouseDownSlot = nil
       end
 
       self.GridSlots[y][x] = slot
