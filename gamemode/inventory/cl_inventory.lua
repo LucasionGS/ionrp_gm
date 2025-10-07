@@ -44,6 +44,10 @@ IonRP.InventoryUI.DraggedFrom = nil
 net.Receive("IonRP_SyncInventory", function()
   local invData = net.ReadTable()
 
+  print("[IonRP Inventory] Received inventory sync from server")
+  print(string.format("[IonRP Inventory] Size: %dx%d, Max Weight: %.1f, Items: %d",
+    invData.width, invData.height, invData.maxWeight, #invData.items))
+
   -- Reconstruct inventory on client
   local inv = INVENTORY:New(invData.width, invData.height, invData.maxWeight)
 
@@ -51,10 +55,13 @@ net.Receive("IonRP_SyncInventory", function()
     local itemDef = IonRP.Items.List[itemData.identifier]
     if itemDef then
       inv:AddItem(itemDef, itemData.quantity, itemData.x, itemData.y)
+    else
+      print("[IonRP Inventory] Warning: Unknown item on client: " .. itemData.identifier)
     end
   end
 
   IonRP.InventoryUI.CurrentInventory = inv
+  print("[IonRP Inventory] Client inventory updated successfully")
 
   -- Refresh UI if open
   if IsValid(IonRP.InventoryUI.Frame) then
@@ -63,10 +70,13 @@ net.Receive("IonRP_SyncInventory", function()
 end)
 
 --[[
-    Open inventory UI
+    Open inventory UI (called when server sends fresh data)
 ]] --
 net.Receive("IonRP_OpenInventory", function()
-  IonRP.InventoryUI:Open()
+  -- Wait a tiny bit for the sync data to arrive first
+  timer.Simple(0.1, function()
+    IonRP.InventoryUI:Open()
+  end)
 end)
 
 --[[
@@ -80,13 +90,15 @@ end)
     Open the inventory UI
 ]] --
 function IonRP.InventoryUI:Open()
-  if IsValid(self.Frame) then
-    self.Frame:Remove()
-  end
-
   if not self.CurrentInventory then
     chat.AddText(Color(255, 100, 100), "[Inventory] ", Color(255, 255, 255), "No inventory data loaded")
     return
+  end
+
+  -- If already open, close and reopen with fresh data
+  if IsValid(self.Frame) then
+    print("[IonRP Inventory] Refreshing open inventory UI")
+    self.Frame:Remove()
   end
 
   local cfg = self.Config
@@ -94,7 +106,7 @@ function IonRP.InventoryUI:Open()
 
   local frameWidth = (inv.width * (cfg.SlotSize + cfg.SlotPadding)) + (cfg.Padding * 2) + cfg.SlotPadding
   local frameHeight = (inv.height * (cfg.SlotSize + cfg.SlotPadding)) + cfg.HeaderHeight + cfg.FooterHeight +
-  (cfg.Padding * 2) + cfg.SlotPadding
+      (cfg.Padding * 2) + cfg.SlotPadding
 
   -- Main frame
   --- @class DFrame
@@ -406,13 +418,13 @@ function IonRP.InventoryUI:Close()
   self.DraggedFrom = nil
 end
 
--- Command to open inventory (local)
+-- Command to open inventory - requests fresh data from server
 concommand.Add("ionrp_inventory", function(ply)
-  if IonRP.InventoryUI.CurrentInventory then
-    IonRP.InventoryUI:Open()
-  else
-    chat.AddText(Color(255, 100, 100), "[Inventory] ", Color(255, 255, 255), "Inventory not loaded yet")
-  end
+  -- Request server to send fresh inventory data and open
+  net.Start("IonRP_RequestOpenInventory")
+  net.SendToServer()
+  
+  print("[IonRP Inventory] Requesting inventory from server...")
 end)
 
 -- Bind key to open inventory (I key)

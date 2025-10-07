@@ -8,6 +8,7 @@ AddCSLuaFile("sh_inventory.lua")
 AddCSLuaFile("cl_inventory.lua")
 
 -- Network strings
+util.AddNetworkString("IonRP_RequestOpenInventory")
 util.AddNetworkString("IonRP_OpenInventory")
 util.AddNetworkString("IonRP_CloseInventory")
 util.AddNetworkString("IonRP_SyncInventory")
@@ -201,6 +202,14 @@ function IonRP.Inventory:Load(_ply, inventoryID, callback)
 
           print("[IonRP Inventory] Loaded inventory for " .. ply:Nick() .. " with " .. table.Count(inv.slots) .. " slots")
 
+          -- Send inventory to client immediately after loading
+          timer.Simple(0.5, function()
+            if IsValid(ply) then
+              self:SendToClient(ply)
+              print("[IonRP Inventory] Sent inventory to client for " .. ply:Nick())
+            end
+          end)
+
           if callback then callback(inv) end
         end,
         function(err)
@@ -310,10 +319,8 @@ function IonRP.Inventory:Serialize(inv)
   return data
 end
 
---[[
-    Send inventory to client
-    @param ply Player
-]] --
+--- Send inventory to client
+--- @param ply Player
 function IonRP.Inventory:SendToClient(ply)
   if not IsValid(ply) or not ply.IonRP_Inventory then return end
 
@@ -324,10 +331,8 @@ function IonRP.Inventory:SendToClient(ply)
   net.Send(ply)
 end
 
---[[
-    Open inventory for player
-    @param ply Player
-]] --
+--- Open inventory for player
+--- @param ply Player
 function IonRP.Inventory:Open(ply)
   if not IsValid(ply) or not ply.IonRP_Inventory then return end
 
@@ -338,6 +343,12 @@ function IonRP.Inventory:Open(ply)
 end
 
 -- Network handlers
+
+-- Player requests to open inventory (sends fresh data)
+net.Receive("IonRP_RequestOpenInventory", function(len, ply)
+  print("[IonRP Inventory] " .. ply:Nick() .. " requested to open inventory")
+  IonRP.Inventory:Open(ply)
+end)
 
 -- Player requests to move an item
 net.Receive("IonRP_MoveItem", function(len, ply)
