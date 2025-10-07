@@ -8,6 +8,7 @@ IonRP.Inventory = IonRP.Inventory or {}
 --- @class InventorySlot
 --- @field item ITEM|nil The item in this slot
 --- @field quantity number The quantity of items in this slot
+--- @field equippedSlot number|nil The weapon slot this item is equipped in (1 = primary, 2 = secondary), if applicable
 --- @field x number The X position in the inventory grid
 --- @field y number The Y position in the inventory grid
 
@@ -83,8 +84,9 @@ end
 --- @param x number
 --- @param y number
 --- @param ignoreOccupied boolean|nil If true, ignore if slots are occupied (for moving items)
+--- @param ignoreItemAt table|nil Table with {x=number, y=number} to ignore item at this origin position (for moving)
 --- @return boolean, string|nil Returns true if can fit, or false with reason
-function INVENTORY:CanFitItem(item, x, y, ignoreOccupied)
+function INVENTORY:CanFitItem(item, x, y, ignoreOccupied, ignoreItemAt)
   if not item then return false, "No item specified" end
   if not item.size or #item.size ~= 2 then return false, "Invalid item size" end
 
@@ -105,7 +107,31 @@ function INVENTORY:CanFitItem(item, x, y, ignoreOccupied)
       for iy = y, y + height - 1 do
         local slot = self:GetSlot(ix, iy)
         if slot and slot.item then
-          return false, "Slot occupied"
+          -- If we have an ignoreItemAt position, check if this slot belongs to that item
+          if ignoreItemAt then
+            local ignoreSlot = self:GetSlot(ignoreItemAt.x, ignoreItemAt.y)
+            if ignoreSlot and ignoreSlot.item then
+              -- Check if this occupied slot is part of the item we're ignoring
+              local isPartOfIgnoredItem = false
+              if slot.x == ignoreSlot.x and slot.y == ignoreSlot.y then
+                -- This is the origin of the item we're moving, ignore it
+                isPartOfIgnoredItem = true
+              else
+                -- Check if this slot references the same item
+                if slot.item == ignoreSlot.item then
+                  isPartOfIgnoredItem = true
+                end
+              end
+              
+              if not isPartOfIgnoredItem then
+                return false, "Slot occupied"
+              end
+            else
+              return false, "Slot occupied"
+            end
+          else
+            return false, "Slot occupied"
+          end
         end
       end
     end
@@ -304,21 +330,35 @@ function INVENTORY:MoveItem(fromX, fromY, toX, toY)
   -- Check if destination can accept the item
   local destSlot = self:GetSlot(toX, toY)
 
-  -- Try to stack with existing item
+  -- Try to stack with existing item (but not if it's the same item we're moving!)
   if destSlot and destSlot.item and item and item.identifier and destSlot.item.identifier == item.identifier then
-    if item.stackSize and destSlot.quantity and destSlot.quantity < item.stackSize then
-      local canAdd = math.min(quantity, item.stackSize - destSlot.quantity)
-
-      -- Remove from source
-      self:RemoveItem(originX, originY, canAdd)
-
-      -- Add to destination
-      destSlot.quantity = destSlot.quantity + canAdd
-
-      return true, nil
-    else
-      return false, "Destination stack is full"
+    -- Check if the destination slot is part of the same item instance we're moving
+    local isSameItemInstance = false
+    if destSlot.x == originX and destSlot.y == originY then
+      -- Destination is the origin of the item we're moving
+      isSameItemInstance = true
+    elseif destSlot.item == item then
+      -- Destination references the exact same item instance
+      isSameItemInstance = true
     end
+
+    if not isSameItemInstance then
+      -- Only try to stack if it's a different item instance
+      if item.stackSize and destSlot.quantity and destSlot.quantity < item.stackSize then
+        local canAdd = math.min(quantity, item.stackSize - destSlot.quantity)
+
+        -- Remove from source
+        self:RemoveItem(originX, originY, canAdd)
+
+        -- Add to destination
+        destSlot.quantity = destSlot.quantity + canAdd
+
+        return true, nil
+      else
+        return false, "Destination stack is full"
+      end
+    end
+    -- If it's the same item instance, fall through to the move logic below
   end
 
   -- Check if we can fit at new position
@@ -326,7 +366,8 @@ function INVENTORY:MoveItem(fromX, fromY, toX, toY)
     return false, "Invalid item"
   end
 
-  local canFit, reason = self:CanFitItem(item, toX, toY, true)
+  -- Pass the origin position so we can ignore slots occupied by the item we're moving
+  local canFit, reason = self:CanFitItem(item, toX, toY, false, {x = originX, y = originY})
 
   if not canFit then
     return false, reason

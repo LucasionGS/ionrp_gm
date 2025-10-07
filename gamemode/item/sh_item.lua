@@ -114,10 +114,7 @@ if SERVER then
     end
 
     if not ply:HasWeapon(self.weaponClass) then
-      -- TODO: Implement Equip Weapon... and inventory lol
-      -- The function should equip the specific weapon and put the item in the player's weapon slot
-      -- It should unequip any existing weapon in that slot first as well, if applicable.
-      ply:SV_EquipWeapon(self) -- This function should handle all that
+      ply:SV_EquipWeapon(self)
     end
 
     return true

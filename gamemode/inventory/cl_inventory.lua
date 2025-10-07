@@ -105,7 +105,7 @@ function IonRP.InventoryUI:Open()
   local inv = self.CurrentInventory
 
   local frameWidth = (inv.width * (cfg.SlotSize + cfg.SlotPadding)) + (cfg.Padding * 2) + cfg.SlotPadding
-  local frameHeight = (inv.height * (cfg.SlotSize + cfg.SlotPadding)) + cfg.HeaderHeight + cfg.FooterHeight +
+  local frameHeight = (inv.height * (cfg.SlotSize + cfg.SlotPadding)) + cfg.HeaderHeight + cfg.FooterHeight * 2 +
       (cfg.Padding * 2) + cfg.SlotPadding
 
   -- Main frame
@@ -264,7 +264,7 @@ function IonRP.InventoryUI:CreateGrid()
       if self.GridSlots[y] then
         for x = 0, inv.width - 1 do
           local slot = self.GridSlots[y][x]
-          if IsValid(slot) then
+          if IsValid(slot) and istable(slot) then
             -- Remove any model panels attached to this slot
             for k, v in pairs(slot) do
               if type(k) == "string" and string.StartsWith(k, "model_") and IsValid(v) then
@@ -292,11 +292,17 @@ function IonRP.InventoryUI:CreateGrid()
         cfg.SlotPadding + (y * (cfg.SlotSize + cfg.SlotPadding))
       )
       slot:SetSize(cfg.SlotSize, cfg.SlotSize)
+      slot:SetPaintedManually(false)
+      slot:SetDrawOnTop(true) -- Draw items on top of other slots
       slot.GridX = x
       slot.GridY = y
 
       slot.Paint = function(self, w, h)
-        local invSlot = inv:GetSlot(x, y)
+        -- Always use the current inventory reference for real-time updates
+        local currentInv = IonRP.InventoryUI.CurrentInventory
+        if not currentInv then return end
+        
+        local invSlot = currentInv:GetSlot(x, y)
         local bgColor = cfg.Colors.SlotBackground
 
         -- Check if this is the origin of an item
@@ -311,8 +317,14 @@ function IonRP.InventoryUI:CreateGrid()
         end
 
         -- Check if dragging over this slot
-        if IonRP.InventoryUI.DraggedItem then
-          local canFit, _ = inv:CanFitItem(IonRP.InventoryUI.DraggedItem, x, y, true)
+        if IonRP.InventoryUI.DraggedItem and IonRP.InventoryUI.DraggedFrom then
+          -- Pass the origin position so we can ignore slots occupied by the item we're moving
+          local canFit, _ = currentInv:CanFitItem(
+            IonRP.InventoryUI.DraggedItem, 
+            x, y, 
+            false, 
+            {x = IonRP.InventoryUI.DraggedFrom.x, y = IonRP.InventoryUI.DraggedFrom.y}
+          )
           if canFit then
             bgColor = cfg.Colors.SlotValid
           else
@@ -331,6 +343,9 @@ function IonRP.InventoryUI:CreateGrid()
           --- @type ITEM
           local item = invSlot.item
 
+          -- Disable clipping so multi-cell items can render beyond slot boundaries
+          DisableClipping(true)
+
           -- Calculate total size this item occupies (spans multiple slots)
           local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
           local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
@@ -343,54 +358,54 @@ function IonRP.InventoryUI:CreateGrid()
           surface.DrawOutlinedRect(2, 2, itemW - 4, itemH - 4, 1)
 
           -- Model preview area (fills most of the item space)
-          local modelW = itemW - 8
-          local modelH = itemH - 28 -- Leave room for name at top
-          local modelX = 4
-          local modelY = 22
+          -- local modelW = itemW - 8
+          -- local modelH = itemH - 28 -- Leave room for name at top
+          -- local modelX = 4
+          -- local modelY = 22
 
           -- Draw 3D model preview
-          if item.model then
-            -- Create or get cached model panel for this slot
-            local modelKey = "model_" .. x .. "_" .. y
-            if not self[modelKey] or not IsValid(self[modelKey]) then
-              local mdlPanel = vgui.Create("DModelPanel", self)
-              mdlPanel:SetModel(item.model)
-              mdlPanel:SetMouseInputEnabled(false)
-              mdlPanel:SetKeyboardInputEnabled(false)
+          -- if item.model then
+          --   -- Create or get cached model panel for this slot
+          --   local modelKey = "model_" .. x .. "_" .. y
+          --   if not self[modelKey] or not IsValid(self[modelKey]) then
+          --     local mdlPanel = vgui.Create("DModelPanel", self)
+          --     mdlPanel:SetModel(item.model)
+          --     mdlPanel:SetMouseInputEnabled(false)
+          --     mdlPanel:SetKeyboardInputEnabled(false)
 
-              -- Set camera position to frame the model nicely
-              local ent = mdlPanel:GetEntity()
-              if IsValid(ent) then
-                local mins, maxs = ent:GetRenderBounds()
-                local size = maxs - mins
-                local radius = math.max(size.x, size.y, size.z)
-                local dist = radius / math.tan(math.rad(45 / 2))
+          --     -- Set camera position to frame the model nicely
+          --     local ent = mdlPanel:GetEntity()
+          --     if IsValid(ent) then
+          --       local mins, maxs = ent:GetRenderBounds()
+          --       local size = maxs - mins
+          --       local radius = math.max(size.x, size.y, size.z)
+          --       local dist = radius / math.tan(math.rad(45 / 2))
 
-                mdlPanel:SetCamPos(Vector(dist * 0.6, dist * 0.6, dist * 0.4))
-                mdlPanel:SetLookAt((mins + maxs) / 2)
-                mdlPanel:SetFOV(45)
-              end
+          --       mdlPanel:SetCamPos(Vector(dist * 0.6, dist * 0.6, dist * 0.4))
+          --       mdlPanel:SetLookAt((mins + maxs) / 2)
+          --       mdlPanel:SetFOV(45)
+          --     end
 
-              self[modelKey] = mdlPanel
-            end
+          --     self[modelKey] = mdlPanel
+          --   end
 
-            local mdlPanel = self[modelKey]
-            if IsValid(mdlPanel) then
-              mdlPanel:SetPos(modelX, modelY)
-              mdlPanel:SetSize(modelW, modelH)
-              mdlPanel:SetVisible(true)
+          --   local mdlPanel = self[modelKey]
+          --   if IsValid(mdlPanel) then
+          --     mdlPanel:SetPos(modelX, modelY)
+          --     mdlPanel:SetSize(modelW, modelH)
+          --     mdlPanel:SetVisible(true)
 
-              -- Custom paint for model panel background
-              mdlPanel.Paint = function(pnl, w, h)
-                -- Dark background
-                draw.RoundedBox(4, 0, 0, w, h, Color(30, 30, 40, 220))
+          --     -- Custom paint for model panel background
+          --     mdlPanel.Paint = function(pnl, w, h)
+          --       -- Dark background
+          --       draw.RoundedBox(4, 0, 0, w, h, Color(30, 30, 40, 220))
 
-                -- Gradient overlay for depth
-                surface.SetDrawColor(0, 0, 0, 100)
-                surface.DrawRect(0, h * 0.7, w, h * 0.3)
-              end
-            end
-          end
+          --       -- Gradient overlay for depth
+          --       surface.SetDrawColor(0, 0, 0, 100)
+          --       surface.DrawRect(0, h * 0.7, w, h * 0.3)
+          --     end
+          --   end
+          -- end
 
           -- Item name with adaptive sizing
           local name = item.name
@@ -443,12 +458,19 @@ function IonRP.InventoryUI:CreateGrid()
 
           -- Bottom type indicator bar
           draw.RoundedBox(0, 2, itemH - 3, itemW - 4, 2, typeColor)
+
+          -- Re-enable clipping after drawing multi-cell items
+          DisableClipping(false)
         end
       end
 
       -- Mouse interaction
       slot.OnMousePressed = function(self, mouse)
-        local invSlot = inv:GetSlot(x, y)
+        -- Always use the current inventory reference for real-time updates
+        local currentInv = IonRP.InventoryUI.CurrentInventory
+        if not currentInv then return end
+        
+        local invSlot = currentInv:GetSlot(x, y)
 
         if not invSlot or not invSlot.item then return end
 
@@ -512,7 +534,7 @@ function IonRP.InventoryUI:Close()
   if self.GridSlots then
     for _, row in pairs(self.GridSlots) do
       for _, slot in pairs(row) do
-        if IsValid(slot) then
+        if IsValid(slot) and istable(slot) then
           for k, v in pairs(slot) do
             if type(k) == "string" and string.StartsWith(k, "model_") and IsValid(v) then
               v:Remove()

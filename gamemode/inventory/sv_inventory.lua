@@ -28,8 +28,8 @@ function IonRP.Inventory:InitializeTables()
     CREATE TABLE IF NOT EXISTS ionrp_inventories (
       id INT AUTO_INCREMENT PRIMARY KEY,
       steam_id VARCHAR(32) NOT NULL,
-      width INT NOT NULL DEFAULT 10,
-      height INT NOT NULL DEFAULT 10,
+      width INT NOT NULL DEFAULT 5,
+      height INT NOT NULL DEFAULT 3,
       max_weight FLOAT NOT NULL DEFAULT 50.0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -123,7 +123,7 @@ function IonRP.Inventory:Create(ply, callback)
 
   IonRP.Database:PreparedQuery(
     "INSERT INTO ionrp_inventories (steam_id, width, height, max_weight) VALUES (?, ?, ?, ?)",
-    { steamID, 10, 10, 50.0 },
+    { steamID, 5, 3, 50.0 },
     function(data)
       print("[IonRP Inventory] Created inventory for " .. ply:Nick())
 
@@ -163,8 +163,8 @@ function IonRP.Inventory:Load(_ply, inventoryID, callback)
 
       local invMeta = invData[1]
       local inv = INVENTORY:New(
-        tonumber(invMeta.width) or 10,
-        tonumber(invMeta.height) or 10,
+        tonumber(invMeta.width) or 5,
+        tonumber(invMeta.height) or 3,
         tonumber(invMeta.max_weight) or 50.0
       )
       inv.owner = ply
@@ -545,6 +545,10 @@ end
 --- @param item ITEM The weapon item to equip
 --- @return boolean
 function playerMeta:SV_EquipWeapon(item)
+  -- TODO: Implement Equip Weapon... and inventory lol
+  -- The function should equip the specific weapon and put the item in the player's weapon slot
+  -- It should unequip any existing weapon in that slot first as well, if applicable.
+  
   if not item or item.type ~= "weapon" or not item.weaponClass then
     return false
   end
