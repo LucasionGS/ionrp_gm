@@ -155,7 +155,26 @@ function playerMeta:GetJob()
   return IonRP.Jobs.List[jobId], jobId
 end
 
+if SERVER then
+  -- Salary interval
+  local salaryInterval = 60 -- in seconds
 
+  -- Pay salaries periodically
+  timer.Create("IonRP_PaySalaries", salaryInterval, 0, function()
+    for _, ply in ipairs(player.GetAll()) do
+      if not IsValid(ply) then continue end
+
+      local job = ply:GetJob()
+      if not job then continue end
+
+      local salary = job.salary
+      if not salary then continue end
+
+      ply:AddBank(salary)
+      ply:ChatPrint("You have received your salary: " .. IonRP.Util:FormatMoney(salary))
+    end
+  end)
+end
 
 -- Import weapons
 print("┌──────────────┬─────────────────────────────────────────────────────────────────•")

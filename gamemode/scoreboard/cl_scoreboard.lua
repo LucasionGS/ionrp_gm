@@ -227,7 +227,7 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
     -- Get rank and job info
     local rankColor = ply.GetRankColor and ply:GetRankColor() or Color(150, 150, 155)
     local rankName = ply.GetRankName and ply:GetRankName() or "User"
-    local jobName = ply:Team() and team.GetName(ply:Team()) or "Citizen"
+    local jobName = ply:GetJob().name
 
     -- Background with subtle rank tint
     local bgColor = index % 2 == 0 and cfg.Colors.PlayerRow or cfg.Colors.PlayerRowAlt

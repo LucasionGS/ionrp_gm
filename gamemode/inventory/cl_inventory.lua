@@ -234,6 +234,7 @@ function IonRP.InventoryUI:Open()
   end
 
   -- Create grid panel
+  --- @class DPanel
   self.GridPanel = vgui.Create("DPanel", gridContainer)
   self.GridPanel:SetSize(
     inv.width * (cfg.SlotSize + cfg.SlotPadding) + cfg.SlotPadding,
@@ -573,6 +574,7 @@ function IonRP.InventoryUI:CreateGrid()
       local isOrigin = invSlot and invSlot.x == ix and invSlot.y == iy
 
       if isOrigin and invSlot and invSlot.item then
+        --- @type ITEM
         local item = invSlot.item
 
         -- Calculate position and size
@@ -583,6 +585,7 @@ function IonRP.InventoryUI:CreateGrid()
 
         -- Create model panel if item has a model
         if item.model then
+          --- @class DModelPanel
           local modelPanel = vgui.Create("DModelPanel", itemOverlay)
           modelPanel:SetPos(slotX + 2, slotY + 2)
           modelPanel:SetSize(itemW - 4, itemH - 4)
@@ -630,6 +633,7 @@ function IonRP.InventoryUI:CreateGrid()
         local isOrigin = invSlot and invSlot.x == ix and invSlot.y == iy
 
         if isOrigin and invSlot and invSlot.item then
+          --- @type ITEM
           local item = invSlot.item
           local slotX = cfg.SlotPadding + (ix * (cfg.SlotSize + cfg.SlotPadding))
           local slotY = cfg.SlotPadding + (iy * (cfg.SlotSize + cfg.SlotPadding))
@@ -697,6 +701,7 @@ function IonRP.InventoryUI:CreateGrid()
         local isOrigin = invSlot and invSlot.x == ix and invSlot.y == iy
 
         if isOrigin and invSlot and invSlot.item then
+          --- @type ITEM
           local item = invSlot.item
           local slotX = cfg.SlotPadding + (ix * (cfg.SlotSize + cfg.SlotPadding))
           local slotY = cfg.SlotPadding + (iy * (cfg.SlotSize + cfg.SlotPadding))
@@ -785,6 +790,7 @@ function IonRP.InventoryUI:CreateGrid()
     -- Render dragged item at cursor position (ghost)
     if IonRP.InventoryUI.DraggedItem then
       local mx, my = pnl:CursorPos()
+      --- @type ITEM
       local item = IonRP.InventoryUI.DraggedItem
       local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
       local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
@@ -866,9 +872,12 @@ concommand.Add("ionrp_inventory", function(ply)
   print("[IonRP Inventory] Requesting inventory from server...")
 end)
 
+local Q_held = false
 -- Bind key to open inventory (Q key - hold to keep open)
 hook.Add("PlayerButtonDown", "IonRP_InventoryKey", function(ply, button)
   if button == KEY_Q then
+    if Q_held then return end
+    Q_held = true
     RunConsoleCommand("ionrp_inventory")
   end
 end)
@@ -877,6 +886,7 @@ end)
 hook.Add("PlayerButtonUp", "IonRP_InventoryKeyRelease", function(ply, button)
   if button == KEY_Q then
     IonRP.InventoryUI:Close()
+    Q_held = false
   end
 end)
 

@@ -2,6 +2,7 @@
   IonRP - Server Initialization
 --]]
 IonRP = IonRP or {}
+IonRP.Util = IonRP.Util or {}
 -- Send client files to players
 AddCSLuaFile("cl_init.lua")
 AddCSLuaFile("shared.lua")

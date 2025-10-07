@@ -27,8 +27,8 @@ end
   Shared utility functions
 --]]
 
--- Format money display
-function GM:FormatMoney(amount)
+--- Format money display
+function IonRP.Util:FormatMoney(amount)
   -- Format number with commas (e.g., 1000 -> 1,000)
   local formatted = tostring(amount)
   local k

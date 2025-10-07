@@ -2,6 +2,7 @@
   IonRP - Client Initialization
 --]]
 IonRP = IonRP or {}
+IonRP.Util = IonRP.Util or {}
 -- Load shared code
 include("shared.lua")
 

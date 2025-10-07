@@ -83,7 +83,7 @@ function GM:DrawIonRPHUD()
   draw.RoundedBox(cornerRadius, x + 10, barY, barWidth - 20, barHeight, barBgColor)
   draw.RoundedBox(cornerRadius, x + 10, barY, barWidth - 20, barHeight,
   Color(moneyColor.r, moneyColor.g, moneyColor.b, 60))
-  local moneyText = self:FormatMoney(money)
+  local moneyText = IonRP.Util:FormatMoney(money)
   draw.SimpleText("Cash: " .. moneyText, "DermaDefault", x + barWidth / 2, barY + barHeight / 2, moneyColor,
     TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   
