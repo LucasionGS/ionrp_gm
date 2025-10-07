@@ -4,6 +4,7 @@
 ]] --
 
 include("sh_character.lua")
+AddCSLuaFile("sh_character.lua")
 AddCSLuaFile("cl_character.lua")
 
 -- Network strings
