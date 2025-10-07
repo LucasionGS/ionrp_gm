@@ -258,6 +258,25 @@ function IonRP.InventoryUI:CreateGrid()
   local cfg = self.Config
   local inv = self.CurrentInventory
 
+  -- Clean up old model panels
+  if self.GridSlots then
+    for y = 0, inv.height - 1 do
+      if self.GridSlots[y] then
+        for x = 0, inv.width - 1 do
+          local slot = self.GridSlots[y][x]
+          if IsValid(slot) then
+            -- Remove any model panels attached to this slot
+            for k, v in pairs(slot) do
+              if type(k) == "string" and string.StartsWith(k, "model_") and IsValid(v) then
+                v:Remove()
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
   self.GridPanel:Clear()
   self.GridSlots = {}
 
@@ -323,47 +342,53 @@ function IonRP.InventoryUI:CreateGrid()
           surface.SetDrawColor(70, 70, 80, 200)
           surface.DrawOutlinedRect(2, 2, itemW - 4, itemH - 4, 1)
 
-          -- Icon background area (centered square in the item space)
-          local iconSize = math.min(itemW - 24, itemH - 32, 96) -- Max 96x96 icon
-          local iconX = (itemW - iconSize) / 2
-          local iconY = 20
+          -- Model preview area (fills most of the item space)
+          local modelW = itemW - 8
+          local modelH = itemH - 28 -- Leave room for name at top
+          local modelX = 4
+          local modelY = 22
 
-          -- Draw model icon (simplified representation)
+          -- Draw 3D model preview
           if item.model then
-            -- Get material/texture from model if available, otherwise draw placeholder
-            draw.RoundedBox(4, iconX, iconY, iconSize, iconSize, Color(40, 40, 50, 200))
+            -- Create or get cached model panel for this slot
+            local modelKey = "model_" .. x .. "_" .. y
+            if not self[modelKey] or not IsValid(self[modelKey]) then
+              local mdlPanel = vgui.Create("DModelPanel", self)
+              mdlPanel:SetModel(item.model)
+              mdlPanel:SetMouseInputEnabled(false)
+              mdlPanel:SetKeyboardInputEnabled(false)
 
-            -- Icon border
-            surface.SetDrawColor(80, 80, 90, 255)
-            surface.DrawOutlinedRect(iconX, iconY, iconSize, iconSize, 2)
+              -- Set camera position to frame the model nicely
+              local ent = mdlPanel:GetEntity()
+              if IsValid(ent) then
+                local mins, maxs = ent:GetRenderBounds()
+                local size = maxs - mins
+                local radius = math.max(size.x, size.y, size.z)
+                local dist = radius / math.tan(math.rad(45 / 2))
 
-            -- Calculate center position for icon drawing
-            local centerX = iconX + iconSize / 2
-            local centerY = iconY + iconSize / 2
+                mdlPanel:SetCamPos(Vector(dist * 0.6, dist * 0.6, dist * 0.4))
+                mdlPanel:SetLookAt((mins + maxs) / 2)
+                mdlPanel:SetFOV(45)
+              end
 
-            -- Draw a simple icon representation based on item type
-            local iconColor = Color(120, 120, 140)
-            if item.type == "weapon" then
-              iconColor = Color(255, 100, 100)
-              -- Draw weapon icon (crossed lines suggesting a gun)
-              surface.SetDrawColor(iconColor)
-              surface.DrawLine(centerX - iconSize / 3, centerY, centerX + iconSize / 3, centerY)
-              surface.DrawLine(centerX, centerY - iconSize / 4, centerX, centerY + iconSize / 4)
-            elseif item.type == "consumable" then
-              iconColor = Color(100, 255, 100)
-              -- Draw consumable icon (bottle shape)
-              draw.RoundedBox(2, centerX - iconSize / 6, centerY - iconSize / 4, iconSize / 3, iconSize / 2, iconColor)
-            else
-              iconColor = Color(100, 150, 255)
-              -- Draw misc icon (box)
-              surface.SetDrawColor(iconColor)
-              surface.DrawOutlinedRect(centerX - iconSize / 4, centerY - iconSize / 4, iconSize / 2, iconSize / 2, 3)
+              self[modelKey] = mdlPanel
             end
 
-            -- Model name text (if room)
-            if iconSize > 40 then
-              draw.SimpleText("MODEL", "DermaDefault", centerX, centerY - 6,
-                Color(150, 150, 160, 150), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            local mdlPanel = self[modelKey]
+            if IsValid(mdlPanel) then
+              mdlPanel:SetPos(modelX, modelY)
+              mdlPanel:SetSize(modelW, modelH)
+              mdlPanel:SetVisible(true)
+
+              -- Custom paint for model panel background
+              mdlPanel.Paint = function(pnl, w, h)
+                -- Dark background
+                draw.RoundedBox(4, 0, 0, w, h, Color(30, 30, 40, 220))
+
+                -- Gradient overlay for depth
+                surface.SetDrawColor(0, 0, 0, 100)
+                surface.DrawRect(0, h * 0.7, w, h * 0.3)
+              end
             end
           end
 
@@ -483,6 +508,21 @@ end
     Close the inventory UI
 ]] --
 function IonRP.InventoryUI:Close()
+  -- Clean up all model panels before closing
+  if self.GridSlots then
+    for _, row in pairs(self.GridSlots) do
+      for _, slot in pairs(row) do
+        if IsValid(slot) then
+          for k, v in pairs(slot) do
+            if type(k) == "string" and string.StartsWith(k, "model_") and IsValid(v) then
+              v:Remove()
+            end
+          end
+        end
+      end
+    end
+  end
+
   if IsValid(self.Frame) then
     self.Frame:AlphaTo(0, 0.2, 0, function()
       if IsValid(self.Frame) then
