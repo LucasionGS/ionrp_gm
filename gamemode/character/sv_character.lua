@@ -122,7 +122,7 @@ function IonRP.Character:Create(ply, firstName, lastName, model)
 
   -- Insert into database
   IonRP.Database:PreparedQuery(
-    "INSERT INTO ionrp_characters (steam_id, first_name, last_name, bank) VALUES (?, ?, ?, ?)",
+    "INSERT INTO ionrp_characters (steam_id, first_name, last_name, model, bank) VALUES (?, ?, ?, ?, ?)",
     { steamID, firstName, lastName, model, IonRP.Bank.Config.StartingBank },
     function(data)
       print(string.format("[IonRP] Created character for %s: %s %s", ply:Nick(), firstName, lastName))
