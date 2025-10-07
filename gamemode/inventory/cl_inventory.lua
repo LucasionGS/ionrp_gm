@@ -318,7 +318,7 @@ function IonRP.InventoryUI:CreateGrid()
 
           -- Item background with gradient effect
           draw.RoundedBox(4, 2, 2, itemW - 4, itemH - 4, Color(50, 50, 60, 240))
-          
+
           -- Subtle inner highlight
           surface.SetDrawColor(70, 70, 80, 200)
           surface.DrawOutlinedRect(2, 2, itemW - 4, itemH - 4, 1)
@@ -332,35 +332,37 @@ function IonRP.InventoryUI:CreateGrid()
           if item.model then
             -- Get material/texture from model if available, otherwise draw placeholder
             draw.RoundedBox(4, iconX, iconY, iconSize, iconSize, Color(40, 40, 50, 200))
-            
+
             -- Icon border
             surface.SetDrawColor(80, 80, 90, 255)
             surface.DrawOutlinedRect(iconX, iconY, iconSize, iconSize, 2)
-            
+
+            -- Calculate center position for icon drawing
+            local centerX = iconX + iconSize / 2
+            local centerY = iconY + iconSize / 2
+
             -- Draw a simple icon representation based on item type
             local iconColor = Color(120, 120, 140)
             if item.type == "weapon" then
               iconColor = Color(255, 100, 100)
               -- Draw weapon icon (crossed lines suggesting a gun)
               surface.SetDrawColor(iconColor)
-              local centerX = iconX + iconSize / 2
-              local centerY = iconY + iconSize / 2
-              surface.DrawLine(centerX - iconSize/3, centerY, centerX + iconSize/3, centerY)
-              surface.DrawLine(centerX, centerY - iconSize/4, centerX, centerY + iconSize/4)
+              surface.DrawLine(centerX - iconSize / 3, centerY, centerX + iconSize / 3, centerY)
+              surface.DrawLine(centerX, centerY - iconSize / 4, centerX, centerY + iconSize / 4)
             elseif item.type == "consumable" then
               iconColor = Color(100, 255, 100)
               -- Draw consumable icon (bottle shape)
-              draw.RoundedBox(2, centerX - iconSize/6, centerY - iconSize/4, iconSize/3, iconSize/2, iconColor)
+              draw.RoundedBox(2, centerX - iconSize / 6, centerY - iconSize / 4, iconSize / 3, iconSize / 2, iconColor)
             else
               iconColor = Color(100, 150, 255)
               -- Draw misc icon (box)
               surface.SetDrawColor(iconColor)
-              surface.DrawOutlinedRect(centerX - iconSize/4, centerY - iconSize/4, iconSize/2, iconSize/2, 3)
+              surface.DrawOutlinedRect(centerX - iconSize / 4, centerY - iconSize / 4, iconSize / 2, iconSize / 2, 3)
             end
-            
+
             -- Model name text (if room)
             if iconSize > 40 then
-              draw.SimpleText("MODEL", "DermaDefault", iconX + iconSize/2, iconY + iconSize/2 - 6, 
+              draw.SimpleText("MODEL", "DermaDefault", centerX, centerY - 6,
                 Color(150, 150, 160, 150), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
           end
@@ -376,7 +378,7 @@ function IonRP.InventoryUI:CreateGrid()
           surface.SetFont("DermaDefault")
           local nameW, nameH = surface.GetTextSize(name)
           draw.RoundedBox(2, (itemW / 2) - (nameW / 2) - 4, 4, nameW + 8, 16, Color(0, 0, 0, 200))
-          
+
           draw.SimpleText(name, "DermaDefault", itemW / 2, 6, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
 
           -- Quantity badge (if stackable and more than 1)
@@ -384,7 +386,7 @@ function IonRP.InventoryUI:CreateGrid()
             local qtyText = "x" .. invSlot.quantity
             surface.SetFont("DermaDefaultBold")
             local qtyW = surface.GetTextSize(qtyText)
-            
+
             -- Badge background with accent color
             draw.RoundedBox(3, itemW - qtyW - 12, itemH - 20, qtyW + 8, 16, cfg.Colors.AccentCyan)
             draw.SimpleText(qtyText, "DermaDefaultBold", itemW - 6, itemH - 12, Color(255, 255, 255, 255),
@@ -394,7 +396,7 @@ function IonRP.InventoryUI:CreateGrid()
           -- Weight display (bottom left)
           local weight = item.weight * invSlot.quantity
           local weightText = string.format("%.1fkg", weight)
-          
+
           -- Show weight if there's room (at least 2 slots in either dimension)
           if item.size[2] >= 2 or item.size[1] >= 2 then
             surface.SetFont("DermaDefault")
@@ -413,7 +415,7 @@ function IonRP.InventoryUI:CreateGrid()
           elseif item.type == "misc" then
             typeColor = Color(100, 150, 255, 200) -- Blue for misc
           end
-          
+
           -- Bottom type indicator bar
           draw.RoundedBox(0, 2, itemH - 3, itemW - 4, 2, typeColor)
         end
@@ -499,7 +501,7 @@ concommand.Add("ionrp_inventory", function(ply)
   -- Request server to send fresh inventory data and open
   net.Start("IonRP_RequestOpenInventory")
   net.SendToServer()
-  
+
   print("[IonRP Inventory] Requesting inventory from server...")
 end)
 
