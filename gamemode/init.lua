@@ -22,6 +22,9 @@ AddCSLuaFile("scoreboard/cl_scoreboard.lua")
 AddCSLuaFile("developer/cl_model_explorer.lua")
 -- Items
 AddCSLuaFile("item/sh_item.lua")
+-- Inventory
+AddCSLuaFile("inventory/sh_inventory.lua")
+AddCSLuaFile("inventory/cl_inventory.lua")
 
 -- Load shared code
 include("shared.lua")
@@ -43,9 +46,13 @@ include("developer/sv_model_explorer.lua")
 
 -- Load commands
 include("commands/sv_rank_commands.lua")
+include("commands/sv_inventory_commands.lua")
 
 -- Items
 include("item/sh_item.lua")
+
+-- Inventory
+include("inventory/sv_inventory.lua")
 
 function GM:Initialize()
   self.BaseClass.Initialize(self)

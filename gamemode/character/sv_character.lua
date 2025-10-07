@@ -54,6 +54,17 @@ function IonRP.Character:Load(ply)
 
       print(string.format("[IonRP] Loaded character for %s: %s %s", ply:Nick(), data.first_name, data.last_name))
 
+      -- Load inventory
+      if IonRP.Inventory then
+        IonRP.Inventory:GetOrCreate(ply, function(inv)
+          if inv then
+            print(string.format("[IonRP] Loaded inventory for %s", ply:Nick()))
+          else
+            print(string.format("[IonRP] Failed to load inventory for %s", ply:Nick()))
+          end
+        end)
+      end
+
       -- Notify client that character is loaded
       net.Start("IonRP_CharacterLoaded")
       net.Send(ply)

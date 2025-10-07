@@ -16,6 +16,11 @@ function IonRP.Database:InitializeTables()
     IonRP.Ranks:InitializeTables()
   end
 
+  -- Initialize inventory tables if available
+  if IonRP.Inventory and IonRP.Inventory.InitializeTables then
+    IonRP.Inventory:InitializeTables()
+  end
+
   -- Create characters table
   local query = self:query([[
         CREATE TABLE IF NOT EXISTS ionrp_characters (
