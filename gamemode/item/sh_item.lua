@@ -71,7 +71,7 @@ function ITEM:New(identifier, name)
   newItem.name = name
 
   IonRP.Items.List[identifier] = newItem
-  print("[IonRP Items] Registered item: " .. identifier .. " - " .. name)
+  print("│ [IonRP Items] ├ Registered item: " .. identifier .. " - " .. name)
   
   return newItem
 end
@@ -138,7 +138,9 @@ if CLIENT then
 end
 
 -- Import weapons
-print("[IonRP Items] Loading weapon items...")
+print("┌───────────────┬────────────────────────────────────────────────────────────────•")
+print("│ [IonRP Items] │ Loading Items")
+print("│ [IonRP Items] │ Loading weapon items...")
 for _, weapon in ipairs(file.Find("ionrp/gamemode/item/weapons/*.lua", "LUA")) do
   include("weapons/" .. weapon)
   if SERVER then
@@ -147,7 +149,7 @@ for _, weapon in ipairs(file.Find("ionrp/gamemode/item/weapons/*.lua", "LUA")) d
 end
 
 -- Import consumable items
-print("[IonRP Items] Loading consumable items...")
+print("│ [IonRP Items] │ Loading consumable items...")
 for _, consumable in ipairs(file.Find("ionrp/gamemode/item/consumable/*.lua", "LUA")) do
   include("consumable/" .. consumable)
   if SERVER then
@@ -156,10 +158,18 @@ for _, consumable in ipairs(file.Find("ionrp/gamemode/item/consumable/*.lua", "L
 end
 
 -- Import misc items
-print("[IonRP Items] Loading misc items...")
+print("│ [IonRP Items] │ Loading misc items...")
 for _, misc in ipairs(file.Find("ionrp/gamemode/item/misc/*.lua", "LUA")) do
   include("misc/" .. misc)
   if SERVER then
     AddCSLuaFile("misc/" .. misc)
   end
 end
+print("└───────────────┴────────────────────────────────────────────────────────────────•")
+
+
+--[[
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                          SERVER-SIDE FUNCTIONS                          │
+  └─────────────────────────────────────────────────────────────────────────┘
+]]

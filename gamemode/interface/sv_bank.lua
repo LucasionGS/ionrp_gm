@@ -23,9 +23,9 @@ IonRP.Bank.Config = {
 	Initialize player bank account
 --]]
 function IonRP.Bank:InitializePlayer(ply)
-  if ply:GetBank() == 0 then
-    ply:SetBank(self.Config.StartingBank)
-  end
+  -- if ply:GetBank() == 0 then
+  --   ply:SetBank(self.Config.StartingBank)
+  -- end
 end
 
 --[[
@@ -150,7 +150,7 @@ concommand.Add("ionrp_openbank", function(ply, cmd, args)
 
   local target = ply
   if args[1] then
-    target = Player(tonumber(args[1]))
+    target = Player(tonumber(args[1]) or 0)
   end
 
   if IsValid(target) then
