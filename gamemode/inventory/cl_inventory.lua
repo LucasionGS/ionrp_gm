@@ -403,8 +403,9 @@ function IonRP.InventoryUI:CreateGrid()
 
         if not invSlot or not invSlot.item then return end
 
-        -- Only interact with origin slots
-        if invSlot.x ~= x or invSlot.y ~= y then return end
+        -- Allow interaction from ANY cell the item occupies (not just origin)
+        -- Get the origin position of the item
+        local originX, originY = invSlot.x, invSlot.y
 
         -- Check if already dragging - if so, don't start a new drag
         if IonRP.InventoryUI.DraggedItem then
@@ -412,11 +413,12 @@ function IonRP.InventoryUI:CreateGrid()
         end
 
         -- Track mouse down state (don't start drag yet, wait for movement)
+        -- Use the ORIGIN position for all operations, not the clicked cell
         local mx, my = input.GetCursorPos()
         IonRP.InventoryUI.MouseDownPos = { x = mx, y = my }
         IonRP.InventoryUI.MouseDownTime = SysTime()
         IonRP.InventoryUI.MouseDownButton = mouse
-        IonRP.InventoryUI.MouseDownSlot = { x = x, y = y, quantity = invSlot.quantity, item = invSlot.item }
+        IonRP.InventoryUI.MouseDownSlot = { x = originX, y = originY, quantity = invSlot.quantity, item = invSlot.item }
       end
 
       slot.OnMouseReleased = function(self, mouse)
@@ -443,13 +445,18 @@ function IonRP.InventoryUI:CreateGrid()
           local downSlot = IonRP.InventoryUI.MouseDownSlot
           local downButton = IonRP.InventoryUI.MouseDownButton
           
-          -- Check if we released on the same slot we pressed on
-          if downSlot.x == x and downSlot.y == y and downButton == mouse then
+          -- Get the current slot (might be any cell of a multi-cell item)
+          local currentInv = IonRP.InventoryUI.CurrentInventory
+          local invSlot = currentInv and currentInv:GetSlot(x, y)
+          local originX, originY = invSlot and invSlot.x or x, invSlot and invSlot.y or y
+          
+          -- Check if we released on the same ITEM (any cell) we pressed on
+          if downSlot.x == originX and downSlot.y == originY and downButton == mouse then
             if mouse == MOUSE_LEFT then
-              -- Left click = use item
+              -- Left click = use item (use the origin position)
               net.Start("IonRP_UseItem")
-              net.WriteUInt(x, 8)
-              net.WriteUInt(y, 8)
+              net.WriteUInt(downSlot.x, 8)
+              net.WriteUInt(downSlot.y, 8)
               net.SendToServer()
             elseif mouse == MOUSE_RIGHT then
               -- Right click on single item or stack = drop a single item from the stack
