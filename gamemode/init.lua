@@ -25,6 +25,9 @@ AddCSLuaFile("item/sh_item.lua")
 -- Inventory
 AddCSLuaFile("inventory/sh_inventory.lua")
 AddCSLuaFile("inventory/cl_inventory.lua")
+-- IonSys (Admin Panel)
+AddCSLuaFile("ionsys/sh_ionsys.lua")
+AddCSLuaFile("ionsys/cl_ionsys.lua")
 
 -- Load shared code
 include("shared.lua")
@@ -53,6 +56,9 @@ include("item/sh_item.lua")
 
 -- Inventory
 include("inventory/sv_inventory.lua")
+
+-- IonSys (Admin Panel)
+include("ionsys/sv_ionsys.lua")
 
 function GM:Initialize()
   self.BaseClass.Initialize(self)

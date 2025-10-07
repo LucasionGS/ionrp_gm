@@ -66,6 +66,7 @@ if SERVER then
     local quantity = tonumber(args[3]) or 1
 
     -- Find target player
+    --- @type Player|nil
     local target = nil
     for _, ply in ipairs(player.GetAll()) do
       if string.find(string.lower(ply:Nick()), string.lower(targetIdentifier)) then

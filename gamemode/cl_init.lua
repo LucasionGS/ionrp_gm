@@ -32,3 +32,5 @@ include("developer/cl_model_explorer.lua")
 include("item/sh_item.lua")
 -- Inventory
 include("inventory/cl_inventory.lua")
+-- IonSys (Admin Panel)
+include("ionsys/cl_ionsys.lua")
