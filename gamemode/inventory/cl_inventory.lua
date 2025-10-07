@@ -469,6 +469,9 @@ function IonRP.InventoryUI:CreateGrid()
     end
   end
 
+  -- Store model panels for cleanup
+  self.ModelPanels = self.ModelPanels or {}
+
   -- Helper function to render an item
   local function RenderItem(item, invSlot, slotX, slotY, alpha)
     alpha = alpha or 255
@@ -532,6 +535,64 @@ function IonRP.InventoryUI:CreateGrid()
   itemOverlay:SetSize(self.GridPanel:GetSize())
   itemOverlay:SetMouseInputEnabled(false) -- Allow clicks to pass through to slots
   itemOverlay:SetKeyboardInputEnabled(false)
+  
+  -- Clean up old model panels
+  for _, mdl in pairs(self.ModelPanels or {}) do
+    if IsValid(mdl) then
+      mdl:Remove()
+    end
+  end
+  self.ModelPanels = {}
+  
+  -- Create model panels for each item
+  for iy = 0, inv.height - 1 do
+    for ix = 0, inv.width - 1 do
+      local invSlot = inv:GetSlot(ix, iy)
+      local isOrigin = invSlot and invSlot.x == ix and invSlot.y == iy
+      
+      if isOrigin and invSlot and invSlot.item then
+        local item = invSlot.item
+        
+        -- Calculate position and size
+        local slotX = cfg.SlotPadding + (ix * (cfg.SlotSize + cfg.SlotPadding))
+        local slotY = cfg.SlotPadding + (iy * (cfg.SlotSize + cfg.SlotPadding))
+        local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
+        local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
+        
+        -- Create model panel if item has a model
+        if item.model then
+          local modelPanel = vgui.Create("DModelPanel", itemOverlay)
+          modelPanel:SetPos(slotX + 2, slotY + 2)
+          modelPanel:SetSize(itemW - 4, itemH - 4)
+          modelPanel:SetModel(item.model)
+          modelPanel:SetMouseInputEnabled(false)
+          modelPanel:SetKeyboardInputEnabled(false)
+          modelPanel:SetFOV(45)
+          
+          -- Store reference with position for later management
+          modelPanel.ItemX = ix
+          modelPanel.ItemY = iy
+          modelPanel.Item = item
+          
+          -- Auto-fit the model in the view
+          local ent = modelPanel:GetEntity()
+          if IsValid(ent) then
+            local mins, maxs = ent:GetRenderBounds()
+            local size = maxs - mins
+            local radius = math.max(size.x, size.y, size.z)
+            local offset = size / 2 + mins
+            
+            modelPanel:SetCamPos(Vector(radius * 0.75, radius * 0.75, radius * 0.5))
+            modelPanel:SetLookAt(offset)
+          end
+          
+          -- Store panel for management
+          table.insert(self.ModelPanels, modelPanel)
+        end
+      end
+    end
+  end
+  
   itemOverlay.Paint = function(pnl, w, h)
     -- Render all items on top of the grid
     local currentInv = IonRP.InventoryUI.CurrentInventory
@@ -566,10 +627,21 @@ function IonRP.InventoryUI:CreateGrid()
               }
               RenderItem(item, remainingSlot, slotX, slotY, 128) -- Dimmed to show it's being split
             end
-            -- Otherwise skip rendering (entire stack is being moved)
+            -- Hide the model panel for dragged items
+            for _, mdl in pairs(IonRP.InventoryUI.ModelPanels or {}) do
+              if IsValid(mdl) and mdl.ItemX == ix and mdl.ItemY == iy then
+                mdl:SetVisible(false)
+              end
+            end
           else
             -- Normal rendering
             RenderItem(item, invSlot, slotX, slotY, 255)
+            -- Show model panel
+            for _, mdl in pairs(IonRP.InventoryUI.ModelPanels or {}) do
+              if IsValid(mdl) and mdl.ItemX == ix and mdl.ItemY == iy then
+                mdl:SetVisible(true)
+              end
+            end
           end
         end
       end
@@ -608,8 +680,8 @@ end
 function IonRP.InventoryUI:RefreshGrid()
   if not IsValid(self.GridPanel) then return end
 
-  -- Just trigger a repaint, the Paint function will handle the rest
-  self.GridPanel:InvalidateLayout(true)
+  -- Recreate the entire grid to update item positions and models
+  self:CreateGrid()
 end
 
 --[[
@@ -617,6 +689,15 @@ end
 ]] --
 function IonRP.InventoryUI:Close()
   -- Clean up all model panels before closing
+  if self.ModelPanels then
+    for _, mdl in pairs(self.ModelPanels) do
+      if IsValid(mdl) then
+        mdl:Remove()
+      end
+    end
+    self.ModelPanels = {}
+  end
+  
   if self.GridSlots then
     for _, row in pairs(self.GridSlots) do
       for _, slot in pairs(row) do
