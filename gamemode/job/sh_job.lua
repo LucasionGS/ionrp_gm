@@ -44,6 +44,10 @@ JOB.color = Color(200, 200, 200)
 --- @type table<string>
 JOB.weapons = {}
 
+--- The ammunition given to players when they take this job.
+--- @type table<"ar2"|"smg1"|"pistol"|"buckshot"|"357", number>
+JOB.ammo = {}
+
 --- The default weapons given to all jobs (e.g. fists, physgun).
 --- @type table<string>
 JOB.defaultWeapons = {
@@ -102,7 +106,6 @@ end
 
 --- Apply for this job as a player
 --- @param ply Player
---- @return boolean, string|nil
 function JOB:ApplyForJob(ply)
   if not ply or not IsValid(ply) then return false, "Invalid player" end
   if not self or not self.identifier then return false, "Invalid job" end
@@ -111,10 +114,11 @@ function JOB:ApplyForJob(ply)
     ply:SetNWString("IonRP_Job", self.identifier)
     self:Loadout(ply)
     ply:ChatPrint("You are now employed as: " .. self.name)
-    return true
+  else
+    net.Start("IonRP_JobChangeRequest")
+    net.WriteString(self.identifier)
+    net.SendToServer()
   end
-
-  return false, "Not running on server"
 end
 
 --- Give the player their job loadout (model, weapons, etc.)
@@ -128,10 +132,15 @@ function JOB:Loadout(ply)
 
   -- Give weapons
   for _, defaultWeapon in ipairs(self.defaultWeapons) do
-    ply:Give(defaultWeapon)
+    ply:Give(defaultWeapon, true)
   end
   for _, weapon in ipairs(self.weapons) do
-    ply:Give(weapon)
+    ply:Give(weapon, true)
+  end
+
+  -- Give ammo
+  for ammoType, amount in pairs(self.ammo) do
+    ply:GiveAmmo(amount, ammoType, true)
   end
 
   print("[IonRP] Player " .. ply:Nick() .. " has been given the loadout for job: " .. self.name)
@@ -172,6 +181,21 @@ if SERVER then
 
       ply:AddBank(salary)
       ply:ChatPrint("You have received your salary: " .. IonRP.Util:FormatMoney(salary))
+    end
+  end)
+
+  util.AddNetworkString("IonRP_JobChangeRequest")
+  net.Receive("IonRP_JobChangeRequest", function(len, ply)
+    local jobId = net.ReadString()
+    local job = IonRP.Jobs.List[jobId]
+    if not job then
+      ply:ChatPrint("Invalid job: " .. jobId)
+      return
+    end
+
+    local success, err = job:ApplyForJob(ply)
+    if not success then
+      ply:ChatPrint("Failed to change job: " .. err)
     end
   end)
 end
