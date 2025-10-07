@@ -16,7 +16,7 @@ IonRP.Bank.Config = {
   DepositFee = 0,  -- Percentage fee for deposits (0 = no fee)
   MinWithdraw = 1,
   MinDeposit = 1,
-  StartingBank = 0, -- Starting bank balance for new players
+  StartingBank = GetConVar("ionrp_starting_money"):GetInt() or 0, -- Starting bank balance for new players
 }
 
 --[[
