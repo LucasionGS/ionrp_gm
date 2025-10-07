@@ -21,8 +21,10 @@ IonRP.InventoryUI.Config = {
     SlotBackground = Color(35, 35, 45, 200),
     SlotHover = Color(55, 50, 70, 230),
     SlotOccupied = Color(45, 45, 55, 220),
-    SlotInvalid = Color(80, 30, 30, 200),
-    SlotValid = Color(30, 80, 50, 200),
+
+    SlotInvalid = Color(80, 30, 30, 100),
+    SlotValid = Color(30, 80, 50, 100),
+
     Divider = Color(100, 80, 120, 100),
     Text = Color(255, 255, 255, 255),
     TextDim = Color(200, 200, 210, 255),
@@ -397,6 +399,62 @@ function IonRP.InventoryUI:CreateGrid()
     end
   end
 
+  -- Helper function to render an item
+  local function RenderItem(item, invSlot, slotX, slotY, alpha)
+    alpha = alpha or 255
+    local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
+    local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
+
+    -- Item background with gradient effect
+    draw.RoundedBox(4, slotX + 2, slotY + 2, itemW - 4, itemH - 4, ColorAlpha(Color(50, 50, 60, 240), alpha))
+
+    -- Subtle inner highlight
+    surface.SetDrawColor(ColorAlpha(Color(70, 70, 80, 200), alpha))
+    surface.DrawOutlinedRect(slotX + 2, slotY + 2, itemW - 4, itemH - 4, 1)
+
+    -- Item name
+    local name = item.name
+    local maxNameChars = math.max(8, item.size[1] * 5)
+    if #name > maxNameChars then
+      name = string.sub(name, 1, maxNameChars - 2) .. ".."
+    end
+
+    surface.SetFont("DermaDefault")
+    local nameW, nameH = surface.GetTextSize(name)
+    draw.RoundedBox(2, slotX + (itemW / 2) - (nameW / 2) - 4, slotY + 4, nameW + 8, 16, ColorAlpha(Color(0, 0, 0, 200), alpha))
+    draw.SimpleText(name, "DermaDefault", slotX + itemW / 2, slotY + 6, ColorAlpha(cfg.Colors.Text, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+
+    -- Quantity badge
+    if invSlot and item.stackSize > 1 and invSlot.quantity > 1 then
+      local qtyText = "x" .. invSlot.quantity
+      surface.SetFont("DermaDefaultBold")
+      local qtyW = surface.GetTextSize(qtyText)
+      draw.RoundedBox(3, slotX + itemW - qtyW - 12, slotY + itemH - 20, qtyW + 8, 16, ColorAlpha(cfg.Colors.AccentCyan, alpha))
+      draw.SimpleText(qtyText, "DermaDefaultBold", slotX + itemW - 6, slotY + itemH - 6, ColorAlpha(Color(255, 255, 255, 255), alpha), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+    end
+
+    -- Weight display
+    if item.size[2] >= 2 or item.size[1] >= 2 then
+      local weight = invSlot and (item.weight * invSlot.quantity) or item.weight
+      local weightText = string.format("%.1fkg", weight)
+      surface.SetFont("DermaDefault")
+      local weightW = surface.GetTextSize(weightText)
+      draw.RoundedBox(2, slotX + 4, slotY + itemH - 18, weightW + 6, 14, ColorAlpha(Color(0, 0, 0, 180), alpha))
+      draw.SimpleText(weightText, "DermaDefault", slotX + 7, slotY + itemH - 16, ColorAlpha(cfg.Colors.TextMuted, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    end
+
+    -- Item type indicator
+    local typeColor = Color(120, 120, 120)
+    if item.type == "weapon" then
+      typeColor = Color(255, 100, 100, 200)
+    elseif item.type == "consumable" then
+      typeColor = Color(100, 255, 100, 200)
+    elseif item.type == "misc" then
+      typeColor = Color(100, 150, 255, 200)
+    end
+    draw.RoundedBox(0, slotX + 2, slotY + itemH - 3, itemW - 4, 2, ColorAlpha(typeColor, alpha))
+  end
+
   -- Create item overlay panel that renders on top of all slots
   -- Created AFTER slots so it renders on top
   local itemOverlay = vgui.Create("DPanel", self.GridPanel)
@@ -417,62 +475,41 @@ function IonRP.InventoryUI:CreateGrid()
         if isOrigin and invSlot and invSlot.item then
           local item = invSlot.item
           
-          -- Calculate position and size
+          -- Calculate position
           local slotX = cfg.SlotPadding + (ix * (cfg.SlotSize + cfg.SlotPadding))
           local slotY = cfg.SlotPadding + (iy * (cfg.SlotSize + cfg.SlotPadding))
-          local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-          local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-
-          -- Item background with gradient effect
-          draw.RoundedBox(4, slotX + 2, slotY + 2, itemW - 4, itemH - 4, Color(50, 50, 60, 240))
-
-          -- Subtle inner highlight
-          surface.SetDrawColor(70, 70, 80, 200)
-          surface.DrawOutlinedRect(slotX + 2, slotY + 2, itemW - 4, itemH - 4, 1)
-
-          -- Item name
-          local name = item.name
-          local maxNameChars = math.max(8, item.size[1] * 5)
-          if #name > maxNameChars then
-            name = string.sub(name, 1, maxNameChars - 2) .. ".."
+          
+          -- Skip rendering if this is the item being dragged (will be rendered at cursor)
+          local isDragged = IonRP.InventoryUI.DraggedItem == item and 
+                           IonRP.InventoryUI.DraggedFrom and
+                           IonRP.InventoryUI.DraggedFrom.x == ix and 
+                           IonRP.InventoryUI.DraggedFrom.y == iy
+          
+          if not isDragged then
+            RenderItem(item, invSlot, slotX, slotY, 255)
           end
-
-          surface.SetFont("DermaDefault")
-          local nameW, nameH = surface.GetTextSize(name)
-          draw.RoundedBox(2, slotX + (itemW / 2) - (nameW / 2) - 4, slotY + 4, nameW + 8, 16, Color(0, 0, 0, 200))
-          draw.SimpleText(name, "DermaDefault", slotX + itemW / 2, slotY + 6, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-
-          -- Quantity badge
-          if item.stackSize > 1 and invSlot.quantity > 1 then
-            local qtyText = "x" .. invSlot.quantity
-            surface.SetFont("DermaDefaultBold")
-            local qtyW = surface.GetTextSize(qtyText)
-            draw.RoundedBox(3, slotX + itemW - qtyW - 12, slotY + itemH - 20, qtyW + 8, 16, cfg.Colors.AccentCyan)
-            draw.SimpleText(qtyText, "DermaDefaultBold", slotX + itemW - 6, slotY + itemH - 12, Color(255, 255, 255, 255), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
-          end
-
-          -- Weight display
-          if item.size[2] >= 2 or item.size[1] >= 2 then
-            local weight = item.weight * invSlot.quantity
-            local weightText = string.format("%.1fkg", weight)
-            surface.SetFont("DermaDefault")
-            local weightW = surface.GetTextSize(weightText)
-            draw.RoundedBox(2, slotX + 4, slotY + itemH - 18, weightW + 6, 14, Color(0, 0, 0, 180))
-            draw.SimpleText(weightText, "DermaDefault", slotX + 7, slotY + itemH - 16, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-          end
-
-          -- Item type indicator
-          local typeColor = Color(120, 120, 120)
-          if item.type == "weapon" then
-            typeColor = Color(255, 100, 100, 200)
-          elseif item.type == "consumable" then
-            typeColor = Color(100, 255, 100, 200)
-          elseif item.type == "misc" then
-            typeColor = Color(100, 150, 255, 200)
-          end
-          draw.RoundedBox(0, slotX + 2, slotY + itemH - 3, itemW - 4, 2, typeColor)
         end
       end
+    end
+
+    -- Render dragged item at cursor position (ghost)
+    if IonRP.InventoryUI.DraggedItem then
+      local mx, my = pnl:CursorPos()
+      
+      -- Center the item on the cursor
+      local item = IonRP.InventoryUI.DraggedItem
+      local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
+      local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
+      
+      local ghostX = mx - (itemW / 2)
+      local ghostY = my - (itemH / 2)
+      
+      -- Render with transparency to show it's being dragged
+      local draggedSlot = nil
+      if IonRP.InventoryUI.DraggedFrom then
+        draggedSlot = currentInv:GetSlot(IonRP.InventoryUI.DraggedFrom.x, IonRP.InventoryUI.DraggedFrom.y)
+      end
+      RenderItem(item, draggedSlot, ghostX, ghostY, 180)
     end
   end
   self.ItemOverlay = itemOverlay
