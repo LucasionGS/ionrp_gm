@@ -106,6 +106,7 @@ end
 
 --- Apply for this job as a player
 --- @param ply Player
+--- @return boolean, string|nil - True on success, false and error message on failure
 function JOB:ApplyForJob(ply)
   if not ply or not IsValid(ply) then return false, "Invalid player" end
   if not self or not self.identifier then return false, "Invalid job" end
@@ -114,10 +115,12 @@ function JOB:ApplyForJob(ply)
     ply:SetNWString("IonRP_Job", self.identifier)
     self:Loadout(ply)
     ply:ChatPrint("You are now employed as: " .. self.name)
+    return true, nil
   else
     net.Start("IonRP_JobChangeRequest")
     net.WriteString(self.identifier)
     net.SendToServer()
+    return true, nil
   end
 end
 
@@ -130,6 +133,10 @@ function JOB:Loadout(ply)
   local model = self:GetFullModel(ply)
   ply:SetModel(model)
 
+  -- Clear current weapons and ammo
+  ply:StripWeapons()
+  ply:RemoveAllAmmo()
+  
   -- Give weapons
   for _, defaultWeapon in ipairs(self.defaultWeapons) do
     ply:Give(defaultWeapon, true)

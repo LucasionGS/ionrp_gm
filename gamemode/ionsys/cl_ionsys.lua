@@ -187,6 +187,10 @@ function IonRP.IonSys.UI:Open()
   local itemPanel = self:CreateItemPanel()
   tabs:AddSheet("Item Spawner", itemPanel, "icon16/package.png")
 
+  -- Job Management Tab
+  local jobPanel = self:CreateJobPanel()
+  tabs:AddSheet("Job Manager", jobPanel, "icon16/briefcase.png")
+
   self.Tabs = tabs
 end
 
@@ -252,31 +256,18 @@ function IonRP.IonSys.UI:CreatePlayerPanel()
         TEXT_ALIGN_TOP)
     end
 
-    -- Kick button
-    local kickBtn = vgui.Create("DButton", playerRow)
-    kickBtn:SetPos(playerRow:GetWide() - 150, 15)
-    kickBtn:SetSize(60, 50)
-    kickBtn:SetText("Kick")
+    -- Button container (right side)
+    local buttonContainer = vgui.Create("DPanel", playerRow)
+    buttonContainer:Dock(RIGHT)
+    buttonContainer:SetWide(130)
+    buttonContainer:DockMargin(0, 15, 10, 15)
+    buttonContainer.Paint = function() end
 
-    kickBtn.Paint = function(self, w, h)
-      local col = cfg.Colors.Button
-      if self:IsHovered() then
-        col = cfg.Colors.ButtonHover
-      end
-
-      draw.RoundedBox(4, 0, 0, w, h, col)
-      draw.SimpleText("Kick", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-    end
-
-    kickBtn.DoClick = function()
-      self:ShowKickDialog(playerData)
-    end
-
-    -- Ban button
-    local banBtn = vgui.Create("DButton", playerRow)
-    banBtn:SetPos(playerRow:GetWide() - 80, 15)
-    banBtn:SetSize(60, 50)
-    banBtn:SetText("Ban")
+    -- Ban button (rightmost)
+    local banBtn = vgui.Create("DButton", buttonContainer)
+    banBtn:Dock(RIGHT)
+    banBtn:SetWide(60)
+    banBtn:SetText("")
 
     banBtn.Paint = function(self, w, h)
       local col = cfg.Colors.ButtonDanger
@@ -290,6 +281,27 @@ function IonRP.IonSys.UI:CreatePlayerPanel()
 
     banBtn.DoClick = function()
       self:ShowBanDialog(playerData)
+    end
+
+    -- Kick button (left of ban)
+    local kickBtn = vgui.Create("DButton", buttonContainer)
+    kickBtn:Dock(RIGHT)
+    kickBtn:SetWide(60)
+    kickBtn:DockMargin(0, 0, 5, 0)
+    kickBtn:SetText("")
+
+    kickBtn.Paint = function(self, w, h)
+      local col = cfg.Colors.Button
+      if self:IsHovered() then
+        col = cfg.Colors.ButtonHover
+      end
+
+      draw.RoundedBox(4, 0, 0, w, h, col)
+      draw.SimpleText("Kick", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+
+    kickBtn.DoClick = function()
+      self:ShowKickDialog(playerData)
     end
   end
 
@@ -390,25 +402,18 @@ function IonRP.IonSys.UI:CreateItemPanel()
           TEXT_ALIGN_TOP)
       end
 
-      -- Quantity selector
-      local qtyLabel = vgui.Create("DLabel", itemRow)
-      qtyLabel:SetPos(itemRow:GetWide() - 220, 20)
-      qtyLabel:SetSize(60, 20)
-      qtyLabel:SetText("Quantity:")
-      qtyLabel:SetTextColor(cfg.Colors.TextDim)
+      -- Button container (right side)
+      local buttonContainer = vgui.Create("DPanel", itemRow)
+      buttonContainer:Dock(RIGHT)
+      buttonContainer:SetWide(210)
+      buttonContainer:DockMargin(0, 20, 10, 20)
+      buttonContainer.Paint = function() end
 
-      local qtyBox = vgui.Create("DNumberWang", itemRow)
-      qtyBox:SetPos(itemRow:GetWide() - 150, 20)
-      qtyBox:SetSize(60, 50)
-      qtyBox:SetMin(1)
-      qtyBox:SetMax(itemData.stackSize or 999)
-      qtyBox:SetValue(1)
-
-      -- Give button
-      local giveBtn = vgui.Create("DButton", itemRow)
-      giveBtn:SetPos(itemRow:GetWide() - 80, 20)
-      giveBtn:SetSize(60, 50)
-      giveBtn:SetText("Give")
+      -- Give button (rightmost)
+      local giveBtn = vgui.Create("DButton", buttonContainer)
+      giveBtn:Dock(RIGHT)
+      giveBtn:SetWide(60)
+      giveBtn:SetText("")
 
       giveBtn.Paint = function(self, w, h)
         local col = cfg.Colors.ButtonSuccess
@@ -420,10 +425,29 @@ function IonRP.IonSys.UI:CreateItemPanel()
         draw.SimpleText("Give", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
       end
 
+      local qtyBox -- Forward declare for use in DoClick
       giveBtn.DoClick = function()
         local quantity = qtyBox:GetValue()
         self:GiveItem(itemData.identifier, quantity)
       end
+
+      -- Quantity selector
+      qtyBox = vgui.Create("DNumberWang", buttonContainer)
+      qtyBox:Dock(RIGHT)
+      qtyBox:SetWide(60)
+      qtyBox:DockMargin(0, 0, 5, 0)
+      qtyBox:SetMin(1)
+      qtyBox:SetMax(itemData.stackSize or 999)
+      qtyBox:SetValue(1)
+
+      -- Quantity label
+      local qtyLabel = vgui.Create("DLabel", buttonContainer)
+      qtyLabel:Dock(RIGHT)
+      qtyLabel:SetWide(60)
+      qtyLabel:DockMargin(0, 0, 5, 0)
+      qtyLabel:SetText("Quantity:")
+      qtyLabel:SetTextColor(cfg.Colors.TextDim)
+      qtyLabel:SetContentAlignment(5) -- Center align
     end
   end
 
@@ -433,6 +457,143 @@ function IonRP.IonSys.UI:CreateItemPanel()
   -- Search functionality
   searchBox.OnValueChange = function(self, value)
     PopulateItems(value)
+  end
+
+  return panel
+end
+
+--- Create the job management panel
+--- @return Panel
+function IonRP.IonSys.UI:CreateJobPanel()
+  local cfg = self.Config
+  local panel = vgui.Create("DPanel")
+  panel.Paint = function() end
+
+  if not self.CurrentData or not self.CurrentData.jobs then
+    return panel
+  end
+
+  -- Search bar
+  local searchPanel = vgui.Create("DPanel", panel)
+  searchPanel:Dock(TOP)
+  searchPanel:SetTall(50)
+  searchPanel:DockMargin(cfg.Padding, cfg.Padding, cfg.Padding, 0)
+  searchPanel.Paint = function() end
+
+  local searchLabel = vgui.Create("DLabel", searchPanel)
+  searchLabel:SetPos(0, 0)
+  searchLabel:SetSize(100, 30)
+  searchLabel:SetText("Search Jobs:")
+  searchLabel:SetTextColor(cfg.Colors.TextDim)
+
+  local searchBox = vgui.Create("DTextEntry", searchPanel)
+  searchBox:SetPos(110, 0)
+  searchBox:SetSize(300, 30)
+  searchBox:SetPlaceholderText("Type to filter jobs...")
+
+  -- Job list
+  local scroll = vgui.Create("DScrollPanel", panel)
+  scroll:Dock(FILL)
+  scroll:DockMargin(cfg.Padding, cfg.Padding, cfg.Padding, cfg.Padding)
+
+  -- Custom scrollbar
+  local sbar = scroll:GetVBar()
+  sbar:SetWide(8)
+  sbar:SetHideButtons(true)
+
+  function sbar:Paint(w, h)
+    draw.RoundedBox(4, 0, 0, w, h, Color(20, 20, 30, 220))
+  end
+
+  function sbar.btnGrip:Paint(w, h)
+    local col = cfg.Colors.AccentCyan
+    draw.RoundedBox(4, 0, 0, w, h, col)
+  end
+
+  -- Function to populate jobs
+  local function PopulateJobs(filter)
+    scroll:Clear()
+
+    filter = filter and string.lower(filter) or ""
+
+    for i, jobData in ipairs(self.CurrentData.jobs) do
+      -- Apply filter
+      if filter ~= "" then
+        local nameMatch = string.find(string.lower(jobData.name), filter, 1, true)
+        local idMatch = string.find(string.lower(jobData.identifier), filter, 1, true)
+        local descMatch = string.find(string.lower(jobData.description), filter, 1, true)
+
+        if not nameMatch and not idMatch and not descMatch then
+          continue
+        end
+      end
+
+      local jobRow = vgui.Create("DPanel", scroll)
+      jobRow:Dock(TOP)
+      jobRow:SetTall(90)
+      jobRow:DockMargin(0, 0, 0, 4)
+
+      jobRow.Paint = function(self, w, h)
+        local bgColor = i % 2 == 0 and cfg.Colors.Panel or cfg.Colors.ListAlt
+
+        if self:IsHovered() then
+          bgColor = cfg.Colors.PanelHover
+        end
+
+        draw.RoundedBox(4, 0, 0, w, h, bgColor)
+
+        -- Job color bar on left
+        local jobColor = Color(jobData.color.r, jobData.color.g, jobData.color.b)
+        draw.RoundedBox(0, 0, 0, 4, h, jobColor)
+
+        -- Job info
+        draw.SimpleText(jobData.name, "DermaDefaultBold", 12, 10, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        draw.SimpleText(jobData.identifier, "DermaDefault", 12, 28, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT,
+          TEXT_ALIGN_TOP)
+        draw.SimpleText(jobData.description, "DermaDefault", 12, 46, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+
+        -- Stats
+        local salaryText = "Salary: " .. IonRP.Util:FormatMoney(jobData.salary)
+        draw.SimpleText(salaryText, "DermaDefault", 12, 64, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        
+        local maxText = jobData.max == 0 and "Unlimited" or ("Max: " .. jobData.max)
+        draw.SimpleText(maxText, "DermaDefault", 200, 64, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+      end
+
+      -- Button container (right side)
+      local buttonContainer = vgui.Create("DPanel", jobRow)
+      buttonContainer:Dock(RIGHT)
+      buttonContainer:SetWide(90)
+      buttonContainer:DockMargin(0, 20, 10, 20)
+      buttonContainer.Paint = function() end
+
+      -- Become button
+      local becomeBtn = vgui.Create("DButton", buttonContainer)
+      becomeBtn:Dock(FILL)
+      becomeBtn:SetText("")
+
+      becomeBtn.Paint = function(self, w, h)
+        local col = cfg.Colors.Button
+        if self:IsHovered() then
+          col = cfg.Colors.ButtonHover
+        end
+
+        draw.RoundedBox(4, 0, 0, w, h, col)
+        draw.SimpleText("Become", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+      end
+
+      becomeBtn.DoClick = function()
+        self:ApplyForJob(jobData.identifier)
+      end
+    end
+  end
+
+  -- Initial population
+  PopulateJobs()
+
+  -- Search functionality
+  searchBox.OnValueChange = function(self, value)
+    PopulateJobs(value)
   end
 
   return panel
@@ -640,6 +801,16 @@ function IonRP.IonSys.UI:GiveItem(identifier, quantity)
   net.SendToServer()
 end
 
+--- Apply for a job
+--- @param identifier string The job identifier
+function IonRP.IonSys.UI:ApplyForJob(identifier)
+  net.Start("IonSys_ApplyJob")
+  net.WriteString(identifier)
+  net.SendToServer()
+
+  chat.AddText(Color(100, 200, 255), "[IonSys] ", Color(255, 255, 255), "Job change request sent!")
+end
+
 --- Refresh panel content
 function IonRP.IonSys.UI:RefreshContent()
   if not IsValid(self.Frame) or not IsValid(self.Tabs) then return end
@@ -652,6 +823,9 @@ function IonRP.IonSys.UI:RefreshContent()
 
   local itemPanel = self:CreateItemPanel()
   self.Tabs:AddSheet("Item Spawner", itemPanel, "icon16/package.png")
+
+  local jobPanel = self:CreateJobPanel()
+  self.Tabs:AddSheet("Job Manager", jobPanel, "icon16/briefcase.png")
 end
 
 --- Close the admin panel

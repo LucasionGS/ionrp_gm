@@ -24,6 +24,15 @@ IonRP.IonSys = IonRP.IonSys or {}
 --- @field weight number The item's weight in KG
 --- @field stackSize number Maximum stack size for this item
 
+--- @class IonSys_JobData
+--- @field identifier string The job's unique identifier
+--- @field name string The job's display name
+--- @field description string The job's description
+--- @field salary number The job's salary per pay period
+--- @field max number Maximum players allowed (0 = unlimited)
+--- @field color table The job's color {r, g, b}
+
 --- @class IonSys_PanelData
 --- @field players IonSys_PlayerData[] List of all players
 --- @field items IonSys_ItemData[] List of all items
+--- @field jobs IonSys_JobData[] List of all jobs

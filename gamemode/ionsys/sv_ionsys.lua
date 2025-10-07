@@ -14,6 +14,7 @@ util.AddNetworkString("IonSys_SendData")
 util.AddNetworkString("IonSys_KickPlayer")
 util.AddNetworkString("IonSys_BanPlayer")
 util.AddNetworkString("IonSys_GiveItem")
+util.AddNetworkString("IonSys_ApplyJob")
 
 --- Send admin panel data to client
 --- @param ply Player The player to send data to
@@ -51,11 +52,25 @@ function IonRP.IonSys:SendDataToClient(ply)
     })
   end
 
+  -- Collect job data
+  local jobs = {}
+  for identifier, job in pairs(IonRP.Jobs.List) do
+    table.insert(jobs, {
+      identifier = identifier,
+      name = job.name,
+      description = job.description,
+      salary = job.salary,
+      max = job.max,
+      color = { r = job.color.r, g = job.color.g, b = job.color.b }
+    })
+  end
+
   -- Send data
   net.Start("IonSys_SendData")
   net.WriteTable({
     players = players,
-    items = items
+    items = items,
+    jobs = jobs
   })
   net.Send(ply)
 end
@@ -216,6 +231,32 @@ net.Receive("IonSys_GiveItem", function(len, ply)
     print(string.format("[IonSys] %s gave themselves %dx %s", ply:Nick(), quantity, item.name))
   else
     ply:ChatPrint("[IonSys] Failed to give item: " .. (err or "unknown error"))
+  end
+end)
+
+-- Client requests to apply for a job
+net.Receive("IonSys_ApplyJob", function(len, ply)
+  if not ply:HasPermission("ionsys") then
+    ply:ChatPrint("[IonSys] You don't have permission to change jobs!")
+    return
+  end
+
+  local jobIdentifier = net.ReadString()
+
+  -- Validate job
+  local job = IonRP.Jobs.List[jobIdentifier]
+  if not job then
+    ply:ChatPrint("[IonSys] Invalid job identifier!")
+    return
+  end
+
+  -- Apply for the job
+  local success, err = job:ApplyForJob(ply)
+
+  if err then
+    ply:ChatPrint("[IonSys] Failed to apply for job: " .. err)
+  else
+    print(string.format("[IonSys] %s changed their job to %s", ply:Nick(), job.name))
   end
 end)
 

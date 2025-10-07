@@ -131,7 +131,7 @@ function IonRP.InventoryUI:Open()
   -- Check if Q key is still held down (since MakePopup captures input)
   frame.Think = function(self)
     if not input.IsKeyDown(KEY_Q) then
-      IonRP.InventoryUI:Close()
+      -- IonRP.InventoryUI:Close()
     end
   end
 
@@ -300,11 +300,11 @@ function IonRP.InventoryUI:Open()
   end
 
   -- Handle ESC key
-  frame.OnKeyCodePressed = function(self, key)
-    if key == KEY_ESCAPE then
-      IonRP.InventoryUI:Close()
-    end
-  end
+  -- frame.OnKeyCodePressed = function(self, key)
+  --   if key == KEY_ESCAPE then
+  --     IonRP.InventoryUI:Close()
+  --   end
+  -- end
 end
 
 --[[
@@ -873,20 +873,21 @@ concommand.Add("ionrp_inventory", function(ply)
 end)
 
 local Q_held = false
--- Bind key to open inventory (Q key - hold to keep open)
-hook.Add("PlayerButtonDown", "IonRP_InventoryKey", function(ply, button)
-  if button == KEY_Q then
-    if Q_held then return end
-    Q_held = true
-    RunConsoleCommand("ionrp_inventory")
-  end
-end)
-
--- Close inventory when Q is released
-hook.Add("PlayerButtonUp", "IonRP_InventoryKeyRelease", function(ply, button)
-  if button == KEY_Q then
-    IonRP.InventoryUI:Close()
-    Q_held = false
+hook.Add("Think", "IonRP_InventoryKeyThink", function()
+  local ply = LocalPlayer()
+  if not IsValid(ply) then return end
+  if input.IsKeyDown(KEY_Q) then
+    if not Q_held and not gui.IsGameUIVisible() and not vgui.CursorVisible() then
+      Q_held = true
+      print("[IonRP Inventory] Q key pressed, opening inventory...", Q_held and " (held)" or "")
+      RunConsoleCommand("ionrp_inventory")
+    end
+  else
+    if Q_held then
+      Q_held = false
+      IonRP.InventoryUI:Close()
+      print("[IonRP Inventory] Q key released, closing inventory...", Q_held and " (held)" or "")
+    end
   end
 end)
 

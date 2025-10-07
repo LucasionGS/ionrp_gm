@@ -93,10 +93,7 @@ function GM:PlayerLoadout(ply)
   if job then
     job:Loadout(ply)
   else
-    ply:SetModel("models/player/group01/male_01.mdl")
-    -- Give default weapons
-    ply:Give("weapon_pistol")
-    ply:Give("weapon_physcannon")
+    JOB_CITIZEN:Loadout(ply)
   end
 
   print("[IonRP] Player " .. ply:Nick() .. " has spawned")
