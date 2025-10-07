@@ -359,8 +359,14 @@ net.Receive("IonRP_MoveItem", function(len, ply)
   local fromY = net.ReadUInt(8)
   local toX = net.ReadUInt(8)
   local toY = net.ReadUInt(8)
+  local quantity = net.ReadUInt(16) -- Read quantity (0 = move all)
 
-  local success, err = inv:MoveItem(fromX, fromY, toX, toY)
+  if quantity == 0 then quantity = nil end -- nil means move all
+
+  print(string.format("[IonRP Inventory] Move request: from (%d,%d) to (%d,%d), quantity: %s", 
+    fromX, fromY, toX, toY, tostring(quantity or "all")))
+
+  local success, err = inv:MoveItem(fromX, fromY, toX, toY, quantity)
 
   if success then
     -- Resync inventory

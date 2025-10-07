@@ -101,7 +101,7 @@ function INVENTORY:CanFitItem(item, x, y, ignoreOccupied, ignoreItemAt)
     return false, "Item too large for position"
   end
 
-  -- Check if all required slots are empty
+  -- Check if all required slots are empty or can stack
   if not ignoreOccupied then
     for ix = x, x + width - 1 do
       for iy = y, y + height - 1 do
@@ -124,13 +124,30 @@ function INVENTORY:CanFitItem(item, x, y, ignoreOccupied, ignoreItemAt)
               end
               
               if not isPartOfIgnoredItem then
-                return false, "Slot occupied"
+                -- Check if we can stack with this item
+                if slot.item.identifier == item.identifier and
+                  slot.quantity < item.stackSize then
+                    print("Part of ignored!")
+                  -- This is a stackable item, allow placement
+                  -- The stacking logic in MoveItem will handle the actual stacking
+                  -- Allow all cells of the item, not just origin
+                else
+                  return false, "Slot occupied"
+                end
               end
             else
               return false, "Slot occupied"
             end
           else
-            return false, "Slot occupied"
+            -- Check if we can stack with this item (when no ignoreItemAt is specified)
+            if slot.item.identifier == item.identifier and
+               slot.quantity < item.stackSize then
+              -- This is a stackable item, allow placement
+              -- The stacking logic in AddItem/MoveItem will handle the actual stacking
+              -- Allow all cells of the item, not just origin
+            else
+              return false, "Slot occupied"
+            end
           end
         end
       end
@@ -204,8 +221,8 @@ function INVENTORY:AddItem(item, quantity, x, y)
 
   local remainingQuantity = quantity
 
-  -- Try to stack with existing items first
-  if item.stackSize > 1 then
+  -- Try to stack with existing items first if no specific position was requested
+  if item.stackSize > 1 and not x and not y then
     while remainingQuantity > 0 do
       local sx, sy, currentQty = self:FindStackableSlot(item)
 
@@ -290,11 +307,21 @@ function INVENTORY:RemoveItem(x, y, quantity)
   if quantity <= 0 then return false, nil, 0 end
   if quantity > slot.quantity then quantity = slot.quantity end
 
-  slot.quantity = slot.quantity - quantity
+  local newQuantity = slot.quantity - quantity
+
+  -- Update quantity for all cells occupied by this item
+  local width, height = item.size[1], item.size[2]
+  for ix = originX, originX + width - 1 do
+    for iy = originY, originY + height - 1 do
+      local cellSlot = self:GetSlot(ix, iy)
+      if cellSlot then
+        cellSlot.quantity = newQuantity
+      end
+    end
+  end
 
   -- If slot is empty, clear all grid cells for this item
-  if slot.quantity <= 0 then
-    local width, height = item.size[1], item.size[2]
+  if newQuantity <= 0 then
     for ix = originX, originX + width - 1 do
       for iy = originY, originY + height - 1 do
         self.slots[self:GetSlotKey(ix, iy)] = nil
@@ -310,8 +337,9 @@ end
 --- @param fromY number
 --- @param toX number
 --- @param toY number
+--- @param quantity number|nil How many items to move (nil = all)
 --- @return boolean, string|nil
-function INVENTORY:MoveItem(fromX, fromY, toX, toY)
+function INVENTORY:MoveItem(fromX, fromY, toX, toY, quantity)
   local fromSlot = self:GetSlot(fromX, fromY)
 
   if not fromSlot or not fromSlot.item then
@@ -319,12 +347,15 @@ function INVENTORY:MoveItem(fromX, fromY, toX, toY)
   end
 
   local item = fromSlot.item
-  local quantity = fromSlot.quantity
+  quantity = quantity or fromSlot.quantity -- Default to moving all
+  quantity = math.min(quantity, fromSlot.quantity) -- Can't move more than we have
   local originX, originY = fromSlot.x, fromSlot.y
 
   -- Check if we're moving to the origin position (no-op)
-  if fromX == originX and fromY == originY and toX == fromX and toY == fromY then
-    return true, nil
+  -- Also check if trying to move partial quantity to same slot (can't split onto itself)
+  if toX == originX and toY == originY then
+    print(string.format("[MoveItem] No-op: trying to move to same origin (%d,%d)", toX, toY))
+    return true, nil -- No-op, item stays where it is
   end
 
   -- Check if destination can accept the item
@@ -332,34 +363,56 @@ function INVENTORY:MoveItem(fromX, fromY, toX, toY)
 
   -- Try to stack with existing item (but not if it's the same item we're moving!)
   if destSlot and destSlot.item and item and item.identifier and destSlot.item.identifier == item.identifier then
+    print(string.format("[MoveItem] Found same item type at destination (%d,%d)", toX, toY))
     -- Check if the destination slot is part of the same item instance we're moving
     local isSameItemInstance = false
     if destSlot.x == originX and destSlot.y == originY then
       -- Destination is the origin of the item we're moving
       isSameItemInstance = true
-    elseif destSlot.item == item then
-      -- Destination references the exact same item instance
-      isSameItemInstance = true
     end
 
     if not isSameItemInstance then
       -- Only try to stack if it's a different item instance
+      print(string.format("[MoveItem] Different item instance, attempting to stack %d items", quantity))
       if item.stackSize and destSlot.quantity and destSlot.quantity < item.stackSize then
         local canAdd = math.min(quantity, item.stackSize - destSlot.quantity)
+        local destOriginX, destOriginY = destSlot.x, destSlot.y
 
-        -- Remove from source
+        print(string.format("[MoveItem] Stacking: Adding %d to destination's %d items", canAdd, destSlot.quantity))
+
+        -- Simple approach: Update destination quantity first
+        local newDestQuantity = destSlot.quantity + canAdd
+        
+        -- Update ALL cells of the destination item
+        local destItemSize = destSlot.item.size
+        for ix = destOriginX, destOriginX + destItemSize[1] - 1 do
+          for iy = destOriginY, destOriginY + destItemSize[2] - 1 do
+            local cellSlot = self:GetSlot(ix, iy)
+            if cellSlot then
+              cellSlot.quantity = newDestQuantity
+            end
+          end
+        end
+
+        print(string.format("[MoveItem] Destination updated to %d items", newDestQuantity))
+
+        -- Now remove from source
         self:RemoveItem(originX, originY, canAdd)
 
-        -- Add to destination
-        destSlot.quantity = destSlot.quantity + canAdd
+        print(string.format("[MoveItem] Removed %d items from source", canAdd))
 
         return true, nil
       else
         return false, "Destination stack is full"
       end
+    else
+      print("[MoveItem] Same item instance detected, treating as move operation")
     end
     -- If it's the same item instance, fall through to the move logic below
   end
+
+  print(string.format("[MoveItem] Proceeding with move operation: %d items from (%d,%d) to (%d,%d)", 
+    quantity, originX, originY, toX, toY))
 
   -- Check if we can fit at new position
   if not item then

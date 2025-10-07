@@ -39,6 +39,7 @@ IonRP.InventoryUI.Config = {
 IonRP.InventoryUI.CurrentInventory = nil
 IonRP.InventoryUI.DraggedItem = nil
 IonRP.InventoryUI.DraggedFrom = nil
+IonRP.InventoryUI.DraggedQuantity = nil -- How many items are being dragged
 
 --[[
     Receive inventory sync from server
@@ -362,36 +363,52 @@ function IonRP.InventoryUI:CreateGrid()
         if invSlot.x ~= x or invSlot.y ~= y then return end
 
         if mouse == MOUSE_LEFT then
-          -- Start dragging
+          -- Start dragging full stack
           IonRP.InventoryUI.DraggedItem = invSlot.item
           IonRP.InventoryUI.DraggedFrom = { x = x, y = y }
+          IonRP.InventoryUI.DraggedQuantity = invSlot.quantity
         elseif mouse == MOUSE_RIGHT then
-          -- Use item
-          net.Start("IonRP_UseItem")
-          net.WriteUInt(x, 8)
-          net.WriteUInt(y, 8)
-          net.SendToServer()
+          -- Check if already dragging - if so, this is a drop action
+          if IonRP.InventoryUI.DraggedItem then
+            return -- Let OnMouseReleased handle the drop
+          end
+          
+          -- Start dragging single item (split stack)
+          if invSlot.quantity > 1 then
+            IonRP.InventoryUI.DraggedItem = invSlot.item
+            IonRP.InventoryUI.DraggedFrom = { x = x, y = y }
+            IonRP.InventoryUI.DraggedQuantity = 1
+          else
+            -- If only 1 item, use it instead
+            net.Start("IonRP_UseItem")
+            net.WriteUInt(x, 8)
+            net.WriteUInt(y, 8)
+            net.SendToServer()
+          end
         end
       end
 
       slot.OnMouseReleased = function(self, mouse)
-        if mouse == MOUSE_LEFT and IonRP.InventoryUI.DraggedItem then
+        -- Handle drop for both left and right click
+        if (mouse == MOUSE_LEFT or mouse == MOUSE_RIGHT) and IonRP.InventoryUI.DraggedItem then
           -- Drop item here
           local fromPos = IonRP.InventoryUI.DraggedFrom
 
           if fromPos then
-            -- Send move request to server
+            -- Send move request to server with quantity
             net.Start("IonRP_MoveItem")
             net.WriteUInt(fromPos.x, 8)
             net.WriteUInt(fromPos.y, 8)
             net.WriteUInt(x, 8)
             net.WriteUInt(y, 8)
+            net.WriteUInt(IonRP.InventoryUI.DraggedQuantity or 0, 16) -- 0 = move all
             net.SendToServer()
           end
 
           -- Clear drag state
           IonRP.InventoryUI.DraggedItem = nil
           IonRP.InventoryUI.DraggedFrom = nil
+          IonRP.InventoryUI.DraggedQuantity = nil
         end
       end
 
@@ -479,13 +496,26 @@ function IonRP.InventoryUI:CreateGrid()
           local slotX = cfg.SlotPadding + (ix * (cfg.SlotSize + cfg.SlotPadding))
           local slotY = cfg.SlotPadding + (iy * (cfg.SlotSize + cfg.SlotPadding))
           
-          -- Skip rendering if this is the item being dragged (will be rendered at cursor)
+          -- Check if this is the item being dragged
           local isDragged = IonRP.InventoryUI.DraggedItem == item and 
                            IonRP.InventoryUI.DraggedFrom and
                            IonRP.InventoryUI.DraggedFrom.x == ix and 
                            IonRP.InventoryUI.DraggedFrom.y == iy
           
-          if not isDragged then
+          if isDragged then
+            -- If doing a partial drag (split stack), show remaining quantity
+            if IonRP.InventoryUI.DraggedQuantity and IonRP.InventoryUI.DraggedQuantity < invSlot.quantity then
+              local remainingSlot = {
+                item = item,
+                quantity = invSlot.quantity - IonRP.InventoryUI.DraggedQuantity,
+                x = ix,
+                y = iy
+              }
+              RenderItem(item, remainingSlot, slotX, slotY, 128) -- Dimmed to show it's being split
+            end
+            -- Otherwise skip rendering (entire stack is being moved)
+          else
+            -- Normal rendering
             RenderItem(item, invSlot, slotX, slotY, 255)
           end
         end
@@ -504,11 +534,15 @@ function IonRP.InventoryUI:CreateGrid()
       local ghostX = mx - (itemW / 2)
       local ghostY = my - (itemH / 2)
       
+      -- Create a fake slot with the dragged quantity for rendering
+      local draggedSlot = {
+        item = item,
+        quantity = IonRP.InventoryUI.DraggedQuantity or 1,
+        x = 0,
+        y = 0
+      }
+      
       -- Render with transparency to show it's being dragged
-      local draggedSlot = nil
-      if IonRP.InventoryUI.DraggedFrom then
-        draggedSlot = currentInv:GetSlot(IonRP.InventoryUI.DraggedFrom.x, IonRP.InventoryUI.DraggedFrom.y)
-      end
       RenderItem(item, draggedSlot, ghostX, ghostY, 180)
     end
   end
