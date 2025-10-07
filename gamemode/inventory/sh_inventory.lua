@@ -45,10 +45,17 @@ end
 --- @return number
 function INVENTORY:GetTotalWeight()
   local totalWeight = 0
+  local processed = {}
 
   for _, slot in pairs(self.slots) do
     if slot.item then
-      totalWeight = totalWeight + (slot.item.weight * slot.quantity)
+      local originKey = self:GetSlotKey(slot.x, slot.y)
+      
+      -- Only count items at their origin position to avoid counting multi-cell items multiple times
+      if not processed[originKey] then
+        processed[originKey] = true
+        totalWeight = totalWeight + (slot.item.weight * slot.quantity)
+      end
     end
   end
 
