@@ -156,6 +156,7 @@ function IonRP.Scoreboard:Open()
   scroll:DockMargin(cfg.Padding, cfg.Padding, cfg.Padding, cfg.Padding)
 
   -- Custom scrollbar
+  --- @class DVScrollBar
   local sbar = scroll:GetVBar()
   sbar:SetWide(8)
   sbar:SetHideButtons(true)
@@ -201,15 +202,14 @@ function IonRP.Scoreboard:Open()
   end
 end
 
---[[
-    Create a player row
-    @param parent Panel
-    @param ply Player
-    @param index number
-]] --
+--- Create a player row
+--- @param parent Panel
+--- @param ply Player
+--- @param index number
 function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
   local cfg = self.Config
 
+  --- @class DButton
   local row = vgui.Create("DButton", parent)
   row:Dock(TOP)
   row:SetTall(cfg.PlayerRowHeight)
@@ -298,6 +298,7 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
   end
 
   -- Avatar with colorful animated border
+  --- @class AvatarImage
   local avatar = vgui.Create("AvatarImage", row)
   avatar:SetPos(12, (cfg.PlayerRowHeight - 36) / 2)
   avatar:SetSize(36, 36)

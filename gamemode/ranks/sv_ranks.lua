@@ -3,43 +3,35 @@
     Server-side rank management and permission checking
 ]] --
 
+-- Load shared types
+include("sh_ranks_types.lua")
+AddCSLuaFile("sh_ranks_types.lua")
+
 IonRP.Ranks = IonRP.Ranks or {}
 
+--- @type RankData[]
 IonRP.Ranks.List = {}
 
+--- Add a rank to the rank list
+--- @param id number Unique rank identifier
+--- @param name string Display name of the rank
+--- @param color Color RGB color for the rank
+--- @param immunity number Immunity level
 local function AddRank(id, name, color, immunity)
     table.insert(IonRP.Ranks.List, {id = id, name = name, color = color, immunity = immunity})
 end
 -- Define rank hierarchy (higher number = higher rank)
--- IonRP.Ranks.List = {
---     {id = 0, name = "User", color = Color(200, 200, 200), immunity = 0},
---     {id = 1, name = "Moderator", color = Color(46, 204, 113), immunity = 1},
---     {id = 2, name = "Admin", color = Color(52, 152, 219), immunity = 2},
---     {id = 3, name = "Superadmin", color = Color(231, 76, 60), immunity = 3},
---     {id = 4, name = "Lead Admin", color = Color(155, 89, 182), immunity = 4},
---     {id = 5, name = "Developer", color = Color(241, 196, 15), immunity = 5},
--- }
-
-RANK_USER = 0;
+-- Define ranks (constants are in sh_ranks_types.lua)
 AddRank(RANK_USER, "User", Color(200, 200, 200), 0)
-
-RANK_MODERATOR = 1;
 AddRank(RANK_MODERATOR, "Moderator", Color(46, 204, 113), 1)
-
-RANK_ADMIN = 2;
 AddRank(RANK_ADMIN, "Admin", Color(52, 152, 219), 2)
-
-RANK_SUPERADMIN = 3;
 AddRank(RANK_SUPERADMIN, "Superadmin", Color(231, 76, 60), 3)
-
-RANK_LEAD_ADMIN = 4;
 AddRank(RANK_LEAD_ADMIN, "Lead Admin", Color(155, 89, 182), 4)
-
-RANK_DEVELOPER = 5;
 AddRank(RANK_DEVELOPER, "Developer", Color(241, 196, 15), 5)
 
 
--- Permission categories
+--- Permission categories with minimum rank requirements
+--- @type table<string, PermissionData>
 IonRP.Ranks.Permissions = {
     -- Basic moderation
     ["kick"] = {minRank = RANK_MODERATOR, description = "Kick players"},
@@ -86,11 +78,9 @@ IonRP.Ranks.Permissions = {
     ["modelexplorer"] = {minRank = RANK_DEVELOPER, description = "Access Model Explorer"},
 }
 
---[[
-    Get rank data by ID
-    @param rankId number
-    @return table Rank data
-]]--
+--- Get rank data by ID
+--- @param rankId number The rank ID to look up
+--- @return RankData The rank data
 function IonRP.Ranks:GetRankData(rankId)
     for _, rank in ipairs(self.List) do
         if rank.id == rankId then
@@ -100,11 +90,9 @@ function IonRP.Ranks:GetRankData(rankId)
     return self.List[1] -- Default to User
 end
 
---[[
-    Get rank data by name
-    @param rankName string
-    @return table Rank data
-]]--
+--- Get rank data by name
+--- @param rankName string The rank name to look up (case-insensitive)
+--- @return RankData|nil The rank data or nil if not found
 function IonRP.Ranks:GetRankByName(rankName)
     for _, rank in ipairs(self.List) do
         if string.lower(rank.name) == string.lower(rankName) then
@@ -114,12 +102,10 @@ function IonRP.Ranks:GetRankByName(rankName)
     return nil
 end
 
---[[
-    Check if a rank has a specific permission
-    @param rankId number
-    @param permission string
-    @return boolean
-]]--
+--- Check if a rank has a specific permission
+--- @param rankId number The rank ID to check
+--- @param permission string The permission to check
+--- @return boolean True if the rank has the permission
 function IonRP.Ranks:HasPermission(rankId, permission)
     local perm = self.Permissions[permission]
     if not perm then return false end
@@ -127,11 +113,9 @@ function IonRP.Ranks:HasPermission(rankId, permission)
     return rankId >= perm.minRank
 end
 
---[[
-    Get all permissions for a rank
-    @param rankId number
-    @return table List of permissions
-]]--
+--- Get all permissions for a rank
+--- @param rankId number The rank ID to get permissions for
+--- @return table<number, {name: string, description: string}> List of permissions with their descriptions
 function IonRP.Ranks:GetRankPermissions(rankId)
     local perms = {}
     
@@ -151,11 +135,9 @@ end
 util.AddNetworkString("IonRP_RankUpdated")
 util.AddNetworkString("IonRP_SendRankData")
 
---[[
-    Load a player's rank from database
-    @param ply Player
-    @param callback function(rankId)
-]] --
+--- Load a player's rank from database
+--- @param ply Player The player to load rank for
+--- @param callback fun(rankId: number)|nil Optional callback with the loaded rank ID
 function IonRP.Ranks:LoadPlayerRank(ply, callback)
   local steamID = ply:SteamID64()
 
@@ -188,16 +170,16 @@ function IonRP.Ranks:LoadPlayerRank(ply, callback)
   )
 end
 
---[[
-    Set a player's rank
-    @param ply Player - Target player
-    @param rankId number - New rank ID
-    @param admin Player - Admin who changed the rank
-    @param reason string - Optional reason
-]] --
+--- Set a player's rank
+--- @param ply Player Target player to set rank for
+--- @param rankId number New rank ID to assign
+--- @param admin Player|nil Admin who changed the rank (nil for console)
+--- @param reason string|nil Optional reason for the rank change
+--- @return boolean success True if rank was set successfully
+--- @return string|nil error Error message if failed
 function IonRP.Ranks:SetPlayerRank(ply, rankId, admin, reason)
   local steamID = ply:SteamID64()
-  local adminSteamID = IsValid(admin) and admin:SteamID64() or "CONSOLE"
+  local adminSteamID = admin and IsValid(admin) and admin:SteamID64() or "CONSOLE"
   local oldRank = ply:GetNWInt("IonRP_Rank", 0)
 
   -- Validate rank ID
@@ -219,7 +201,7 @@ function IonRP.Ranks:SetPlayerRank(ply, rankId, admin, reason)
       local oldRankData = self:GetRankData(oldRank)
 
       print(string.format("[IonRP] %s changed %s's rank from %s to %s",
-        IsValid(admin) and admin:Nick() or "CONSOLE",
+        admin and IsValid(admin) and admin:Nick() or "CONSOLE",
         ply:Nick(),
         oldRankData.name,
         rankData.name))
@@ -239,7 +221,7 @@ function IonRP.Ranks:SetPlayerRank(ply, rankId, admin, reason)
       for _, p in ipairs(player.GetAll()) do
         if p:HasPermission("seeadminchat") then
           p:ChatPrint(string.format("[RANK] %s set %s's rank to %s",
-            IsValid(admin) and admin:Nick() or "CONSOLE",
+            admin and IsValid(admin) and admin:Nick() or "CONSOLE",
             ply:Nick(),
             rankData.name))
         end
@@ -253,14 +235,12 @@ function IonRP.Ranks:SetPlayerRank(ply, rankId, admin, reason)
   return true
 end
 
---[[
-    Log rank change
-    @param steamID string
-    @param oldRank number
-    @param newRank number
-    @param changedBy string
-    @param reason string
-]] --
+--- Log rank change to database
+--- @param steamID string The Steam ID of the player whose rank changed
+--- @param oldRank number The previous rank ID
+--- @param newRank number The new rank ID
+--- @param changedBy string Steam ID of who made the change (or "CONSOLE")
+--- @param reason string|nil Reason for the change
 function IonRP.Ranks:LogRankChange(steamID, oldRank, newRank, changedBy, reason)
   IonRP.Database:PreparedQuery(
     "INSERT INTO ionrp_rank_logs (steam_id, old_rank, new_rank, changed_by, reason) VALUES (?, ?, ?, ?, ?)",
@@ -274,10 +254,8 @@ function IonRP.Ranks:LogRankChange(steamID, oldRank, newRank, changedBy, reason)
   )
 end
 
---[[
-    Send rank data to client
-    @param ply Player
-]] --
+--- Send rank data to client
+--- @param ply Player The player to send rank data to
 function IonRP.Ranks:SendRankDataToClient(ply)
   net.Start("IonRP_SendRankData")
   -- Send all ranks
@@ -295,54 +273,43 @@ function IonRP.Ranks:SendRankDataToClient(ply)
 end
 
 -- Player meta functions
+---@class Player
 local ply = FindMetaTable("Player")
 
---[[
-    Get player's rank ID
-    @return number
-]] --
+--- Get player's rank ID
+--- @return number The rank ID (0 = User, 1 = Moderator, etc.)
 function ply:GetRank()
   return self:GetNWInt("IonRP_Rank", 0)
 end
 
---[[
-    Get player's rank data
-    @return table
-]] --
+--- Get player's rank data
+--- @return RankData The full rank data including name, color, and immunity
 function ply:GetRankData()
   return IonRP.Ranks:GetRankData(self:GetRank())
 end
 
---[[
-    Get player's rank name
-    @return string
-]] --
+--- Get player's rank name
+--- @return string The display name of the player's rank
 function ply:GetRankName()
   return self:GetRankData().name
 end
 
---[[
-    Get player's rank color
-    @return Color
-]] --
+--- Get player's rank color
+--- @return Color The RGB color associated with the rank
 function ply:GetRankColor()
   return self:GetRankData().color
 end
 
---[[
-    Check if player has a specific permission
-    @param permission string
-    @return boolean
-]] --
+--- Check if player has a specific permission
+--- @param permission string The permission name to check (e.g., "noclip", "kick", "ban")
+--- @return boolean True if the player has the permission
 function ply:HasPermission(permission)
   return IonRP.Ranks:HasPermission(self:GetRank(), permission)
 end
 
---[[
-    Check if player has higher or equal immunity than target
-    @param target Player
-    @return boolean
-]] --
+--- Check if player has higher or equal immunity than target
+--- @param target Player The target player to check immunity against
+--- @return boolean True if this player has immunity over the target
 function ply:HasImmunity(target)
   if not IsValid(target) then return true end
 
@@ -352,34 +319,26 @@ function ply:HasImmunity(target)
   return myRank.immunity >= targetRank.immunity
 end
 
---[[
-    Check if player is staff (Moderator or above)
-    @return boolean
-]] --
+--- Check if player is staff (Moderator or above)
+--- @return boolean True if the player is staff rank or higher
 function ply:IsStaff()
   return self:GetRank() >= 1
 end
 
---[[
-    Check if player is admin (Admin or above)
-    @return boolean
-]] --
+--- Check if player is admin (Admin or above)
+--- @return boolean True if the player is admin rank or higher
 function ply:IsRPAdmin()
   return self:GetRank() >= 2
 end
 
---[[
-    Check if player is superadmin (Superadmin or above)
-    @return boolean
-]] --
+--- Check if player is superadmin (Superadmin or above)
+--- @return boolean True if the player is superadmin rank or higher
 function ply:IsRPSuperAdmin()
   return self:GetRank() >= 3
 end
 
---[[
-    Check if player is developer
-    @return boolean
-]] --
+--- Check if player is developer
+--- @return boolean True if the player is developer rank
 function ply:IsDeveloper()
   return self:GetRank() >= 5
 end
@@ -412,7 +371,9 @@ concommand.Add("ionrp_setrank", function(ply, cmd, args)
   end
 
   -- Find target player
+  --- @type string
   local targetName = args[1]
+  --- @type Player|nil
   local target = nil
 
   for _, p in ipairs(player.GetAll()) do
@@ -433,7 +394,7 @@ concommand.Add("ionrp_setrank", function(ply, cmd, args)
     end
   end
 
-  if not IsValid(target) then
+  if not target or not IsValid(target) then
     local msg = "[IonRP] Player not found! Available players:"
     if IsValid(ply) then
       ply:ChatPrint(msg)
