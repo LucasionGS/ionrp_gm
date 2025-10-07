@@ -28,3 +28,5 @@ include("ranks/cl_ranks.lua")
 include("scoreboard/cl_scoreboard.lua")
 -- Developer Tools
 include("developer/cl_model_explorer.lua")
+-- Items
+include("item/sh_item.lua")

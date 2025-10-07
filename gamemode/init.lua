@@ -20,6 +20,8 @@ AddCSLuaFile("ranks/cl_ranks.lua")
 AddCSLuaFile("scoreboard/cl_scoreboard.lua")
 -- Developer Tools
 AddCSLuaFile("developer/cl_model_explorer.lua")
+-- Items
+AddCSLuaFile("item/sh_item.lua")
 
 -- Load shared code
 include("shared.lua")
@@ -41,6 +43,9 @@ include("developer/sv_model_explorer.lua")
 
 -- Load commands
 include("commands/sv_rank_commands.lua")
+
+-- Items
+include("item/sh_item.lua")
 
 function GM:Initialize()
   self.BaseClass.Initialize(self)
