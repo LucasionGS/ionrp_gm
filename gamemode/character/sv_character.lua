@@ -13,11 +13,9 @@ util.AddNetworkString("IonRP_CreateCharacter")
 util.AddNetworkString("IonRP_CharacterLoaded")
 
 
---[[
-    Check if a player has a character
-    @param ply Player
-    @param callback function(hasCharacter, characterData)
-]] --
+--- Check if a player has a character
+--- @param ply Player
+--- @param callback fun(hasCharacter: boolean, characterData: table|nil)
 function IonRP.Character:HasCharacter(ply, callback)
   local steamID = ply:SteamID64()
 
@@ -38,19 +36,17 @@ function IonRP.Character:HasCharacter(ply, callback)
   )
 end
 
---[[
-    Load a player's character
-    @param ply Player
-]] --
+--- Load a player's character
+--- @param ply Player
 function IonRP.Character:Load(ply)
   self:HasCharacter(ply, function(hasChar, data)
-    if hasChar then
+    if hasChar and data then
       -- Apply character data to player
       ply:SetNWString("IonRP_FirstName", data.first_name)
       ply:SetNWString("IonRP_LastName", data.last_name)
       ply:SetWallet(tonumber(data.wallet) or 500)
       ply:SetBank(tonumber(data.bank) or 0)
-      ply:SetModel(data.model or "models/player/Group01/male_01.mdl")
+      ply:SetNWString("IonRP_DesiredModel", data.model or "male_01")
 
       print(string.format("[IonRP] Loaded character for %s: %s %s", ply:Nick(), data.first_name, data.last_name))
 
@@ -65,6 +61,7 @@ function IonRP.Character:Load(ply)
         end)
       end
 
+      GAMEMODE:PlayerLoadout(ply)
       -- Notify client that character is loaded
       net.Start("IonRP_CharacterLoaded")
       net.Send(ply)
@@ -77,13 +74,11 @@ function IonRP.Character:Load(ply)
   end)
 end
 
---[[
-    Create a new character for a player
-    @param ply Player
-    @param firstName string
-    @param lastName string
-    @param model string
-]] --
+--- Create a new character for a player
+--- @param ply Player
+--- @param firstName string
+--- @param lastName string
+--- @param model string
 function IonRP.Character:Create(ply, firstName, lastName, model)
   -- Validate inputs
   if not firstName or firstName == "" or not lastName or lastName == "" then
@@ -115,7 +110,7 @@ function IonRP.Character:Create(ply, firstName, lastName, model)
   end
 
   if not validModel then
-    model = "models/player/Group01/male_01.mdl"
+    model = IonRP.Character.Models.Male[1]
   end
 
   local steamID = ply:SteamID64()
@@ -142,10 +137,8 @@ function IonRP.Character:Create(ply, firstName, lastName, model)
   return true
 end
 
---[[
-    Save a player's character
-    @param ply Player
-]] --
+--- Save a player's character
+--- @param ply Player
 function IonRP.Character:Save(ply)
   local steamID = ply:SteamID64()
   local firstName = ply:GetNWString("IonRP_FirstName", "")

@@ -1,6 +1,6 @@
 --[[
-	IonRP - Bank System (Server)
-	Handles bank transactions
+  IonRP - Bank System (Server)
+  Handles bank transactions
 --]]
 
 util.AddNetworkString("IonRP_BankOpenMenu")
@@ -20,7 +20,7 @@ IonRP.Bank.Config = {
 }
 
 --[[
-	Initialize player bank account
+  Initialize player bank account
 --]]
 function IonRP.Bank:InitializePlayer(ply)
   -- if ply:GetBank() == 0 then
@@ -28,9 +28,9 @@ function IonRP.Bank:InitializePlayer(ply)
   -- end
 end
 
---[[
-	Withdraw money from bank to wallet
---]]
+--- Withdraw money from bank to wallet
+--- @param ply Player
+--- @param amount number
 function IonRP.Bank:Withdraw(ply, amount)
   -- Validate amount
   amount = math.floor(amount)
@@ -72,7 +72,7 @@ function IonRP.Bank:Withdraw(ply, amount)
 end
 
 --[[
-	Deposit money from wallet to bank
+  Deposit money from wallet to bank
 --]]
 function IonRP.Bank:Deposit(ply, amount)
   -- Validate amount
@@ -114,7 +114,7 @@ function IonRP.Bank:Deposit(ply, amount)
 end
 
 --[[
-	Open bank menu for player
+  Open bank menu for player
 --]]
 function IonRP.Bank:OpenMenu(ply)
   net.Start("IonRP_BankOpenMenu")

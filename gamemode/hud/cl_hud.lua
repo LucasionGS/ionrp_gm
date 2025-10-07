@@ -156,7 +156,7 @@ function GM:HUDDrawTargetID()
 
   if not IsValid(trace.Entity) then return end
   if trace.Entity:IsPlayer() then
-    --[[ @type Player ]] --
+    --- @type Player
     local targetPly = trace.Entity
     local pos = targetPly:EyePos()
 

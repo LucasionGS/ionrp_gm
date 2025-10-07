@@ -72,7 +72,7 @@ function ITEM:New(identifier, name)
 
   IonRP.Items.List[identifier] = newItem
   print("│ [IonRP Items] ├ Registered item: " .. identifier .. " - " .. name)
-  
+
   return newItem
 end
 
@@ -163,10 +163,3 @@ for _, misc in ipairs(file.Find("ionrp/gamemode/item/misc/*.lua", "LUA")) do
   end
 end
 print("└───────────────┴────────────────────────────────────────────────────────────────•")
-
-
---[[
-  ┌─────────────────────────────────────────────────────────────────────────┐
-  │                          SERVER-SIDE FUNCTIONS                          │
-  └─────────────────────────────────────────────────────────────────────────┘
-]]

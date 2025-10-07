@@ -30,6 +30,8 @@ include("scoreboard/cl_scoreboard.lua")
 include("developer/cl_model_explorer.lua")
 -- Items
 include("item/sh_item.lua")
+-- Jobs
+include("job/sh_job.lua")
 -- Inventory
 include("inventory/cl_inventory.lua")
 -- IonSys (Admin Panel)

@@ -1,6 +1,6 @@
 --[[
-	IonRP - Dialog System
-	Client-side dialog interface for NPCs, ATMs, and interactions
+  IonRP - Dialog System
+  Client-side dialog interface for NPCs, ATMs, and interactions
 --]]
 
 IonRP.Dialog = IonRP.Dialog or {}
@@ -11,8 +11,8 @@ IonRP.Dialog.Config = {
   MinHeight = 200,
   MaxHeight = 500,
   Padding = 20,
-  ButtonHeight = 32,  -- Reduced from 40
-  ButtonSpacing = 8,  -- Spacing between buttons
+  ButtonHeight = 32,   -- Reduced from 40
+  ButtonSpacing = 8,   -- Spacing between buttons
   AnimationTime = 0.3,
   BottomPadding = 100, -- Distance from bottom of screen
 
@@ -35,15 +35,13 @@ IonRP.Dialog.Config = {
 --- @type DPanel | nil
 local activeDialog = nil
 
---[[
-	Create a dialog panel
-	@param data table {
-		title = string (optional),
-		message = string,
-		buttons = table of {text = string, callback = function, color = Color (optional)},
-		showClose = boolean (optional, default: false) - Show X close button
-	}
---]]
+--- Create a dialog panel
+--- @param data table {
+---   title = string (optional),
+---   message = string,
+---   buttons = table of {text = string, callback = function, color = Color (optional)},
+---   showClose = boolean (optional, default: false) - Show X close button
+--- }
 function IonRP.Dialog:Create(data)
   -- Close existing dialog
   if IsValid(activeDialog) then
@@ -63,7 +61,7 @@ function IonRP.Dialog:Create(data)
   overlay:SetPos(0, 0)
   overlay:MakePopup()
   overlay:SetKeyboardInputEnabled(false) -- Don't block keyboard input
-  overlay:SetMouseInputEnabled(true)    -- But allow mouse clicks
+  overlay:SetMouseInputEnabled(true)     -- But allow mouse clicks
   overlay.Alpha = 0
   overlay.Paint = function(self, w, h)
     draw.RoundedBox(0, 0, 0, w, h, ColorAlpha(IonRP.Dialog.Config.Colors.Overlay, self.Alpha))
@@ -95,7 +93,7 @@ function IonRP.Dialog:Create(data)
   -- Add buttons height (vertical layout)
   if data.buttons and #data.buttons > 0 then
     local totalButtonHeight = (#data.buttons * IonRP.Dialog.Config.ButtonHeight) +
-    ((#data.buttons - 1) * IonRP.Dialog.Config.ButtonSpacing)
+        ((#data.buttons - 1) * IonRP.Dialog.Config.ButtonSpacing)
     contentHeight = contentHeight + totalButtonHeight + IonRP.Dialog.Config.Padding
   end
 
@@ -104,12 +102,12 @@ function IonRP.Dialog:Create(data)
   frame:SetTall(contentHeight)
 
   -- Position near bottom of screen (with some padding from bottom)
-  frame.StartY = ScrH() + contentHeight                                     -- Start off-screen below
+  frame.StartY = ScrH() + contentHeight                                      -- Start off-screen below
   frame.TargetY = ScrH() - contentHeight - IonRP.Dialog.Config.BottomPadding -- Target position near bottom
   frame:SetPos(ScrW() / 2 - IonRP.Dialog.Config.Width / 2, frame.StartY)
   frame.Alpha = 0
   frame:SetKeyboardInputEnabled(true) -- Allow keyboard input to children
-  frame:SetMouseInputEnabled(true)   -- Allow mouse input
+  frame:SetMouseInputEnabled(true)    -- Allow mouse input
 
   -- Paint dialog frame
   frame.Paint = function(self, w, h)
@@ -141,7 +139,7 @@ function IonRP.Dialog:Create(data)
     closeBtn:SetText("")
     closeBtn.Paint = function(self, w, h)
       local col = self:IsHovered() and IonRP.Dialog.Config.Colors.CloseButtonHover or
-      IonRP.Dialog.Config.Colors.CloseButton
+          IonRP.Dialog.Config.Colors.CloseButton
       draw.RoundedBox(4, 0, 0, w, h, col)
 
       -- Draw X
@@ -184,10 +182,10 @@ function IonRP.Dialog:Create(data)
   -- Buttons (vertical layout)
   if data.buttons and #data.buttons > 0 then
     local totalButtonHeight = (#data.buttons * IonRP.Dialog.Config.ButtonHeight) +
-    ((#data.buttons - 1) * IonRP.Dialog.Config.ButtonSpacing)
+        ((#data.buttons - 1) * IonRP.Dialog.Config.ButtonSpacing)
     local startY = contentHeight - totalButtonHeight - IonRP.Dialog.Config.Padding
     local buttonWidth = IonRP.Dialog.Config.Width -
-    (IonRP.Dialog.Config.Padding * 4)                                               -- Narrower buttons with side padding
+        (IonRP.Dialog.Config.Padding * 4) -- Narrower buttons with side padding
     local buttonX = IonRP.Dialog.Config.Padding * 2
 
     for i, btnData in ipairs(data.buttons) do
@@ -248,11 +246,9 @@ function IonRP.Dialog:Create(data)
   return overlay
 end
 
---[[
-	Close a specific dialog with optional animation
-	@param dialog Panel - The dialog overlay to close
-	@param animate boolean - If true, animate the close. If false/nil, close instantly
---]]
+--- Close a specific dialog with optional animation
+--- @param dialog DPanel - The dialog overlay to close
+--- @param animate boolean - If true, animate the close. If false/nil, close instantly
 function IonRP.Dialog:CloseSpecific(dialog, animate)
   if not IsValid(dialog) then return end
 
@@ -287,24 +283,22 @@ function IonRP.Dialog:CloseSpecific(dialog, animate)
   end
 end
 
---[[
-	Close the active dialog with optional animation
-	@param animate boolean - If true, animate the close. If false/nil, close instantly
---]]
+--- Close the active dialog with optional animation
+--- @param animate boolean - If true, animate the close. If false/nil, close instantly
 function IonRP.Dialog:Close(animate)
-  if not IsValid(activeDialog) then return end
+  if not activeDialog or not IsValid(activeDialog) then return end
   self:CloseSpecific(activeDialog, animate)
 end
 
 --[[
-	Check if a dialog is currently active
+  Check if a dialog is currently active
 --]]
 function IonRP.Dialog:IsActive()
   return IsValid(activeDialog)
 end
 
 --[[
-	Convenience function: Simple message dialog
+  Convenience function: Simple message dialog
 --]]
 function IonRP.Dialog:Message(title, message, callback)
   return self:Create({
@@ -320,7 +314,7 @@ function IonRP.Dialog:Message(title, message, callback)
 end
 
 --[[
-	Convenience function: Confirmation dialog
+  Convenience function: Confirmation dialog
 --]]
 function IonRP.Dialog:Confirm(title, message, onConfirm, onCancel)
   return self:Create({
@@ -342,7 +336,7 @@ function IonRP.Dialog:Confirm(title, message, onConfirm, onCancel)
 end
 
 --[[
-	Convenience function: Choice dialog (Yes/No)
+  Convenience function: Choice dialog (Yes/No)
 --]]
 function IonRP.Dialog:Choice(title, message, onYes, onNo)
   return self:Create({
@@ -364,7 +358,7 @@ function IonRP.Dialog:Choice(title, message, onYes, onNo)
 end
 
 --[[
-	Network receiver for server-initiated dialogs
+  Network receiver for server-initiated dialogs
 --]]
 net.Receive("IonRP_OpenDialog", function()
   local data = net.ReadTable()

@@ -51,13 +51,11 @@ function IonRP.Database:InitializeTables()
   query:start()
 end
 
---[[
-    Execute a prepared query safely
-    @param sql string - SQL query with ? placeholders
-    @param params table - Parameters to bind
-    @param onSuccess function - Callback on success
-    @param onError function - Callback on error
-]] --
+--- Execute a prepared query safely
+--- @param sql string - SQL query with ? placeholders
+--- @param params table - Parameters to bind
+--- @param onSuccess function - Callback on success
+--- @param onError function - Callback on error
 function IonRP.Database:PreparedQuery(sql, params, onSuccess, onError)
   local query = self:prepare(sql)
 

@@ -1,22 +1,16 @@
 --[[
-	IonRP - Dialog System (Server)
-	Server-side functions for sending dialogs to clients
+  IonRP - Dialog System (Server)
+  Server-side functions for sending dialogs to clients
 --]]
 
 util.AddNetworkString("IonRP_OpenDialog")
 
 IonRP.Dialog = IonRP.Dialog or {}
 
---[[
-	Send a dialog to a player or players
-	@param ply Player or table of players
-	@param data table {
-		title = string (optional),
-		message = string,
-		buttons = table of {text = string, callback = string (optional)}
-	}
-	Note: callbacks are network message names that will be sent when button is clicked
---]]
+--- Send a dialog to a player or players
+--- @param ply Player or table of players
+--- @param data {title: string, message: string, buttons: {text: string, callback: string }}}
+--- Note: callbacks are network message names that will be sent when button is clicked
 function IonRP.Dialog:Send(ply, data)
   if not data or not data.message then
     ErrorNoHalt("[IonRP Dialog] No message provided!\n")
@@ -53,9 +47,10 @@ function IonRP.Dialog:Send(ply, data)
   net.Send(players)
 end
 
---[[
-	Convenience function: Send message dialog
---]]
+--- Convenience function: Send message dialog
+--- @param ply Player or table of players
+--- @param title string
+--- @param message string
 function IonRP.Dialog:Message(ply, title, message)
   return self:Send(ply, {
     title = title,
@@ -67,7 +62,7 @@ function IonRP.Dialog:Message(ply, title, message)
 end
 
 --[[
-	Convenience function: Send confirmation dialog
+  Convenience function: Send confirmation dialog
 --]]
 function IonRP.Dialog:Confirm(ply, title, message)
   return self:Send(ply, {
@@ -81,32 +76,32 @@ function IonRP.Dialog:Confirm(ply, title, message)
 end
 
 --[[
-	Example: NPC Dialog
-	Usage in your NPC code:
-	
-	IonRP.Dialog:Send(ply, {
-		title = "Shopkeeper",
-		message = "Welcome to my shop! Would you like to buy something?",
-		buttons = {
-			{text = "No thanks"},
-			{text = "Show me your wares"}
-		}
-	})
+  Example: NPC Dialog
+  Usage in your NPC code:
+
+  IonRP.Dialog:Send(ply, {
+    title = "Shopkeeper",
+    message = "Welcome to my shop! Would you like to buy something?",
+    buttons = {
+      {text = "Show me your wares"},
+      {text = "No thanks"},
+    }
+  })
 --]]
 
 --[[
-	Example: ATM Dialog
-	Usage in your ATM code:
-	
-	IonRP.Dialog:Send(ply, {
-		title = "ATM - Bank of IonRP",
-		message = "Your current balance: $" .. ply:GetMoney() .. "\n\nWhat would you like to do?",
-		buttons = {
-			{text = "Cancel"},
-			{text = "Withdraw"},
-			{text = "Deposit"}
-		}
-	})
+  Example: ATM Dialog
+  Usage in your ATM code:
+
+  IonRP.Dialog:Send(ply, {
+    title = "ATM - Bank of IonRP",
+    message = "Your current balance: $" .. ply:GetMoney() .. "\n\nWhat would you like to do?",
+    buttons = {
+      {text = "Deposit"},
+      {text = "Withdraw"},
+      {text = "Cancel"},
+    }
+  })
 --]]
 
 print("[IonRP] Dialog system (server) loaded")

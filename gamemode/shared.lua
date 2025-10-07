@@ -11,19 +11,6 @@ GM.Website = "N/A"
 GM.TeamBased = false
 
 --[[
-  Team Setup
---]]
-function GM:CreateTeams()
-  TEAM_CITIZEN = 1
-  TEAM_POLICE = 2
-  TEAM_MEDIC = 3
-
-  team.SetUp(TEAM_CITIZEN, "Citizen", Color(100, 100, 100))
-  team.SetUp(TEAM_POLICE, "Police Officer", Color(0, 0, 255))
-  team.SetUp(TEAM_MEDIC, "Medic", Color(255, 0, 0))
-end
-
---[[
   Allow or deny noclip
   This will be overridden by the rank system in sv_ranks.lua
 --]]

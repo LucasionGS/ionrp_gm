@@ -26,29 +26,23 @@ function IonRP.Commands.Add(name, callback, description, permission)
   end
 end
 
---[[
-    Get a command by name
-    @param name string
-    @return table or nil
-]] --
+--- Get a command by name
+--- @param name string
+--- @return table or nil
 function IonRP.Commands.Get(name)
   return IonRP.Commands.List[string.lower(name)]
 end
 
---[[
-    Get all registered commands
-    @return table
-]] --
+--- Get all registered commands
+--- @return table
 function IonRP.Commands.GetAll()
   return IonRP.Commands.List
 end
 
---[[
-    Check if a player has permission to run a command
-    @param ply Player
-    @param cmd table - Command data
-    @return boolean
-]] --
+--- Check if a player has permission to run a command
+--- @param ply Player
+--- @param cmd table - Command data
+--- @return boolean
 function IonRP.Commands.HasPermission(ply, cmd)
   if not cmd.permission then return true end
 
@@ -61,11 +55,9 @@ function IonRP.Commands.HasPermission(ply, cmd)
 end
 
 if SERVER then
-  --[[
-      Execute a command
-      @param ply Player - Player executing the command
-      @param text string - Full command text
-  ]] --
+  --- Execute a command
+  --- @param ply Player - Player executing the command
+  --- @param text string - Full command text
   function IonRP.Commands.Execute(ply, text)
     -- Parse command and arguments
     local args = string.Explode("%s+", text)

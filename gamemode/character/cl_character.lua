@@ -116,7 +116,7 @@ function IonRP.Character:OpenCreationMenu()
   local modelPreview = vgui.Create("DModelPanel", frame)
   modelPreview:SetPos(padding, y + 20)
   modelPreview:SetSize(200, 200)
-  modelPreview:SetModel(self.Models.Male[1])
+  modelPreview:SetModel(JOB_CITIZEN.playerModels[self.Models.Male[1]])
   modelPreview:SetCamPos(Vector(50, 0, 50))
   modelPreview:SetLookAt(Vector(0, 0, 40))
 
@@ -130,7 +130,7 @@ function IonRP.Character:OpenCreationMenu()
     if selectedModelIndex < 1 then
       selectedModelIndex = #models
     end
-    modelPreview:SetModel(models[selectedModelIndex])
+    modelPreview:SetModel(JOB_CITIZEN.playerModels[models[selectedModelIndex] or "male"])
   end
 
   local btnNextModel = vgui.Create("DButton", frame)
@@ -143,7 +143,7 @@ function IonRP.Character:OpenCreationMenu()
     if selectedModelIndex > #models then
       selectedModelIndex = 1
     end
-    modelPreview:SetModel(models[selectedModelIndex])
+    modelPreview:SetModel(JOB_CITIZEN.playerModels[models[selectedModelIndex] or "male"])
   end
 
   -- Create button

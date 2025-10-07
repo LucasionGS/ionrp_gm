@@ -22,6 +22,8 @@ AddCSLuaFile("scoreboard/cl_scoreboard.lua")
 AddCSLuaFile("developer/cl_model_explorer.lua")
 -- Items
 AddCSLuaFile("item/sh_item.lua")
+-- Jobs
+AddCSLuaFile("job/sh_job.lua")
 -- Inventory
 AddCSLuaFile("inventory/sh_inventory.lua")
 AddCSLuaFile("inventory/cl_inventory.lua")
@@ -54,6 +56,9 @@ include("commands/sv_inventory_commands.lua")
 -- Items
 include("item/sh_item.lua")
 
+-- Jobs
+include("job/sh_job.lua")
+
 -- Inventory
 include("inventory/sv_inventory.lua")
 
@@ -74,30 +79,27 @@ function GM:PlayerInitialSpawn(ply)
   print("[IonRP] Player " .. ply:Nick() .. " has joined the server")
 end
 
---[[
-  Called when a player spawns
---]]
-function GM:PlayerSpawn(ply)
-  -- Reset player state
-  self.BaseClass.PlayerSpawn(self, ply)
-
-  -- Set player model (required to prevent crashes)
-  ply:SetModel("models/player/group01/male_01.mdl")
-
-  -- Give default weapons
-  ply:Give("weapon_pistol")
-  ply:Give("weapon_physcannon")
-
-  -- local startingMoney = GetConVar("ionrp_starting_money"):GetInt()
-  -- ply:SetWallet(startingMoney)
-
-  print("[IonRP] Player " .. ply:Nick() .. " has spawned")
-end
+-- function GM:PlayerSpawn(ply)
+--   self.BaseClass.PlayerSpawn(self, ply)
+-- end
 
 --[[
-  Called to give players their weapons
+  Initialize the player and their job.
 --]]
 function GM:PlayerLoadout(ply)
+  -- Set player model (required to prevent crashes)
+  local job = ply:GetJob()
+  if job then
+    job:Loadout(ply)
+  else
+    ply:SetModel("models/player/group01/male_01.mdl")
+    -- Give default weapons
+    ply:Give("weapon_pistol")
+    ply:Give("weapon_physcannon")
+  end
+
+  print("[IonRP] Player " .. ply:Nick() .. " has spawned")
+
   -- Return true to prevent default weapon loadout
   return true
 end

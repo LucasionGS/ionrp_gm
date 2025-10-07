@@ -253,7 +253,7 @@ function IonRP.Inventory:Save(ply, callback)
       local toInsert = #items
 
       if toInsert == 0 then
-        print("[IonRP Inventory] Saved empty inventory for " .. ply:Nick())
+        -- print("[IonRP Inventory] Saved empty inventory for " .. ply:Nick())
         if callback then callback(true) end
         return
       end
