@@ -86,6 +86,45 @@ function GM:DrawIonRPHUD()
   local moneyText = self:FormatMoney(money)
   draw.SimpleText("Cash: " .. moneyText, "DermaDefault", x + barWidth / 2, barY + barHeight / 2, moneyColor,
     TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  
+  -- Ammo display (if weapon is equipped)
+  local weapon = ply:GetActiveWeapon()
+  if IsValid(weapon) and weapon.GetPrintName then
+    local clip = weapon:Clip1()
+    local ammoType = weapon:GetPrimaryAmmoType()
+    local reserveAmmo = ply:GetAmmoCount(ammoType)
+    
+    -- Only show if weapon uses ammo
+    if clip >= 0 or reserveAmmo > 0 then
+      -- Position on bottom right
+      local ammoX = ScrW() - barWidth - padding
+      local ammoY = ScrH() - padding - barHeight * 2 - spacing
+      local ammoBarWidth = barWidth * 0.6 -- Smaller width for ammo display
+      
+      -- Background panel
+      draw.RoundedBox(cornerRadius, ammoX, ammoY, ammoBarWidth, barHeight * 2 + spacing, bgColor)
+      
+      -- Weapon name
+      local weaponName = weapon:GetPrintName() or weapon:GetClass()
+      draw.SimpleText(weaponName, "DermaDefault", ammoX + ammoBarWidth / 2, ammoY + 8, textColor, 
+        TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      
+      -- Ammo display
+      local ammoY2 = ammoY + barHeight + spacing - 5
+      local ammoColor = Color(255, 193, 7) -- Orange/yellow for ammo
+      
+      if clip >= 0 then
+        -- Weapon uses clips
+        local clipText = string.format("%d / %d", clip, reserveAmmo)
+        draw.SimpleText(clipText, "DermaLarge", ammoX + ammoBarWidth / 2, ammoY2, ammoColor,
+          TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      else
+        -- Weapon doesn't use clips (like RPG, Crossbow)
+        draw.SimpleText(tostring(reserveAmmo), "DermaLarge", ammoX + ammoBarWidth / 2, ammoY2, ammoColor,
+          TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      end
+    end
+  end
 end
 
 --[[

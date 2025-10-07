@@ -3,8 +3,9 @@
     Handles model spawning for developers
 ]] --
 
--- Network string for spawning models
+-- Network strings
 util.AddNetworkString("IonRP_SpawnModel")
+util.AddNetworkString("IonRP_GiveWeapon")
 
 -- Handle model spawn requests
 net.Receive("IonRP_SpawnModel", function(len, ply)
@@ -50,6 +51,38 @@ net.Receive("IonRP_SpawnModel", function(len, ply)
 
   -- Log the spawn
   print(string.format("[IonRP] %s spawned model: %s", ply:Nick(), modelPath))
+end)
+
+-- Handle weapon give requests
+net.Receive("IonRP_GiveWeapon", function(len, ply)
+  -- Check if player is developer
+  if not (ply.GetRankName and ply:GetRankName() == "Developer") then
+    ply:ChatPrint("[IonRP] Only Developers can give weapons")
+    return
+  end
+
+  -- Get weapon class
+  local weaponClass = net.ReadString()
+
+  -- Validate weapon class
+  if not weaponClass or weaponClass == "" then
+    ply:ChatPrint("[IonRP] Invalid weapon class")
+    return
+  end
+
+  -- Check if weapon exists
+  if not weapons.Get(weaponClass) then
+    ply:ChatPrint("[IonRP] Weapon class not found: " .. weaponClass)
+    return
+  end
+
+  -- Give weapon to player
+  ply:Give(weaponClass, true)
+  ply:SelectWeapon(weaponClass)
+
+  -- Log the action
+  print(string.format("[IonRP] %s gave themselves weapon: %s", ply:Nick(), weaponClass))
+  ply:ChatPrint("[IonRP] Given weapon: " .. weaponClass)
 end)
 
 -- Register /models command

@@ -8,6 +8,7 @@ IonRP.ModelExplorer = IonRP.ModelExplorer or {}
 -- Cache models for performance
 IonRP.ModelExplorer.ModelCache = {}
 IonRP.ModelExplorer.Categories = {}
+IonRP.ModelExplorer.WeaponClasses = {} -- Cache for weapon classes
 IonRP.ModelExplorer.IsLoading = false
 
 --[[
@@ -99,8 +100,9 @@ function IonRP.ModelExplorer:ScanModels()
   self.IsLoading = true
   self.ModelCache = {}
   self.Categories = {}
+  self.WeaponClasses = {}
   
-  print("[IonRP] Model Explorer: Scanning all models...")
+  print("[IonRP] Model Explorer: Scanning all models and weapon classes...")
   
   -- Scan the entire models directory recursively
   ScanDirectory("models/", self.ModelCache)
@@ -116,16 +118,41 @@ function IonRP.ModelExplorer:ScanModels()
     table.insert(self.Categories[category], modelPath)
   end
   
+  -- Scan for weapon classes
+  local weaponList = weapons.GetList()
+  for _, wep in ipairs(weaponList) do
+    if wep.ClassName and wep.ClassName ~= "" then
+      -- Store weapon data: class, printname, and model
+      table.insert(self.WeaponClasses, {
+        class = wep.ClassName,
+        name = wep.PrintName or wep.ClassName,
+        model = wep.WorldModel or ""
+      })
+    end
+  end
+  
+  -- Sort weapon classes by name
+  table.sort(self.WeaponClasses, function(a, b)
+    return a.name:lower() < b.name:lower()
+  end)
+  
+  -- Add weapon classes as a special category
+  self.Categories["Weapon Classes"] = self.WeaponClasses
+  
   -- Sort each category
   for category, models in pairs(self.Categories) do
-    table.sort(models)
+    if category ~= "Weapon Classes" then -- Already sorted
+      table.sort(models)
+    end
   end
   
   self.IsLoading = false
   
   local totalModels = #self.ModelCache
+  local totalWeapons = #self.WeaponClasses
   local categoryCount = table.Count(self.Categories)
-  print(string.format("[IonRP] Model Explorer: Found %d models in %d categories", totalModels, categoryCount))
+  print(string.format("[IonRP] Model Explorer: Found %d models, %d weapon classes in %d categories", 
+    totalModels, totalWeapons, categoryCount))
 end
 
 --[[
@@ -272,7 +299,8 @@ function IonRP.ModelExplorer:Open()
   infoPanel.Paint = function(self, w, h)
     draw.RoundedBox(4, 0, 0, w, h, Color(45, 45, 55, 200))
     
-    local text = string.format("Total Models: %d | Click a model to copy its path", #IonRP.ModelExplorer.ModelCache)
+    local text = string.format("Models: %d | Weapons: %d | Left-Click: Copy | Right-Click: Spawn/Give", 
+      #IonRP.ModelExplorer.ModelCache, #IonRP.ModelExplorer.WeaponClasses)
     draw.SimpleText(text, "DermaDefault", w / 2, h / 2, Color(180, 180, 190), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
   
@@ -308,6 +336,7 @@ function IonRP.ModelExplorer:Open()
     page = page or 1
     local displayedCount = 0
     local totalCount = 0
+    local isWeaponCategory = false
     
     -- Determine which models to show
     local modelsToShow = {}
@@ -320,8 +349,13 @@ function IonRP.ModelExplorer:Open()
       -- Extract category name (remove count)
       local categoryName = category:match("(.+)%s%(%d+%)") or category
       
-      -- Show models from specific category
-      if self.Categories[categoryName] then
+      -- Check if this is the weapon classes category
+      if categoryName == "Weapon Classes" then
+        isWeaponCategory = true
+        modelsToShow = self.WeaponClasses
+        totalCount = #modelsToShow
+      elseif self.Categories[categoryName] then
+        -- Show models from specific category
         modelsToShow = self.Categories[categoryName]
         totalCount = #modelsToShow
       end
@@ -329,9 +363,20 @@ function IonRP.ModelExplorer:Open()
     
     -- Apply filter first to get filtered list
     local filteredModels = {}
-    for _, modelPath in ipairs(modelsToShow) do
-      if filter == "" or string.find(modelPath:lower(), filter, 1, true) then
-        table.insert(filteredModels, modelPath)
+    if isWeaponCategory then
+      -- Filter weapon classes by name or class
+      for _, weaponData in ipairs(modelsToShow) do
+        local searchText = (weaponData.name .. " " .. weaponData.class):lower()
+        if filter == "" or string.find(searchText, filter, 1, true) then
+          table.insert(filteredModels, weaponData)
+        end
+      end
+    else
+      -- Filter models by path
+      for _, modelPath in ipairs(modelsToShow) do
+        if filter == "" or string.find(modelPath:lower(), filter, 1, true) then
+          table.insert(filteredModels, modelPath)
+        end
       end
     end
     
@@ -350,9 +395,22 @@ function IonRP.ModelExplorer:Open()
     
     -- Display only models for current page
     for i = startIdx, endIdx do
-      local modelPath = filteredModels[i]
-      if modelPath then
+      local entry = filteredModels[i]
+      if entry then
         displayedCount = displayedCount + 1
+        
+        -- Check if this is a weapon class or model
+        local isWeapon = isWeaponCategory
+        local displayPath, weaponClass, weaponName, weaponModel
+        
+        if isWeapon then
+          weaponClass = entry.class
+          weaponName = entry.name
+          weaponModel = entry.model
+          displayPath = string.format("%s (%s)", weaponName, weaponClass)
+        else
+          displayPath = entry
+        end
         
         -- Create model row
         local row = vgui.Create("DButton", scroll)
@@ -361,14 +419,22 @@ function IonRP.ModelExplorer:Open()
         row:DockMargin(0, 0, 0, 2)
         row:SetText("")
         
-        -- Store model path
-        row.ModelPath = modelPath
+        -- Store data based on type
+        if isWeapon then
+          row.WeaponClass = weaponClass
+          row.WeaponName = weaponName
+          row.DisplayPath = displayPath
+          row.IsWeapon = true
+        else
+          row.ModelPath = displayPath
+          row.IsWeapon = false
+        end
         
         -- Model preview icon
         local modelIcon = vgui.Create("DModelPanel", row)
         modelIcon:SetPos(8, 5)
         modelIcon:SetSize(40, 40)
-        modelIcon:SetModel(modelPath)
+        modelIcon:SetModel(isWeapon and weaponModel or displayPath)
         modelIcon:SetMouseInputEnabled(false)
         
         -- Auto-calculate camera position based on model size
@@ -420,43 +486,63 @@ function IonRP.ModelExplorer:Open()
           
           draw.RoundedBox(4, 0, 0, w, h, bgCol)
           
-          -- Left accent
-          draw.RoundedBox(0, 0, 0, 3, h, Color(100, 200, 255, 200))
+          -- Left accent (different color for weapons)
+          local accentCol = self.IsWeapon and Color(255, 150, 100, 200) or Color(100, 200, 255, 200)
+          draw.RoundedBox(0, 0, 0, 3, h, accentCol)
           
-          -- Model path text (offset to make room for preview)
-          draw.SimpleText(self.ModelPath, "DermaDefault", 60, h / 2, Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+          -- Display text (offset to make room for preview)
+          local displayText = self.IsWeapon and self.DisplayPath or self.ModelPath
+          draw.SimpleText(displayText, "DermaDefault", 60, h / 2, Color(255, 255, 255), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
           
           -- Copy hint
           if self:IsHovered() then
-            draw.SimpleText("Click to copy", "DermaDefault", w - 10, h / 2, Color(100, 255, 150), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            local hintText = self.IsWeapon and "Click to copy class" or "Click to copy"
+            draw.SimpleText(hintText, "DermaDefault", w - 10, h / 2, Color(100, 255, 150), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
           end
         end
         
         row.DoClick = function(self)
-          SetClipboardText(self.ModelPath)
-          chat.AddText(Color(100, 255, 150), "[Model Explorer] ", Color(255, 255, 255), "Copied: ", Color(100, 200, 255), self.ModelPath)
+          if self.IsWeapon then
+            -- Copy weapon class
+            SetClipboardText(self.WeaponClass)
+            chat.AddText(Color(100, 255, 150), "[Model Explorer] ", Color(255, 255, 255), "Copied weapon class: ", Color(255, 150, 100), self.WeaponClass)
+          else
+            -- Copy model path
+            SetClipboardText(self.ModelPath)
+            chat.AddText(Color(100, 255, 150), "[Model Explorer] ", Color(255, 255, 255), "Copied: ", Color(100, 200, 255), self.ModelPath)
+          end
           
           -- Visual feedback
           surface.PlaySound("buttons/button15.wav")
         end
         
         row.DoRightClick = function(self)
-          -- Get player's aim trace
-          local ply = LocalPlayer()
-          local trace = ply:GetEyeTrace()
-          
-          if trace.Hit then
-            -- Send spawn request to server
-            net.Start("IonRP_SpawnModel")
-            net.WriteString(self.ModelPath)
-            net.WriteVector(trace.HitPos)
-            net.WriteAngle(Angle(0, ply:EyeAngles().y, 0))
+          if self.IsWeapon then
+            -- Give weapon to player
+            net.Start("IonRP_GiveWeapon")
+            net.WriteString(self.WeaponClass)
             net.SendToServer()
             
-            chat.AddText(Color(100, 200, 255), "[Model Explorer] ", Color(255, 255, 255), "Spawned model at crosshair")
+            chat.AddText(Color(100, 200, 255), "[Model Explorer] ", Color(255, 255, 255), "Giving weapon: ", Color(255, 150, 100), self.WeaponClass)
             surface.PlaySound("buttons/button9.wav")
           else
-            chat.AddText(Color(231, 76, 60), "[Model Explorer] ", Color(255, 255, 255), "Aim at a surface to spawn the model")
+            -- Spawn model at crosshair
+            local ply = LocalPlayer()
+            local trace = ply:GetEyeTrace()
+            
+            if trace.Hit then
+              -- Send spawn request to server
+              net.Start("IonRP_SpawnModel")
+              net.WriteString(self.ModelPath)
+              net.WriteVector(trace.HitPos)
+              net.WriteAngle(Angle(0, ply:EyeAngles().y, 0))
+              net.SendToServer()
+              
+              chat.AddText(Color(100, 200, 255), "[Model Explorer] ", Color(255, 255, 255), "Spawned model at crosshair")
+              surface.PlaySound("buttons/button9.wav")
+            else
+              chat.AddText(Color(231, 76, 60), "[Model Explorer] ", Color(255, 255, 255), "Aim at a surface to spawn the model")
+            end
           end
         end
       end

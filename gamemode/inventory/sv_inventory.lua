@@ -397,8 +397,6 @@ net.Receive("IonRP_UseItem", function(len, ply)
     return
   end
 
-  PrintTable(slot.item)
-
   -- Create an owned instance of the item
   local itemInstance = slot.item:MakeOwnedInstance(ply)
 

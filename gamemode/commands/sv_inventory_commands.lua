@@ -181,5 +181,23 @@ if SERVER then
     activator:ChatPrint("=====================================")
   end, "List all available items", "listitems")
 
+  IonRP.Commands.Add("checkammo", function(ply, args, rawArgs)
+    local weapon = ply:GetActiveWeapon()
+    if not IsValid(weapon) then
+      ply:ChatPrint("You are not holding a valid weapon.")
+      return
+    end
+
+    local ammoType = weapon:GetPrimaryAmmoType()
+    if ammoType == -1 then
+      ply:ChatPrint("Your current weapon does not use ammo.")
+      return
+    end
+
+    local ammoName = game.GetAmmoName(ammoType) or "Unknown"
+
+    ply:ChatPrint(string.format("Your current weapon (%s) uses %s ammo. (%s)", weapon:GetClass(), ammoName, ammoType))
+  end, "Get what ammo is required for your current weapon")
+
   print("[IonRP] Inventory commands loaded")
 end

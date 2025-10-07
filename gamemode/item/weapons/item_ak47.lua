@@ -4,5 +4,5 @@ ITEM_AK47.model = "models/weapons/w_rif_ak47.mdl"
 ITEM_AK47.weight = 3.47
 ITEM_AK47.size = { 2, 1 }
 ITEM_AK47.type = "weapon"
-ITEM_AK47.weaponClass = "weapon_ak47"
+ITEM_AK47.weaponClass = "mg_akilo47"
 ITEM_AK47.weaponSlot = 1 -- Primary weapon slot
