@@ -128,6 +128,13 @@ function IonRP.InventoryUI:Open()
   frame:AlphaTo(255, 0.2, 0)
   self.Frame = frame
 
+  -- Check if Q key is still held down (since MakePopup captures input)
+  frame.Think = function(self)
+    if not input.IsKeyDown(KEY_Q) then
+      IonRP.InventoryUI:Close()
+    end
+  end
+
   -- Custom paint
   frame.Paint = function(self, w, h)
     -- Shadow
@@ -842,10 +849,17 @@ concommand.Add("ionrp_inventory", function(ply)
   print("[IonRP Inventory] Requesting inventory from server...")
 end)
 
--- Bind key to open inventory (I key)
+-- Bind key to open inventory (Q key - hold to keep open)
 hook.Add("PlayerButtonDown", "IonRP_InventoryKey", function(ply, button)
-  if button == KEY_I then
+  if button == KEY_Q then
     RunConsoleCommand("ionrp_inventory")
+  end
+end)
+
+-- Close inventory when Q is released
+hook.Add("PlayerButtonUp", "IonRP_InventoryKeyRelease", function(ply, button)
+  if button == KEY_Q then
+    IonRP.InventoryUI:Close()
   end
 end)
 
