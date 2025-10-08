@@ -239,27 +239,12 @@ function IonRP.IonSys.UI:CreatePlayerPanel()
       end
 
       draw.RoundedBox(4, 0, 0, w, h, bgColor)
-
-      -- Player info
-      draw.SimpleText(playerData.name, "DermaDefaultBold", 12, 10, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-      draw.SimpleText("Rank: " .. playerData.rank, "DermaDefault", 12, 30, playerData.rankColor, TEXT_ALIGN_LEFT,
-        TEXT_ALIGN_TOP)
-      draw.SimpleText("SteamID: " .. playerData.steamid, "DermaDefault", 12, 48, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT,
-        TEXT_ALIGN_TOP)
-
-      -- Stats
-      draw.SimpleText("HP: " .. playerData.health, "DermaDefault", w - 250, 10, cfg.Colors.TextDim, TEXT_ALIGN_LEFT,
-        TEXT_ALIGN_TOP)
-      draw.SimpleText("Armor: " .. playerData.armor, "DermaDefault", w - 250, 28, cfg.Colors.TextDim, TEXT_ALIGN_LEFT,
-        TEXT_ALIGN_TOP)
-      draw.SimpleText("Ping: " .. playerData.ping, "DermaDefault", w - 250, 46, cfg.Colors.TextDim, TEXT_ALIGN_LEFT,
-        TEXT_ALIGN_TOP)
     end
 
     -- Button container (right side)
     local buttonContainer = vgui.Create("DPanel", playerRow)
     buttonContainer:Dock(RIGHT)
-    buttonContainer:SetWide(130)
+    buttonContainer:SetWide(210)
     buttonContainer:DockMargin(0, 15, 10, 15)
     buttonContainer.Paint = function() end
 
@@ -283,7 +268,7 @@ function IonRP.IonSys.UI:CreatePlayerPanel()
       self:ShowBanDialog(playerData)
     end
 
-    -- Kick button (left of ban)
+    -- Kick button
     local kickBtn = vgui.Create("DButton", buttonContainer)
     kickBtn:Dock(RIGHT)
     kickBtn:SetWide(60)
@@ -302,6 +287,55 @@ function IonRP.IonSys.UI:CreatePlayerPanel()
 
     kickBtn.DoClick = function()
       self:ShowKickDialog(playerData)
+    end
+
+    -- Set Rank button (leftmost)
+    local rankBtn = vgui.Create("DButton", buttonContainer)
+    rankBtn:Dock(RIGHT)
+    rankBtn:SetWide(80)
+    rankBtn:DockMargin(0, 0, 5, 0)
+    rankBtn:SetText("")
+
+    rankBtn.Paint = function(self, w, h)
+      local col = Color(155, 89, 182, 230) -- Purple
+      if self:IsHovered() then
+        col = Color(165, 99, 192, 255)
+      end
+
+      draw.RoundedBox(4, 0, 0, w, h, col)
+      draw.SimpleText("Set Rank", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+
+    rankBtn.DoClick = function()
+      self:ShowSetRankDialog(playerData)
+    end
+
+    -- Stats container (left of buttons)
+    local statsContainer = vgui.Create("DPanel", playerRow)
+    statsContainer:Dock(RIGHT)
+    statsContainer:SetWide(120)
+    statsContainer:DockMargin(0, 10, 5, 10)
+    statsContainer.Paint = function(self, w, h)
+      -- Stats text
+      draw.SimpleText("HP: " .. playerData.health, "DermaDefault", 0, 5, cfg.Colors.TextDim, TEXT_ALIGN_LEFT,
+        TEXT_ALIGN_TOP)
+      draw.SimpleText("Armor: " .. playerData.armor, "DermaDefault", 0, 23, cfg.Colors.TextDim, TEXT_ALIGN_LEFT,
+        TEXT_ALIGN_TOP)
+      draw.SimpleText("Ping: " .. playerData.ping, "DermaDefault", 0, 41, cfg.Colors.TextDim, TEXT_ALIGN_LEFT,
+        TEXT_ALIGN_TOP)
+    end
+
+    -- Player info container (fills remaining space on left)
+    local infoContainer = vgui.Create("DPanel", playerRow)
+    infoContainer:Dock(FILL)
+    infoContainer:DockMargin(12, 10, 5, 10)
+    infoContainer.Paint = function(self, w, h)
+      -- Player info
+      draw.SimpleText(playerData.name, "DermaDefaultBold", 0, 0, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+      draw.SimpleText("Rank: " .. playerData.rank, "DermaDefault", 0, 20, playerData.rankColor, TEXT_ALIGN_LEFT,
+        TEXT_ALIGN_TOP)
+      draw.SimpleText("SteamID: " .. playerData.steamid, "DermaDefault", 0, 38, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT,
+        TEXT_ALIGN_TOP)
     end
   end
 
@@ -555,7 +589,7 @@ function IonRP.IonSys.UI:CreateJobPanel()
         -- Stats
         local salaryText = "Salary: " .. IonRP.Util:FormatMoney(jobData.salary)
         draw.SimpleText(salaryText, "DermaDefault", 12, 64, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-        
+
         local maxText = jobData.max == 0 and "Unlimited" or ("Max: " .. jobData.max)
         draw.SimpleText(maxText, "DermaDefault", 200, 64, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
       end
@@ -788,6 +822,135 @@ function IonRP.IonSys.UI:ShowBanDialog(playerData)
     dialog:Close()
 
     chat.AddText(Color(255, 100, 100), "[IonSys] ", Color(255, 255, 255), "Ban request sent for " .. playerData.name)
+  end
+end
+
+--- Show set rank dialog
+--- @param playerData IonSys_PlayerData
+function IonRP.IonSys.UI:ShowSetRankDialog(playerData)
+  local cfg = self.Config
+
+  if not self.CurrentData or not self.CurrentData.ranks then
+    chat.AddText(Color(255, 100, 100), "[IonSys] ", Color(255, 255, 255), "Rank data not available!")
+    return
+  end
+
+  -- Create dialog
+  local dialog = vgui.Create("DFrame")
+  dialog:SetSize(400, 350)
+  dialog:Center()
+  dialog:SetTitle("")
+  dialog:SetDraggable(true)
+  dialog:ShowCloseButton(false)
+  dialog:MakePopup()
+
+  dialog.Paint = function(self, w, h)
+    draw.RoundedBox(8, 0, 0, w, h, cfg.Colors.Background)
+    surface.SetDrawColor(cfg.Colors.AccentCyan)
+    surface.DrawOutlinedRect(0, 0, w, h, 2)
+  end
+
+  -- Title
+  local title = vgui.Create("DLabel", dialog)
+  title:SetPos(12, 12)
+  title:SetSize(376, 30)
+  title:SetText("Set Rank: " .. playerData.name)
+  title:SetFont("DermaLarge")
+  title:SetTextColor(cfg.Colors.Text)
+
+  -- Current rank display
+  local currentRankLabel = vgui.Create("DLabel", dialog)
+  currentRankLabel:SetPos(12, 50)
+  currentRankLabel:SetSize(376, 20)
+  currentRankLabel:SetText("Current Rank: " .. playerData.rank)
+  currentRankLabel:SetTextColor(playerData.rankColor)
+
+  -- Rank selection label
+  local rankLabel = vgui.Create("DLabel", dialog)
+  rankLabel:SetPos(12, 80)
+  rankLabel:SetSize(376, 20)
+  rankLabel:SetText("New Rank:")
+  rankLabel:SetTextColor(cfg.Colors.TextDim)
+
+  -- Rank dropdown
+  local rankCombo = vgui.Create("DComboBox", dialog)
+  rankCombo:SetPos(12, 105)
+  rankCombo:SetSize(376, 30)
+  rankCombo:SetValue("Select a rank...")
+  rankCombo:SetSortItems(false)
+
+  -- Populate ranks
+  for _, rankData in ipairs(self.CurrentData.ranks) do
+    local rankColor = Color(rankData.color.r, rankData.color.g, rankData.color.b)
+    rankCombo:AddChoice(rankData.name, rankData.id, false, "icon16/user.png")
+  end
+
+  -- Reason input
+  local reasonLabel = vgui.Create("DLabel", dialog)
+  reasonLabel:SetPos(12, 145)
+  reasonLabel:SetSize(376, 20)
+  reasonLabel:SetText("Reason (optional):")
+  reasonLabel:SetTextColor(cfg.Colors.TextDim)
+
+  local reasonBox = vgui.Create("DTextEntry", dialog)
+  reasonBox:SetPos(12, 170)
+  reasonBox:SetSize(376, 30)
+  reasonBox:SetPlaceholderText("Enter reason for rank change...")
+
+  -- Buttons
+  local cancelBtn = vgui.Create("DButton", dialog)
+  cancelBtn:SetPos(12, 290)
+  cancelBtn:SetSize(180, 40)
+  cancelBtn:SetText("")
+
+  cancelBtn.Paint = function(self, w, h)
+    local col = cfg.Colors.Panel
+    if self:IsHovered() then
+      col = cfg.Colors.PanelHover
+    end
+    draw.RoundedBox(4, 0, 0, w, h, col)
+    draw.SimpleText("Cancel", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+
+  cancelBtn.DoClick = function()
+    dialog:Close()
+  end
+
+  local setRankBtn = vgui.Create("DButton", dialog)
+  setRankBtn:SetPos(208, 290)
+  setRankBtn:SetSize(180, 40)
+  setRankBtn:SetText("")
+
+  setRankBtn.Paint = function(self, w, h)
+    local col = Color(155, 89, 182, 230)
+    if self:IsHovered() then
+      col = Color(165, 99, 192, 255)
+    end
+    draw.RoundedBox(4, 0, 0, w, h, col)
+    draw.SimpleText("SET RANK", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+
+  setRankBtn.DoClick = function()
+    local selectedRankName, selectedRankId = rankCombo:GetSelected()
+
+    if not selectedRankId then
+      chat.AddText(Color(255, 100, 100), "[IonSys] ", Color(255, 255, 255), "Please select a rank!")
+      return
+    end
+
+    local reason = reasonBox:GetValue()
+
+    -- Send set rank request to server
+    net.Start("IonSys_SetPlayerRank")
+    net.WriteUInt(playerData.userid, 16)
+    net.WriteUInt(selectedRankId, 8)
+    net.WriteString(reason)
+    net.SendToServer()
+
+    dialog:Close()
+
+    chat.AddText(Color(155, 89, 182), "[IonSys] ", Color(255, 255, 255),
+      "Rank change request sent for " .. playerData.name .. " to " .. selectedRankName)
   end
 end
 

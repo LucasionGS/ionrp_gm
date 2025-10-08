@@ -32,7 +32,14 @@ IonRP.IonSys = IonRP.IonSys or {}
 --- @field max number Maximum players allowed (0 = unlimited)
 --- @field color table The job's color {r, g, b}
 
+--- @class IonSys_RankData
+--- @field id number The rank's unique identifier
+--- @field name string The rank's display name
+--- @field color table The rank's color {r, g, b}
+--- @field immunity number The rank's immunity level
+
 --- @class IonSys_PanelData
 --- @field players IonSys_PlayerData[] List of all players
 --- @field items IonSys_ItemData[] List of all items
 --- @field jobs IonSys_JobData[] List of all jobs
+--- @field ranks IonSys_RankData[] List of all ranks

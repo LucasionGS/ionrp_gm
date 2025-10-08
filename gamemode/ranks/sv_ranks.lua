@@ -90,7 +90,7 @@ function IonRP.Ranks:GetRankData(rankId)
       return rank
     end
   end
-  return self.List[1]   -- Default to User
+  return self.List[1] -- Default to User
 end
 
 --- Get rank data by name
@@ -289,7 +289,7 @@ end
 local ply = FindMetaTable("Player")
 
 --- Get player's rank ID
---- @return number The rank ID (0 = User, 1 = Moderator, etc.)
+--- @return number - The rank ID (0 = User, 1 = Moderator, etc.)
 function ply:GetRank()
   return self:GetNWInt("IonRP_Rank", 0)
 end

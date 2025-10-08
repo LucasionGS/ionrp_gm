@@ -15,6 +15,7 @@ util.AddNetworkString("IonSys_KickPlayer")
 util.AddNetworkString("IonSys_BanPlayer")
 util.AddNetworkString("IonSys_GiveItem")
 util.AddNetworkString("IonSys_ApplyJob")
+util.AddNetworkString("IonSys_SetPlayerRank")
 
 --- Send admin panel data to client
 --- @param ply Player The player to send data to
@@ -65,12 +66,24 @@ function IonRP.IonSys:SendDataToClient(ply)
     })
   end
 
+  -- Collect rank data
+  local ranks = {}
+  for _, rankData in ipairs(IonRP.Ranks.List) do
+    table.insert(ranks, {
+      id = rankData.id,
+      name = rankData.name,
+      color = { r = rankData.color.r, g = rankData.color.g, b = rankData.color.b },
+      immunity = rankData.immunity
+    })
+  end
+
   -- Send data
   net.Start("IonSys_SendData")
   net.WriteTable({
     players = players,
     items = items,
-    jobs = jobs
+    jobs = jobs,
+    ranks = ranks
   })
   net.Send(ply)
 end
@@ -257,6 +270,70 @@ net.Receive("IonSys_ApplyJob", function(len, ply)
     ply:ChatPrint("[IonSys] Failed to apply for job: " .. err)
   else
     print(string.format("[IonSys] %s changed their job to %s", ply:Nick(), job.name))
+  end
+end)
+
+-- Client requests to set a player's rank
+net.Receive("IonSys_SetPlayerRank", function(len, ply)
+  if not ply:HasPermission("setrank") then
+    ply:ChatPrint("[IonSys] You don't have permission to set player ranks!")
+    return
+  end
+
+  local targetUserID = net.ReadUInt(16)
+  local newRankId = net.ReadUInt(8)
+  local reason = net.ReadString()
+
+  -- Find the target player
+  --- @type Player
+  local target = nil
+  for _, p in ipairs(player.GetAll()) do
+    if p:UserID() == targetUserID then
+      target = p
+      break
+    end
+  end
+
+  if not target or not IsValid(target) then
+    ply:ChatPrint("[IonSys] Target player not found!")
+    return
+  end
+
+  -- Check immunity (admin can't change rank of someone with equal or higher rank)
+  local adminRank = ply:GetRankData()
+  local targetRank = target:GetRankData()
+  local newRank = IonRP.Ranks:GetRankData(newRankId)
+
+  if not newRank then
+    ply:ChatPrint("[IonSys] Invalid rank!")
+    return
+  end
+
+  if targetRank and targetRank.immunity >= adminRank.immunity then
+    ply:ChatPrint("[IonSys] You cannot change the rank of someone with equal or higher immunity!")
+    return
+  end
+
+  if newRank.immunity >= adminRank.immunity then
+    ply:ChatPrint("[IonSys] You cannot set a rank equal to or higher than your own!")
+    return
+  end
+
+  -- Set the rank
+  local success, err = IonRP.Ranks:SetPlayerRank(target, newRankId, ply, reason)
+
+  if success == false then
+    ply:ChatPrint("[IonSys] Failed to set rank: " .. (err or "unknown error"))
+  else
+    ply:ChatPrint(string.format("[IonSys] Set %s's rank to %s", target:Nick(), newRank.name))
+    target:ChatPrint(string.format("Your rank has been changed to %s by %s", newRank.name, ply:Nick()))
+    
+    -- Refresh admin panel data for all admins with panel open
+    for _, admin in ipairs(player.GetAll()) do
+      if admin:HasPermission("ionsys") then
+        IonRP.IonSys:SendDataToClient(admin)
+      end
+    end
   end
 end)
 
