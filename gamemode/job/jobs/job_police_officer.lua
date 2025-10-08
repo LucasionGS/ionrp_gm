@@ -1,6 +1,10 @@
 JOB_POLICE_OFFICER = JOB:New("police_officer", "Police Officer")
 JOB_POLICE_OFFICER.color = Color(20, 150, 20)
 JOB_POLICE_OFFICER.salary = 45
+JOB_POLICE_OFFICER.description = ([[
+  An officer of the law. You have the authority to enforce laws, make arrests, and ensure public safety.
+  You follow the orders of your superiors.
+]]):Trim()
 
 -- We need models...
 -- JOB_POLICE_OFFICER.playerModels

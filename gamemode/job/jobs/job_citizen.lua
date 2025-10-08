@@ -1,6 +1,9 @@
 JOB_CITIZEN = JOB:New("citizen", "Citizen")
 JOB_CITIZEN.color = Color(20, 150, 20)
 JOB_CITIZEN.salary = 45
+JOB_CITIZEN.description = ([[
+  An unemployed citizen. You have no special obligations or powers, what a life!
+]]):Trim()
 
 -- We use default weapons because defaultWeapons already suffices for a citizen.
 -- JOB_CITIZEN.weapons = {}
