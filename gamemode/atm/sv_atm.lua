@@ -148,12 +148,14 @@ function IonRP.ATM:SpawnATM(pos, ang, dbId)
   
   -- Make it solid but non-movable
   atm:SetMoveType(MOVETYPE_NONE)
-  atm:SetSolid(SOLID_BBOX)
-  atm:PhysicsInit(SOLID_BBOX)
+  atm:SetSolid(SOLID_VPHYSICS)
   atm:SetCollisionGroup(COLLISION_GROUP_WORLD)
   
-  -- Set collision bounds
+  -- Set collision bounds for proper USE detection
   atm:SetCollisionBounds(IonRP.ATM.BoundsMin, IonRP.ATM.BoundsMax)
+  
+  -- Enable USE on entire entity
+  atm:SetUseType(SIMPLE_USE)
   
   -- Store metadata
   atm:SetNWString("EntityType", IonRP.ATM.EntityClass)
@@ -163,6 +165,7 @@ function IonRP.ATM:SpawnATM(pos, ang, dbId)
   local phys = atm:GetPhysicsObject()
   if IsValid(phys) then
     phys:EnableMotion(false)
+    phys:EnableCollisions(true)
   end
   
   -- Store reference
@@ -209,6 +212,42 @@ hook.Add("PlayerUse", "IonRP_ATM_Use", function(ply, ent)
   IonRP.Bank:OpenMenu(ply)
 
   return false -- Prevent default USE behavior
+end)
+
+--- Hook: Check for players looking at ATM zones (more reliable than entity USE)
+hook.Add("KeyPress", "IonRP_ATM_KeyPress", function(ply, key)
+  if key ~= IN_USE then return end
+  
+  -- Check if player is looking at any ATM zone
+  local trace = ply:GetEyeTrace()
+  local hitPos = trace.HitPos
+  local maxDist = 100
+  
+  -- Check distance first
+  if hitPos:Distance(ply:EyePos()) > maxDist then return end
+  
+  -- Check all ATM entities to see if trace hit is within their bounding box
+  for _, atm in pairs(IonRP.ATM.Entities) do
+    if IsValid(atm) then
+      local atmPos = atm:GetPos()
+      local atmAng = atm:GetAngles()
+      local mins = IonRP.ATM.BoundsMin
+      local maxs = IonRP.ATM.BoundsMax
+      
+      -- Transform hit position to local space
+      local localPos = WorldToLocal(hitPos, Angle(0, 0, 0), atmPos, atmAng)
+      
+      -- Check if within bounds
+      if localPos.x >= mins.x and localPos.x <= maxs.x and
+         localPos.y >= mins.y and localPos.y <= maxs.y and
+         localPos.z >= mins.z and localPos.z <= maxs.z then
+        
+        -- Hit the ATM zone!
+        IonRP.Bank:OpenMenu(ply)
+        return
+      end
+    end
+  end
 end)
 
 --- Hook: Initialize on map load
