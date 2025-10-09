@@ -16,6 +16,7 @@ end
 
 --- Active vehicle instances
 IonRP.Vehicles.Categories = {
+  MUSCLE = "Muscle Cars",
   SUPERCARS = "Supercars",
   OTHER = "Other",
 }
