@@ -38,3 +38,5 @@ include("vehicle/sh_vehicle.lua")
 -- ATM System
 include("atm/sh_atm.lua")
 include("atm/cl_atm.lua")
+-- Property System
+include("property/sh_property.lua")

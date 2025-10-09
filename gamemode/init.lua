@@ -30,6 +30,8 @@ AddCSLuaFile("vehicle/sh_vehicle.lua")
 -- ATM System
 AddCSLuaFile("atm/sh_atm.lua")
 AddCSLuaFile("atm/cl_atm.lua")
+-- Property System
+AddCSLuaFile("property/sh_property.lua")
 
 -- Load shared code
 include("shared.lua")
@@ -68,6 +70,9 @@ include("inventory/sv_inventory.lua")
 -- ATM System
 include("atm/sh_atm.lua")
 include("atm/sv_atm.lua")
+
+-- Property System
+include("property/sh_property.lua")
 
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")
