@@ -161,4 +161,123 @@ concommand.Add("ionrp_openbank", function(ply, cmd, args)
   end
 end)
 
+IonRP.Commands.Add("atm", function(activator, args, rawArgs)
+  IonRP.Bank:OpenMenu(activator)
+end, "Open your bank account", "developer")
+
+IonRP.Commands.Add("setwallet", function(activator, args, rawArgs)
+  local target = activator
+  local amount = tonumber(args[1]) or 0
+
+  if args[1] and args[2] then
+    target = IonRP.Util:FindPlayer(args[1]) or activator
+    amount = tonumber(args[2]) or 0
+  end
+
+  if not IsValid(target) then
+    activator:ChatPrint("Invalid target player!")
+    return
+  end
+
+  if amount < 0 then
+    activator:ChatPrint("Amount must be non-negative!")
+    return
+  end
+
+  target:SetWallet(amount)
+  activator:ChatPrint(string.format("Set %s's wallet to $%d", target:Nick(), amount))
+  if activator ~= target then
+    target:ChatPrint(string.format("Your wallet has been set to $%d by %s", amount, activator:Nick()))
+  end
+
+  print(string.format("[Admin] %s set %s's wallet to $%d", activator:Nick(), target:Nick(), amount))
+end, "Set the amount of money in a wallet (Yours by default)", "manage_money")
+
+IonRP.Commands.Add("setbank", function(activator, args, rawArgs)
+  local target = activator
+  local amount = tonumber(args[1]) or 0
+
+  if args[1] and args[2] then
+    target = IonRP.Util:FindPlayer(args[1]) or activator
+    amount = tonumber(args[2]) or 0
+  end
+
+  if not IsValid(target) then
+    activator:ChatPrint("Invalid target player!")
+    return
+  end
+
+  if amount < 0 then
+    activator:ChatPrint("Amount must be non-negative!")
+    return
+  end
+
+  target:SetBank(amount)
+  activator:ChatPrint(string.format("Set %s's bank to $%d", target:Nick(), amount))
+  if activator ~= target then
+    target:ChatPrint(string.format("Your bank has been set to $%d by %s", amount, activator:Nick()))
+  end
+
+  print(string.format("[Admin] %s set %s's bank to $%d", activator:Nick(), target:Nick(), amount))
+end, "Set the amount of money in a bank (Yours by default)", "manage_money")
+
+-- Add money and bank
+IonRP.Commands.Add("addmoney", function(activator, args, rawArgs)
+  local target = activator
+  local amount = tonumber(args[1]) or 0
+
+  if args[1] and args[2] then
+    target = IonRP.Util:FindPlayer(args[1]) or activator
+    amount = tonumber(args[2]) or 0
+  end
+
+  if not IsValid(target) then
+    activator:ChatPrint("Invalid target player!")
+    return
+  end
+
+  if amount <= 0 then
+    activator:ChatPrint("Amount must be positive!")
+    return
+  end
+
+  target:AddWallet(amount)
+  activator:ChatPrint(string.format("Added $%d to %s's wallet", amount, target:Nick()))
+  if activator ~= target then
+    target:ChatPrint(string.format("You received $%d from %s", amount, activator:Nick()))
+  end
+
+  print(string.format("[Admin] %s added $%d to %s's wallet", activator:Nick(), amount, target:Nick()))
+end, "Add money to a wallet (Yours by default)", "manage_money")
+
+IonRP.Commands.Add("addbank", function(activator, args, rawArgs)
+  local target = activator
+  local amount = tonumber(args[1]) or 0
+
+  if args[1] and args[2] then
+    target = IonRP.Util:FindPlayer(args[1]) or activator
+    amount = tonumber(args[2]) or 0
+  end
+
+  if not IsValid(target) then
+    activator:ChatPrint("Invalid target player!")
+    return
+  end
+
+  if amount <= 0 then
+    activator:ChatPrint("Amount must be positive!")
+    return
+  end
+
+  target:AddBank(amount)
+  activator:ChatPrint(string.format("Added $%d to %s's bank", amount, target:Nick()))
+  if activator ~= target then
+    target:ChatPrint(string.format("You received $%d in your bank from %s", amount, activator:Nick()))
+  end
+
+  print(string.format("[Admin] %s added $%d to %s's bank", activator:Nick(), amount, target:Nick()))
+end, "Add money to a bank (Yours by default)", "manage_money")
+
+
+
 print("[IonRP] Bank system (server) loaded")

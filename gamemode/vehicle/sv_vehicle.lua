@@ -109,8 +109,8 @@ function IonRP.Vehicles:SV_SaveVehicle(vehicleInstance, callback)
     IonRP.Database:PreparedQuery(
       "INSERT INTO ionrp_owned_vehicles (steam_id, vehicle_identifier, upgrades) VALUES (?, ?, ?)",
       { steamID, vehicleInstance.identifier, upgradesJSON },
-      function(data)
-        local insertId = IonRP.Database:lastInsert()
+      function(data, query)
+        local insertId = query:lastInsert()
         vehicleInstance.databaseId = insertId
         print(string.format("[IonRP Vehicles] Saved new vehicle %s (ID: %d) for %s", 
           vehicleInstance.identifier, insertId, vehicleInstance.owner:Nick()))
@@ -146,14 +146,14 @@ function IonRP.Vehicles:SV_PurchaseVehicle(ply, vehicleIdentifier, callback)
   end
 
   -- Check if player has enough money
-  local wallet = ply:GetWallet()
-  if wallet < vehicleBase.marketValue then
+  local bank = ply:GetBank()
+  if bank < vehicleBase.marketValue then
     if callback then callback(false, "Insufficient funds") end
     return
   end
 
   -- Deduct money
-  ply:AddWallet(-vehicleBase.marketValue)
+  ply:AddBank(-vehicleBase.marketValue)
 
   -- Create and save the vehicle instance
   local vehInstance = vehicleBase:MakeOwnedInstance(ply)
@@ -161,11 +161,11 @@ function IonRP.Vehicles:SV_PurchaseVehicle(ply, vehicleIdentifier, callback)
     if success then
       if callback then 
         callback(true, string.format("Purchased %s for %s", 
-          vehicleBase.name, IonRP.Util:FormatMoney(vehicleBase.marketValue)), vehInstance) 
+          vehicleBase.name, IonRP.Util:FormatMoney(vehicleBase.marketValue)), vehInstance)
       end
     else
       -- Refund on failure
-      ply:AddWallet(vehicleBase.marketValue)
+      ply:AddBank(vehicleBase.marketValue)
       if callback then callback(false, "Failed to save vehicle to database") end
     end
   end)
@@ -205,7 +205,7 @@ end
 --- Get a specific owned vehicle by database ID
 --- @param ply Player The player who owns the vehicle
 --- @param vehicleId number The database ID of the vehicle
---- @param callback function Callback with signature (vehicleInstance: VEHICLE|nil)
+--- @param callback fun(vehicleInstance: VEHICLE|nil) Callback with signature (vehicleInstance: VEHICLE|nil)
 function IonRP.Vehicles:SV_GetOwnedVehicleById(ply, vehicleId, callback)
   if not IsValid(ply) then return end
   local steamID = ply:SteamID64()

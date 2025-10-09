@@ -79,7 +79,7 @@ function IonRP.Database:PreparedQuery(sql, params, onSuccess, onError)
   end
 
   function query:onSuccess(data)
-    if onSuccess then onSuccess(data) end
+    if onSuccess then onSuccess(data, query) end
   end
 
   function query:onError(err, sql)

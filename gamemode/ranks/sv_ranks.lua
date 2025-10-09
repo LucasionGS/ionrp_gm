@@ -65,19 +65,20 @@ IonRP.Ranks.Permissions = {
   ["seejoinleave"] = { minRank = RANK_MODERATOR, description = "See join/leave messages" },
   ["seeadminchat"] = { minRank = RANK_MODERATOR, description = "See admin chat" },
 
-  -- Developer
+  -- Development
   ["lua"] = { minRank = RANK_DEVELOPER, description = "Run Lua code" },
   ["console"] = { minRank = RANK_LEAD_ADMIN, description = "Run server console commands" },
   ["workshop"] = { minRank = RANK_SUPERADMIN, description = "Manage workshop addons" },
+  ["developer"] = { minRank = RANK_DEVELOPER, description = "Access developer tools" },
 
   -- Rank management
   ["setrank"] = { minRank = RANK_LEAD_ADMIN, description = "Set player ranks" },
 
-  -- Development
-  ["developer"] = { minRank = RANK_DEVELOPER, description = "Access developer tools" },
-
   -- Admin Panel
   ["ionsys"] = { minRank = RANK_ADMIN, description = "Access IonSys admin panel" },
+
+  -- Management
+  ["manage_money"] = { minRank = RANK_ADMIN, description = "Manage player money" },
 }
 
 --- Get rank data by ID

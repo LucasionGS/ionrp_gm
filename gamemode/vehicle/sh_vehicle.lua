@@ -7,6 +7,11 @@ if SERVER then
   --- Active vehicle instances. Keys are the entity index of the vehicle entity.
   --- @type table<number, VEHICLE>
   IonRP.Vehicles.Active = IonRP.Vehicles.Active or {}
+  
+  include("sv_vehicle_shop.lua")
+  AddCSLuaFile("cl_vehicle_shop.lua")
+elseif CLIENT then
+  include("cl_vehicle_shop.lua")
 end
 
 --- Active vehicle instances
@@ -95,6 +100,16 @@ VEHICLE.Upgrades.engine = 1
 --- Horsepower
 VEHICLE.Upgradeable.horsepower = { 1, 1.1, 1.2, 1.4 }
 VEHICLE.Upgrades.horsepower = 1
+
+-- Color & skins
+
+--- The color of the vehicle
+--- @type string|nil
+VEHICLE.Upgrades.color = nil
+
+--- The skin index of the vehicle
+--- @type number|nil
+VEHICLE.Upgrades.skin = nil
 
 --- Create a new vehicle
 --- @param identifier string The unique identifier for the vehicle
@@ -193,8 +208,21 @@ if SERVER then
 
     -- Based on upgrades, we use a generated vehicle script
     veh:SetKeyValue("vehiclescript", "scripts/vehicles/" .. self:SV_GetVehicleScript())
-    -- veh:SetKeyValue("vehiclescript", "scripts/vehicles/car.txt")
-    -- veh:SetKeyValue("vehiclescript", self.script)
+
+    -- Apply color and skin
+    if self.Upgrades.color ~= nil then
+      local col = Color(255, 255, 255)
+      local parsedCol = IonRP.Util:HexToColor(self.Upgrades.color or "")
+      if parsedCol then
+        col = parsedCol
+      end
+      veh:SetColor(col)
+    end
+
+    if self.Upgrades.skin ~= nil then
+      veh:SetSkin(self.Upgrades.skin)
+    end
+
     veh:Spawn()
     veh:Activate()
     veh:SetNWString("IonRP_VehicleID", self.identifier)
