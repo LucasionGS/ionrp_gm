@@ -336,15 +336,20 @@ if SERVER then
       return self.Upgradeable[upgradeable][self.Upgrades[upgradeable] or 1] or self.Upgradeable[upgradeable][1]
     end
 
-    -- Manipulate the data...
-    local horsepower = GetKeyValueTable(toTable, "vehicle.engine.horsepower")
-    SetKeyValueTable(toTable, "vehicle.engine.horsepower", horsepower * getLevel("horsepower"))
-    
-    -- local maxreversespeed = GetKeyValueTable(toTable, "vehicle.engine.maxreversespeed")
-    -- SetKeyValueTable(toTable, "vehicle.engine.maxreversespeed", maxreversespeed * getLevel("engine"))
+    local function GetValue(keyPath)
+      return GetKeyValueTable(toTable, keyPath)
+    end
 
-    -- local power = GetKeyValueTable(toTable, "vehicle.engine.power")
-    -- SetKeyValueTable(toTable, "vehicle.engine.power", power * getLevel("engine"))
+    local function SetValue(keyPath, value)
+      return SetKeyValueTable(toTable, keyPath, value)
+    end
+
+    -- Manipulate the data...
+    self:ApplyUpgradesToScript(toTable, {
+      SetValue = SetValue,
+      GetValue = GetValue,
+      GetLevel = getLevel
+    })
 
     -- Convert back to string
     local newData = ""
@@ -355,10 +360,24 @@ if SERVER then
     
     local path = self:SV_GetVehicleScriptFilepath()
     file.Write(path, newData)
-    -- Reload scripts to apply changes
-    -- RunConsoleCommand("vehicle_flushscript")
 
     return path
+  end
+
+  --- Apply the current upgrades to the vehicle script file
+  --- This is called when generating a new script file, when one doesn't exist for this vehicle and upgrade combination
+  --- @param tbl table The parsed vehicle script table
+  --- @param operations { SetValue: fun(keyPath: string, value: any), GetValue: fun(keyPath: string), GetLevel: fun(upgradeable: string): number|string } Collection of operations to manipulate the script
+  function VEHICLE:ApplyUpgradesToScript(tbl, operations)
+    local SetValue = operations.SetValue
+    local GetValue = operations.GetValue
+    local getLevel = operations.GetLevel
+
+    local horsepower = GetValue("vehicle.engine.horsepower")
+    SetValue("vehicle.engine.horsepower", horsepower * getLevel("horsepower"))
+
+    local maxreversespeed = GetValue("vehicle.engine.maxreversespeed")
+    SetValue("vehicle.engine.maxreversespeed", maxreversespeed * getLevel("horsepower"))
   end
 
   --- Find the owner of a vehicle by its entity
