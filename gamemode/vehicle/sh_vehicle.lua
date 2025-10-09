@@ -34,7 +34,7 @@ VEHICLE.model = "models/buggy.mdl"
 
 --- Vehicle script this car utilizes
 --- @type string
-VEHICLE.script = "scripts/vehicles/car3.txt"
+VEHICLE.script = "scripts/vehicles/airboat.txt"
 
 --- The market value used to determine pricing in shops and upgrades
 --- @type number
