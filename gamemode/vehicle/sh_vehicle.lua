@@ -142,6 +142,7 @@ if SERVER then
   function VEHICLE:SV_Spawn(pos, ang)
     if not pos or not ang then return nil end
     if not self.model or self.model == "" then return nil end
+    --- @class Vehicle
     local veh = ents.Create("prop_vehicle_jeep")
     if not IsValid(veh) then return nil end
     veh:SetModel(self.model)
@@ -155,7 +156,10 @@ if SERVER then
     veh:Spawn()
     veh:Activate()
     veh:SetNWString("IonRP_VehicleID", self.identifier)
+    veh.VehicleInstance = self
 
+    IonRP.Vehicles:SV_DefineVehicleEntity(veh)
+    
     self.entity = veh
     IonRP.Vehicles.Active[veh:EntIndex()] = self
 
@@ -408,3 +412,9 @@ IonRP.Commands.Add("spawncar", function(ply, args, rawArgs)
 
   ply:ChatPrint(string.format("[IonRP] Spawned vehicle: %s", vehData.name))
 end, "Spawn a vehicle by ID", "developer")
+
+print(VEHICLE_JEEP:MakeOwnedInstance(Player(1)):SV_Spawn(Vector(0,0,0), Angle(0,0,0)))
+
+if SERVER then
+  include("sv_vehicle.lua")
+end
