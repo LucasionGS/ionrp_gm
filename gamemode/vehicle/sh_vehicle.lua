@@ -34,7 +34,7 @@ VEHICLE.model = "models/buggy.mdl"
 
 --- Vehicle script this car utilizes
 --- @type string
-VEHICLE.script = "scripts/vehicles/jeep.txt"
+VEHICLE.script = "scripts/vehicles/car3.txt"
 
 --- The market value used to determine pricing in shops and upgrades
 --- @type number
@@ -64,7 +64,7 @@ VEHICLE.databaseId = nil
 
 --[[
   Upgradeable stats
-]]--
+]] --
 
 --- Contains all upgradeable stats for this vehicle.
 ---
@@ -149,8 +149,9 @@ if SERVER then
     veh:SetAngles(ang)
 
     -- Based on upgrades, we use a generated vehicle script
-    veh:SetKeyValue("vehiclescript", self:SV_GetVehicleScript())
-
+    veh:SetKeyValue("vehiclescript", "scripts/vehicles/" .. self:SV_GetVehicleScript())
+    -- veh:SetKeyValue("vehiclescript", "scripts/vehicles/car.txt")
+    -- veh:SetKeyValue("vehiclescript", self.script)
     veh:Spawn()
     veh:Activate()
     veh:SetNWString("IonRP_VehicleID", self.identifier)
@@ -161,18 +162,74 @@ if SERVER then
     return veh
   end
 
+  --- For KeyvaluesToTablePreserveOrder converted tables back to string
+  --- Their format follows "1" {
+  ---   "Key" "KEY"
+  ---   "Value" "VALUE"
+  --- }
+  --- @param tbl table The table to convert
+  --- @param rootName string The root name for the keyvalues (e.g. "root")
+  function TablePreservedOrderToKeyValues(tbl, rootName)
+    local lines = {}
+    for k, v in ipairs(tbl) do
+      local key = v["Key"]
+      local value = v["Value"]
+
+      if type(value) == "table" then
+        table.insert(lines, TablePreservedOrderToKeyValues(value, key))
+      else
+        table.insert(lines, string.format('\t"%s" "%s"', key, value))
+      end
+    end
+    return "\"" .. rootName .. "\"\n{\n" .. table.concat(lines, "\n") .. "\n}"
+  end
+
+  --- Set a value in a KeyvaluesToTablePreserveOrder converted table by its key path
+  --- @param tbl table The table to modify
+  --- @param keyPath string The dot-separated key path (e.g. "engine.horsepower")
+  --- @param value any The value to set
+  --- @return table # The modified table
+  function SetKeyValueTable(tbl, keyPath, value)
+    local keys = string.Explode(".", keyPath)
+    local current = tbl
+    for i = 1, #keys - 1 do
+      local key = keys[i]
+      for _, entry in ipairs(current) do
+        if entry["Key"] == key then
+          current = entry["Value"]
+          break
+        end
+      end
+    end
+    current["Value"] = value
+
+    return tbl
+  end
+
   function VEHICLE:SV_GetVehicleScriptFilepath()
-    local generatedPath = "ionrp/generated_vehicle_scripts/" .. self.databaseId .. ".txt"
+
+    -- Generate a unique hash based on the upgrade combination
+    local upgradeHash = util.TableToJSON({ -- Only use upgrades that affect the script file
+      self.Upgrades.engine,
+      self.Upgrades.horsepower
+    })
+    upgradeHash = util.SHA256(upgradeHash)
+
+    local generatedPath = string.format("ionrp/generated_vehicle_scripts/%s_%s.txt", self.identifier, upgradeHash)
     return generatedPath
   end
-  
+
   --- Get or generate the vehicle script path for this vehicle instance
   function VEHICLE:SV_GetVehicleScript()
     -- Check if a generate script exists for this vehicle
     local generatedPath = self:SV_GetVehicleScriptFilepath()
     if not file.Exists(generatedPath, "DATA") then
+      print("No generated vehicle script found for " .. self.identifier .. ", generating new one.")
       self:SV_GenerateVehicleScript()
+    else
+      print("Using existing generated vehicle script for " .. self.identifier)
     end
+    -- self:SV_GenerateVehicleScript()
 
     return generatedPath
   end
@@ -181,29 +238,35 @@ if SERVER then
   --- This should be called when a vehicles upgrades have changed.
   --- @return string|nil # The path to the generated vehicle script, or nil on failure
   function VEHICLE:SV_GenerateVehicleScript()
-    if not self.entity or not IsValid(self.entity) then return end
     if not self.Upgrades or not self.Upgradeable then return end
-    local scriptPath = self.script
-    if not scriptPath or scriptPath == "" then return end
-    local scriptData = file.Read(scriptPath, "GAME")
+    if not self.script or self.script == "" then return end
 
     print("Generating vehicle script for " .. self.identifier .. " with DB ID " .. tostring(self.databaseId))
-    --- @class VehicleParams
-    --- @field axles VehicleParamsAxle
-    --- @field body VehicleParamsBody
-    --- @field engine VehicleParamsEngine
-    --- @field steering VehicleParamsSteering
-    local data = util.KeyValuesToTablePreserveOrder(scriptData)
-    PrintTable(data)
+    local data = file.Read(self.script, "GAME")
+    local toTable = util.KeyValuesToTablePreserveOrder("root" .. "\n{\n" .. data .. "\n}")
+    local items = table.GetKeys(toTable)
+    local newData = ""
+    for _, k in ipairs(items) do
+      local v = toTable[k]
+      newData = newData .. TablePreservedOrderToKeyValues(v["Value"], v["Key"]) .. "\n\n"
+    end
+    print("------------")
     -- TODO: Test what data i even have to work with and implement
     -- Manipulate the data...
 
-    data.engine.horsepower = data.engine.horsepower * (self.Upgrades.horsepower or 1)
+    --- @param upgradeable string
+    --- @return number|string
+    local function getLevel(upgradeable)
+      return self.Upgradeable[upgradeable][self.Upgrades[upgradeable] or 1] or self.Upgradeable[upgradeable][1]
+    end
+
+    -- data.engine.horsepower = data.engine.horsepower * (self.Upgrades.horsepower or 1)
+    SetKeyValueTable(toTable, "engine.horsepower", getLevel("horsepower"))
+    SetKeyValueTable(toTable, "engine.power", getLevel("engine"))
 
     -- Convert back to string
-    local newScript = util.TableToKeyValues(data)
     local path = self:SV_GetVehicleScriptFilepath()
-    file.Write(path, newScript)
+    file.Write(path, newData)
     -- Reload scripts to apply changes
     RunConsoleCommand("vehicle_flushscript")
 
@@ -226,7 +289,7 @@ if SERVER then
     self.entity:EmitSound("doors/door_locked2.wav", 60, 100)
     self.entity:SetNWBool("lockedState", true)
   end
-  
+
   function VEHICLE:SV_Unlock()
     if not self.entity or not IsValid(self.entity) then return end
     self.entity:Fire("unlock", "", 0)
@@ -262,8 +325,8 @@ function VEHICLE:ToggleLock(activator, state)
 
   if CLIENT then
     net.Start("IonRP_VehicleLockToggle")
-      net.WriteEntity(self.entity)
-      net.WriteBool(isLocked)
+    net.WriteEntity(self.entity)
+    net.WriteBool(isLocked)
     net.Send(activator or LocalPlayer())
   else
     if not ent or not IsValid(ent) then return end
@@ -272,7 +335,7 @@ function VEHICLE:ToggleLock(activator, state)
     if not vehData then return end
     local ply = vehData.owner
     if not ply or not IsValid(ply) then return end
-    
+
     if isLocked then
       vehData:SV_Lock()
       ply:ChatPrint("Vehicle locked.")
@@ -294,3 +357,52 @@ for _, vehicle in ipairs(file.Find("ionrp/gamemode/vehicle/vehicles/*.lua", "LUA
 end
 print("│ [IonRP Vehicles] │ Loaded " .. tostring(table.Count(IonRP.Vehicles.List)) .. " vehicles")
 print("└──────────────────┴───────────────────────────────────────────────────────────────•")
+
+IonRP.Commands.Add("listvehicles", function(ply, args, rawArgs)
+  for id, veh in pairs(IonRP.Vehicles.List) do
+    if IsValid(ply) then
+      ply:ChatPrint(string.format("%s - %s (Model: %s, Price: $%d)", id, veh.name, veh.model, veh.marketValue))
+    else
+      print(string.format("%s - %s (Model: %s, Price: $%d)", id, veh.name, veh.model, veh.marketValue))
+    end
+  end
+end, "List all registered vehicles", "developer")
+
+IonRP.Commands.Add("listvehiclescripts", function(ply, args, rawArgs)
+  local files, _ = file.Find("scripts/vehicles/*.txt", "GAME")
+  for _, file in ipairs(files) do
+    if IsValid(ply) then
+      ply:ChatPrint(string.format("Found vehicle script: %s", file))
+    else
+      print(string.format("Found vehicle script: %s", file))
+    end
+  end
+end, "List all registered vehicle scripts", "developer")
+
+-- Spawn car at eye trace
+IonRP.Commands.Add("spawncar", function(ply, args, rawArgs)
+  local vehicleId = args[1]
+  if not vehicleId or vehicleId == "" then
+    ply:ChatPrint("[IonRP] Usage: /spawncar <vehicle_id>")
+    return
+  end
+
+  local vehData = IonRP.Vehicles.List[vehicleId]
+  if not vehData then
+    ply:ChatPrint("[IonRP] Vehicle ID not found: " .. vehicleId)
+    return
+  end
+
+  local trace = ply:GetEyeTrace()
+  local spawnPos = trace.HitPos + Vector(0, 0, 10)
+  local spawnAng = Angle(0, ply:EyeAngles().y - 90, 0)
+
+  local vehInstance = vehData:MakeOwnedInstance(ply, 1)
+  local vehEnt = vehInstance:SV_Spawn(spawnPos, spawnAng)
+  if not vehEnt or not IsValid(vehEnt) then
+    ply:ChatPrint("[IonRP] Failed to spawn vehicle.")
+    return
+  end
+
+  ply:ChatPrint(string.format("[IonRP] Spawned vehicle: %s", vehData.name))
+end, "Spawn a vehicle by ID", "developer")

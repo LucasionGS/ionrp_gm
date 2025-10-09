@@ -33,6 +33,8 @@ include("developer/cl_model_explorer.lua")
 include("item/sh_item.lua")
 -- Jobs
 include("job/sh_job.lua")
+-- Vehicles
+include("vehicle/sh_vehicle.lua")
 -- Inventory
 include("inventory/cl_inventory.lua")
 -- IonSys (Admin Panel)

@@ -60,7 +60,7 @@ if SERVER then
   --- @param text string - Full command text
   function IonRP.Commands.Execute(ply, text)
     -- Parse command and arguments
-    local args = string.Explode("%s+", text)
+    local args = string.Explode(" ", text)
     local cmdName = string.lower(args[1] or "")
 
     -- Remove command name from args

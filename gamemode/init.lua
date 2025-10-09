@@ -25,6 +25,8 @@ AddCSLuaFile("developer/cl_model_explorer.lua")
 AddCSLuaFile("item/sh_item.lua")
 -- Jobs
 AddCSLuaFile("job/sh_job.lua")
+-- Vehicles
+AddCSLuaFile("vehicle/sh_vehicle.lua")
 -- Inventory
 AddCSLuaFile("inventory/sh_inventory.lua")
 AddCSLuaFile("inventory/cl_inventory.lua")
@@ -59,6 +61,9 @@ include("item/sh_item.lua")
 
 -- Jobs
 include("job/sh_job.lua")
+
+-- Vehicles
+include("vehicle/sh_vehicle.lua")
 
 -- Inventory
 include("inventory/sv_inventory.lua")
