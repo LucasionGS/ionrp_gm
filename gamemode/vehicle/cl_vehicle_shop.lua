@@ -1,7 +1,7 @@
 --[[
     Vehicle Shop - Client Side UI
     Modern vehicle dealership interface
-]]--
+]] --
 
 IonRP.VehicleShop = IonRP.VehicleShop or {}
 IonRP.VehicleShop.UI = IonRP.VehicleShop.UI or {}
@@ -13,7 +13,7 @@ IonRP.VehicleShop.UI.Config = {
   Padding = 20,
   HeaderHeight = 100,
   TabHeight = 55,
-  
+
   Colors = {
     Background = Color(20, 20, 28, 250),
     BackgroundLight = Color(28, 28, 38, 240),
@@ -55,16 +55,16 @@ function IonRP.VehicleShop.UI:Open(category)
   -- Get categories from vehicle list
   local categories = {}
   local categoryVehicles = {}
-  
+
   for identifier, vehicle in pairs(IonRP.Vehicles.List) do
     if vehicle.purchasable then
       local cat = vehicle.category or IonRP.Vehicles.Categories.OTHER
-      
+
       if not categories[cat] then
         categories[cat] = true
         categoryVehicles[cat] = {}
       end
-      
+
       table.insert(categoryVehicles[cat], vehicle)
     end
   end
@@ -98,7 +98,7 @@ function IonRP.VehicleShop.UI:Open(category)
 
     -- Main background with subtle gradient
     draw.RoundedBox(10, 0, 0, w, h, cfg.Colors.Background)
-    
+
     -- Subtle inner highlight
     surface.SetDrawColor(255, 255, 255, 8)
     surface.DrawRect(10, 10, w - 20, 2)
@@ -106,7 +106,7 @@ function IonRP.VehicleShop.UI:Open(category)
     -- Glowing accent border
     surface.SetDrawColor(cfg.Colors.AccentCyan)
     surface.DrawOutlinedRect(0, 0, w, h, 2)
-    
+
     -- Inner glow effect for border
     surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, 30)
     surface.DrawOutlinedRect(1, 1, w - 2, h - 2, 1)
@@ -128,11 +128,13 @@ function IonRP.VehicleShop.UI:Open(category)
     draw.RoundedBoxEx(10, 0, 0, w, h, cfg.Colors.Header, true, true, false, false)
 
     -- Title with shadow
-    draw.SimpleText("VEHICLE DEALERSHIP", "DermaLarge", cfg.Padding + 2, 22, Color(0, 0, 0, 100), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    draw.SimpleText("VEHICLE DEALERSHIP", "DermaLarge", cfg.Padding + 2, 22, Color(0, 0, 0, 100), TEXT_ALIGN_LEFT,
+      TEXT_ALIGN_TOP)
     draw.SimpleText("VEHICLE DEALERSHIP", "DermaLarge", cfg.Padding, 20, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
 
     -- Subtitle
-    draw.SimpleText("Browse and purchase premium vehicles", "DermaDefault", cfg.Padding, 52, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    draw.SimpleText("Browse and purchase premium vehicles", "DermaDefault", cfg.Padding, 52, cfg.Colors.TextDim,
+      TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
 
     -- Player money with icon-like background
     local bank = ply:GetBank()
@@ -141,18 +143,20 @@ function IonRP.VehicleShop.UI:Open(category)
     local moneyBoxH = 45
     local moneyX = w - cfg.Padding - moneyBoxW
     local moneyY = (h - moneyBoxH) / 2
-    
+
     -- Money box background
     draw.RoundedBox(8, moneyX, moneyY, moneyBoxW, moneyBoxH, Color(0, 0, 0, 100))
     draw.RoundedBox(8, moneyX + 1, moneyY + 1, moneyBoxW - 2, moneyBoxH - 2, cfg.Colors.BackgroundLight)
-    
+
     -- Border
     surface.SetDrawColor(cfg.Colors.Accent)
     surface.DrawOutlinedRect(moneyX, moneyY, moneyBoxW, moneyBoxH, 1)
-    
+
     -- Money label
-    draw.SimpleText("BANK BALANCE", "DermaDefault", moneyX + moneyBoxW / 2, moneyY + 10, cfg.Colors.TextMuted, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-    draw.SimpleText(moneyText, "DermaDefaultBold", moneyX + moneyBoxW / 2, moneyY + 24, cfg.Colors.Accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    draw.SimpleText("BANK BALANCE", "DermaDefault", moneyX + moneyBoxW / 2, moneyY + 10, cfg.Colors.TextMuted,
+      TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    draw.SimpleText(moneyText, "DermaDefaultBold", moneyX + moneyBoxW / 2, moneyY + 24, cfg.Colors.Accent,
+      TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
   end
 
   -- Close button
@@ -203,7 +207,7 @@ function IonRP.VehicleShop.UI:Open(category)
     btn.Paint = function(self, w, h)
       local isActive = cat == category
       local isHovered = self:IsHovered()
-      
+
       local col = cfg.Colors.TabInactive
       if isActive then
         col = cfg.Colors.TabActive
@@ -215,22 +219,23 @@ function IonRP.VehicleShop.UI:Open(category)
       if isActive or isHovered then
         draw.RoundedBox(8, 0, 2, w, h - 2, Color(0, 0, 0, 80))
       end
-      
+
       draw.RoundedBox(8, 0, 0, w, h, col)
-      
+
       -- Active tab indicator
       if isActive then
         draw.RoundedBox(0, 0, h - 4, w, 4, cfg.Colors.AccentCyan)
-        
+
         -- Glow effect
         surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, 60)
         surface.DrawOutlinedRect(0, 0, w, h, 2)
       end
-      
+
       -- Text with shadow
       local textColor = isActive and Color(255, 255, 255) or cfg.Colors.TextDim
       if isActive then
-        draw.SimpleText(cat, "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 100), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText(cat, "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 100), TEXT_ALIGN_CENTER,
+          TEXT_ALIGN_CENTER)
       end
       draw.SimpleText(cat, "DermaDefaultBold", w / 2, h / 2, textColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
@@ -290,31 +295,32 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
 
     vehPanel.Paint = function(self, w, h)
       local isHovered = self:IsHovered()
-      
+
       -- Animate hover effect
       if isHovered then
         self.HoverAlpha = math.Approach(self.HoverAlpha, 255, FrameTime() * 600)
       else
         self.HoverAlpha = math.Approach(self.HoverAlpha, 0, FrameTime() * 400)
       end
-      
+
       local bgColor = i % 2 == 0 and cfg.Colors.Panel or cfg.Colors.PanelLight
-      
+
       -- Shadow
       draw.RoundedBox(10, 2, 2, w, h, Color(0, 0, 0, 100))
-      
+
       -- Main background
       draw.RoundedBox(10, 0, 0, w, h, bgColor)
-      
+
       -- Hover overlay
       if self.HoverAlpha > 0 then
         draw.RoundedBox(10, 0, 0, w, h, Color(255, 255, 255, math.min(self.HoverAlpha * 0.05, 12)))
-        
+
         -- Hover border glow
-        surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, self.HoverAlpha * 0.6)
+        surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b,
+          self.HoverAlpha * 0.6)
         surface.DrawOutlinedRect(0, 0, w, h, 2)
       end
-      
+
       -- Subtle inner border
       surface.SetDrawColor(255, 255, 255, 8)
       surface.DrawOutlinedRect(1, 1, w - 2, h - 2, 1)
@@ -327,11 +333,11 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
     modelContainer.Paint = function(self, w, h)
       -- Gradient background for model
       draw.RoundedBox(8, 5, 5, w - 10, h - 10, Color(15, 15, 22, 255))
-      
+
       -- Subtle gradient overlay
       surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, 20)
       surface.DrawRect(5, 5, w - 10, (h - 10) / 2)
-      
+
       -- Border accent
       surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, 80)
       surface.DrawOutlinedRect(5, 5, w - 10, h - 10, 1)
@@ -410,7 +416,7 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
 
     buyBtn.Paint = function(self, w, h)
       local isHovered = self:IsHovered()
-      
+
       -- Animate pulse effect
       self.PulseAlpha = self.PulseAlpha + (FrameTime() * 200 * self.PulseDirection)
       if self.PulseAlpha > 100 then
@@ -420,42 +426,45 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
         self.PulseAlpha = 0
         self.PulseDirection = 1
       end
-      
+
       local col = canAfford and cfg.Colors.ButtonBuy or Color(70, 70, 80, 220)
       local hoverCol = canAfford and cfg.Colors.ButtonBuyHover or Color(80, 80, 90, 240)
-      
+
       if isHovered then
         col = hoverCol
       end
-      
+
       -- Shadow
       draw.RoundedBox(10, 2, 2, w, h, Color(0, 0, 0, 120))
-      
+
       -- Button background
       draw.RoundedBox(10, 0, 0, w, h, col)
-      
+
       -- Pulse glow effect for affordable items
       if canAfford then
-        surface.SetDrawColor(cfg.Colors.ButtonBuy.r, cfg.Colors.ButtonBuy.g, cfg.Colors.ButtonBuy.b, self.PulseAlpha * 0.5)
+        surface.SetDrawColor(cfg.Colors.ButtonBuy.r, cfg.Colors.ButtonBuy.g, cfg.Colors.ButtonBuy.b,
+          self.PulseAlpha * 0.5)
         surface.DrawOutlinedRect(0, 0, w, h, 2)
-        
+
         -- Inner highlight
         surface.SetDrawColor(255, 255, 255, isHovered and 30 or 15)
         surface.DrawRect(5, 5, w - 10, 2)
       end
-      
+
       local text = canAfford and "PURCHASE VEHICLE" or "INSUFFICIENT FUNDS"
       local textCol = canAfford and Color(255, 255, 255) or Color(180, 180, 190)
-      
+
       -- Text shadow
       if canAfford then
-        draw.SimpleText(text, "DermaDefaultBold", w / 2 + 1, h / 2 - 9, Color(0, 0, 0, 150), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText(text, "DermaDefaultBold", w / 2 + 1, h / 2 - 9, Color(0, 0, 0, 150), TEXT_ALIGN_CENTER,
+          TEXT_ALIGN_CENTER)
       end
       draw.SimpleText(text, "DermaDefaultBold", w / 2, h / 2 - 10, textCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-      
+
       -- Price
       local priceCol = canAfford and Color(230, 255, 230) or Color(160, 160, 170)
-      draw.SimpleText(IonRP.Util:FormatMoney(vehicle.marketValue), "DermaDefault", w / 2, h / 2 + 10, priceCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+      draw.SimpleText(IonRP.Util:FormatMoney(vehicle.marketValue), "DermaDefault", w / 2, h / 2 + 10, priceCol,
+        TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     buyBtn.DoClick = function()
@@ -480,30 +489,32 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
       spawnBtn.Paint = function(self, w, h)
         local isHovered = self:IsHovered()
         local col = cfg.Colors.ButtonSpawn
-        
+
         if isHovered then
           col = cfg.Colors.ButtonSpawnHover
         end
 
         -- Shadow
         draw.RoundedBox(8, 1, 1, w, h, Color(0, 0, 0, 100))
-        
+
         -- Button background
         draw.RoundedBox(8, 0, 0, w, h, col)
-        
+
         -- Border glow
         surface.SetDrawColor(cfg.Colors.Accent.r, cfg.Colors.Accent.g, cfg.Colors.Accent.b, isHovered and 150 or 80)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
-        
+
         -- Inner highlight
         if isHovered then
           surface.SetDrawColor(255, 255, 255, 20)
           surface.DrawRect(5, 5, w - 10, 2)
         end
-        
+
         -- Text with shadow
-        draw.SimpleText("⚡ SPAWN (ADMIN)", "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 100), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        draw.SimpleText("⚡ SPAWN (ADMIN)", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("⚡ SPAWN (ADMIN)", "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 100),
+          TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("⚡ SPAWN (ADMIN)", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER,
+          TEXT_ALIGN_CENTER)
       end
 
       spawnBtn.DoClick = function()
@@ -547,18 +558,18 @@ function IonRP.VehicleShop.UI:ShowPurchaseConfirmation(vehicle)
       local alpha = 50 - (i * 10)
       draw.RoundedBox(10, -i, -i, w + (i * 2), h + (i * 2), Color(0, 0, 0, alpha))
     end
-    
+
     -- Background
     draw.RoundedBox(10, 0, 0, w, h, cfg.Colors.Background)
-    
+
     -- Gradient overlay
     surface.SetDrawColor(cfg.Colors.Header)
     surface.DrawRect(0, 0, w, 60)
-    
+
     -- Border glow
     surface.SetDrawColor(cfg.Colors.AccentCyan)
     surface.DrawOutlinedRect(0, 0, w, h, 2)
-    
+
     surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, 40)
     surface.DrawOutlinedRect(1, 1, w - 2, h - 2, 1)
   end
@@ -575,7 +586,7 @@ function IonRP.VehicleShop.UI:ShowPurchaseConfirmation(vehicle)
   local message = vgui.Create("DLabel", dialog)
   message:SetPos(16, 55)
   message:SetWide(418)
-  message:SetText(string.format("Are you sure you want to purchase a %s for %s?", 
+  message:SetText(string.format("Are you sure you want to purchase a %s for %s?",
     vehicle.name, IonRP.Util:FormatMoney(vehicle.marketValue)))
   message:SetFont("DermaDefault")
   message:SetTextColor(cfg.Colors.TextDim)
@@ -604,19 +615,20 @@ function IonRP.VehicleShop.UI:ShowPurchaseConfirmation(vehicle)
     if isHovered then
       col = Color(80, 80, 90, 250)
     end
-    
+
     -- Shadow
     draw.RoundedBox(8, 1, 1, w, h, Color(0, 0, 0, 120))
-    
+
     -- Background
     draw.RoundedBox(8, 0, 0, w, h, col)
-    
+
     -- Border
     surface.SetDrawColor(100, 100, 110, isHovered and 200 or 120)
     surface.DrawOutlinedRect(0, 0, w, h, 1)
-    
+
     -- Text
-    draw.SimpleText("CANCEL", "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 100), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("CANCEL", "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 100), TEXT_ALIGN_CENTER,
+      TEXT_ALIGN_CENTER)
     draw.SimpleText("CANCEL", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
 
@@ -636,26 +648,28 @@ function IonRP.VehicleShop.UI:ShowPurchaseConfirmation(vehicle)
     if isHovered then
       col = cfg.Colors.ButtonBuyHover
     end
-    
+
     -- Shadow
     draw.RoundedBox(8, 1, 1, w, h, Color(0, 0, 0, 120))
-    
+
     -- Background
     draw.RoundedBox(8, 0, 0, w, h, col)
-    
+
     -- Glow effect
     surface.SetDrawColor(cfg.Colors.ButtonBuy.r, cfg.Colors.ButtonBuy.g, cfg.Colors.ButtonBuy.b, isHovered and 150 or 80)
     surface.DrawOutlinedRect(0, 0, w, h, 2)
-    
+
     -- Inner highlight
     if isHovered then
       surface.SetDrawColor(255, 255, 255, 30)
       surface.DrawRect(5, 5, w - 10, 2)
     end
-    
+
     -- Text with shadow
-    draw.SimpleText("✓ CONFIRM PURCHASE", "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 150), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-    draw.SimpleText("✓ CONFIRM PURCHASE", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("✓ CONFIRM PURCHASE", "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 150),
+      TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("✓ CONFIRM PURCHASE", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER,
+      TEXT_ALIGN_CENTER)
   end
 
   confirmBtn.DoClick = function()
