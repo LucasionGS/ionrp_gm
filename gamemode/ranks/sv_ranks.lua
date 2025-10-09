@@ -355,6 +355,26 @@ function ply:IsDeveloper()
   return self:GetRank() >= 5
 end
 
+--- Check if player is in developer mode
+--- @return boolean # True if the player is in developer mode
+function ply:IsDevMode()
+  -- This will have a check as well for developer mode enabled
+  -- so its false if even a dev is out of dev mode
+  return self:IsDeveloper() and self:GetNWBool("IonRP_DevMode", false)
+end
+
+IonRP.Commands.Add("devmode", function(activator, args, rawArgs)
+  if not activator:IsDeveloper() then
+    activator:ChatPrint("You are not a developer!")
+    return
+  end
+
+  local enable = args[1] and tobool(args[1]) or not activator:IsDevMode()
+  activator:SetNWBool("IonRP_DevMode", enable)
+
+  activator:ChatPrint("Developer mode " .. (enable and "enabled" or "disabled") .. ".")
+end, "Toggle developer mode (developers only)", "developer")
+
 -- Hook into player initialization
 hook.Add("PlayerInitialSpawn", "IonRP_LoadRank", function(ply)
   timer.Simple(0.5, function()

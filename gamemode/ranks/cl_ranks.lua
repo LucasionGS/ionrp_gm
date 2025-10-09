@@ -122,3 +122,11 @@ end
 function ply:IsDeveloper()
   return self:GetRank() >= 5
 end
+
+--- Check if player is in developer mode
+--- @return boolean # True if the player is in developer mode
+function ply:IsDevMode()
+  -- This will have a check as well for developer mode enabled
+  -- so its false if even a dev is out of dev mode
+  return self:IsDeveloper() and self:GetNWBool("IonRP_DevMode", false)
+end

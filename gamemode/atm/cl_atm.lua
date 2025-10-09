@@ -8,7 +8,7 @@ hook.Add("PostDrawOpaqueRenderables", "IonRP_ATM_DrawOutlines", function()
   local ply = LocalPlayer()
   
   -- Only show to developers
-  if not ply:IsDeveloper() then return end
+  if not ply:IsDevMode() then return end
   
   -- Draw outline for all ATMs
   for _, ent in pairs(ents.GetAll()) do
@@ -43,7 +43,7 @@ hook.Add("HUDPaint", "IonRP_ATM_PlacementHint", function()
   local ply = LocalPlayer()
   
   -- Only show to developers
-  if not ply:IsDeveloper() then return end
+  if not ply:IsDevMode() then return end
   
   local trace = ply:GetEyeTrace()
   

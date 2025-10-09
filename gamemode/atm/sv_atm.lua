@@ -66,6 +66,36 @@ function IonRP.ATM:SaveATM(pos, ang, callback)
   )
 end
 
+--- Update an ATM's position and angle in the database
+--- @param id number Database ID
+--- @param pos Vector New position
+--- @param ang Angle New angles
+--- @param callback function|nil Optional callback(success)
+function IonRP.ATM:UpdateATM(id, pos, ang, callback)
+  local query = [[
+    UPDATE ionrp_atms 
+    SET pos_x = ?, pos_y = ?, pos_z = ?, ang_p = ?, ang_y = ?, ang_r = ?
+    WHERE id = ?
+  ]]
+  
+  IonRP.Database:PreparedQuery(
+    query,
+    { pos.x, pos.y, pos.z, ang.p, ang.y, ang.r, id },
+    function()
+      print("[IonRP ATM] Updated ATM ID: " .. id .. " at " .. tostring(pos))
+      if callback then
+        callback(true)
+      end
+    end,
+    function(err)
+      print("[IonRP ATM] Failed to update ATM: " .. err)
+      if callback then
+        callback(false)
+      end
+    end
+  )
+end
+
 --- Delete an ATM from the database
 --- @param id number Database ID
 --- @param callback function|nil Optional callback(success)
@@ -324,6 +354,42 @@ IonRP.Commands.Add("removeatm", function(activator, args, rawArgs)
   
   activator:ChatPrint("[IonRP] ATM entity removed!")
 end, "Remove the ATM you're looking at", "developer")
+
+--- Command: Save ATM's current position and angle
+IonRP.Commands.Add("saveatm", function(activator, args, rawArgs)
+  if not activator:HasPermission("developer") then
+    activator:ChatPrint("[IonRP] You don't have permission to save ATMs!")
+    return
+  end
+  
+  local atm = IonRP.ATM:GetLookingAtATM(activator, 150)
+  
+  if not atm or not IsValid(atm) then
+    activator:ChatPrint("[IonRP] You're not looking at an ATM!")
+    return
+  end
+  
+  local atmId = atm:GetNWInt("ATM_ID", 0)
+  
+  if atmId == 0 then
+    activator:ChatPrint("[IonRP] This ATM has no database ID! Cannot save.")
+    return
+  end
+  
+  -- Get current position and angle
+  local pos = atm:GetPos()
+  local ang = atm:GetAngles()
+  
+  -- Update in database
+  IonRP.ATM:UpdateATM(atmId, pos, ang, function(success)
+    if success then
+      activator:ChatPrint("[IonRP] ATM position saved! (ID: " .. atmId .. ")")
+      activator:ChatPrint("[IonRP] Position: " .. tostring(pos))
+    else
+      activator:ChatPrint("[IonRP] Failed to save ATM position to database!")
+    end
+  end)
+end, "Save the current position/angle of the ATM you're looking at", "developer")
 
 --- Command: List all ATMs on current map
 IonRP.Commands.Add("listatms", function(activator, args, rawArgs)
