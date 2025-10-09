@@ -65,13 +65,15 @@ RUN mkdir -p \
     /home/steam/gmodserver/garrysmod/cache \
     /home/steam/gmodserver/garrysmod/steamapps/workshop \
     /home/steam/gmodserver/garrysmod/data/ionrp/generated_vehicle_scripts \
-    /home/steam/gmodserver/garrysmod/logs
+    /home/steam/gmodserver/garrysmod/logs \
+    /home/steam/gmodserver/steam_cache
 
 RUN chown -R steam:steam \
     /home/steam/gmodserver/garrysmod/cache \
     /home/steam/gmodserver/garrysmod/steamapps \
     /home/steam/gmodserver/garrysmod/data \
-    /home/steam/gmodserver/garrysmod/logs
+    /home/steam/gmodserver/garrysmod/logs \
+    /home/steam/gmodserver/steam_cache
     
 USER steam
 
