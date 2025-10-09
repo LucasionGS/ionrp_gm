@@ -45,6 +45,7 @@ USER root
 RUN echo '#!/bin/bash\n\
 cd /home/steam/gmodserver\n\
 ./srcds_run \
+    -debug \
     -game garrysmod \
     -console \
     -systemtest \
@@ -60,7 +61,22 @@ cd /home/steam/gmodserver\n\
     && chmod +x /home/steam/start.sh \
     && chown steam:steam /home/steam/start.sh
 
+RUN mkdir -p \
+    /home/steam/gmodserver/garrysmod/cache \
+    /home/steam/gmodserver/garrysmod/steamapps/workshop \
+    /home/steam/gmodserver/garrysmod/data/ionrp/generated_vehicle_scripts \
+    /home/steam/gmodserver/garrysmod/logs
+
+RUN chown -R steam:steam \
+    /home/steam/gmodserver/garrysmod/cache \
+    /home/steam/gmodserver/garrysmod/steamapps \
+    /home/steam/gmodserver/garrysmod/data \
+    /home/steam/gmodserver/garrysmod/logs
+    
 USER steam
+
+RUN mkdir -p /home/steam/gmodserver/garrysmod/scripts/vehicles/ionrp
+RUN ln -sf /home/steam/gmodserver/garrysmod/data/ionrp/generated_vehicle_scripts /home/steam/gmodserver/garrysmod/scripts/vehicles/ionrp/generated_vehicle_scripts || true
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s \

@@ -34,8 +34,9 @@ services:
       - gmod-data:/home/steam/gmodserver/garrysmod/data
       - gmod-addons:/home/steam/gmodserver/garrysmod/addons
       - gmod-logs:/home/steam/gmodserver/garrysmod/logs
-      - workshop_data:/home/steam/steamapps
-      
+      - workshop_cache:/home/steam/gmodserver/garrysmod/cache
+      - workshop_content:/home/steam/gmodserver/garrysmod/steamapps/workshop
+
       # MySQL socket for direct database connection
       - mysql-socket:/var/run/mysqld
     
@@ -128,6 +129,7 @@ volumes:
   gmod-data:
   gmod-addons:
   gmod-logs:
-  workshop_data:
+  workshop_cache:
+  workshop_content:
   mariadb-data:
   mysql-socket:
