@@ -547,6 +547,62 @@ IonRP.Commands.Add("spawncar", function(ply, args, rawArgs)
   ply:ChatPrint(string.format("[IonRP] Spawned vehicle: %s", vehData.name))
 end, "Spawn a vehicle by ID", "developer")
 
+-- Test vehicle purchase command
+if SERVER then
+  IonRP.Commands.Add("buyvehicle", function(ply, args, rawArgs)
+    local vehicleId = args[1]
+    if not vehicleId or vehicleId == "" then
+      ply:ChatPrint("[IonRP] Usage: /buyvehicle <vehicle_id>")
+      return
+    end
+
+    IonRP.Vehicles:SV_PurchaseVehicle(ply, vehicleId, function(success, message, vehicleInstance)
+      ply:ChatPrint("[IonRP] " .. message)
+    end)
+  end, "Purchase a vehicle", "developer")
+
+  IonRP.Commands.Add("mygarage", function(ply, args, rawArgs)
+    IonRP.Vehicles:SV_GetOwnedVehicles(ply, function(vehicles)
+      if #vehicles == 0 then
+        ply:ChatPrint("[IonRP] You don't own any vehicles.")
+        return
+      end
+
+      ply:ChatPrint(string.format("[IonRP] You own %d vehicle(s):", #vehicles))
+      for i, vehInstance in ipairs(vehicles) do
+        ply:ChatPrint(string.format("  %d. %s (ID: %d)", i, vehInstance.name, vehInstance.databaseId))
+      end
+    end)
+  end, "List your owned vehicles", "developer")
+
+  IonRP.Commands.Add("spawnmycar", function(ply, args, rawArgs)
+    local vehicleDbId = tonumber(args[1])
+    if not vehicleDbId then
+      ply:ChatPrint("[IonRP] Usage: /spawnmycar <vehicle_database_id>")
+      return
+    end
+
+    IonRP.Vehicles:SV_GetOwnedVehicleById(ply, vehicleDbId, function(vehInstance)
+      if not vehInstance then
+        ply:ChatPrint("[IonRP] Vehicle not found or you don't own it.")
+        return
+      end
+
+      local trace = ply:GetEyeTrace()
+      local spawnPos = trace.HitPos + Vector(0, 0, 10)
+      local spawnAng = Angle(0, ply:EyeAngles().y - 90, 0)
+
+      local vehEnt = vehInstance:SV_Spawn(spawnPos, spawnAng)
+      if not vehEnt or not IsValid(vehEnt) then
+        ply:ChatPrint("[IonRP] Failed to spawn vehicle.")
+        return
+      end
+
+      ply:ChatPrint(string.format("[IonRP] Spawned your %s", vehInstance.name))
+    end)
+  end, "Spawn one of your owned vehicles", "developer")
+end
+
 IonRP.Commands.Add("allvehicles", function(ply, args, rawArgs)
   local data = GetVehicleList()
 
@@ -560,6 +616,35 @@ IonRP.Commands.Add("allvehicles", function(ply, args, rawArgs)
     end
   end
 end, "List all vehicles", "developer")
+
+--[[
+    Player Metatable Extensions
+]] --
+
+--- @class Player
+local plyMeta = FindMetaTable("Player")
+
+if SERVER then
+  --- Get all vehicles owned by this player
+  --- @param callback function Callback with signature (vehicles: VEHICLE[])
+  function plyMeta:SV_GetOwnedVehicles(callback)
+    IonRP.Vehicles:SV_GetOwnedVehicles(self, callback)
+  end
+
+  --- Purchase a vehicle
+  --- @param vehicleIdentifier string The vehicle identifier
+  --- @param callback function|nil Optional callback with signature (success: boolean, message: string, vehicleInstance: VEHICLE|nil)
+  function plyMeta:SV_PurchaseVehicle(vehicleIdentifier, callback)
+    IonRP.Vehicles:SV_PurchaseVehicle(self, vehicleIdentifier, callback)
+  end
+
+  --- Get a specific owned vehicle by database ID
+  --- @param vehicleId number The database ID of the vehicle
+  --- @param callback function Callback with signature (vehicleInstance: VEHICLE|nil)
+  function plyMeta:SV_GetOwnedVehicleById(vehicleId, callback)
+    IonRP.Vehicles:SV_GetOwnedVehicleById(self, vehicleId, callback)
+  end
+end
 
 if SERVER then
   include("sv_vehicle.lua")
