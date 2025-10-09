@@ -28,6 +28,10 @@ VEHICLE.identifier = "generic_vehicle"
 --- @type string
 VEHICLE.name = "<No name>"
 
+--- The description
+--- @type string
+VEHICLE.description = "<No description>"
+
 --- The model path used for the world model
 --- @type string
 VEHICLE.model = "models/buggy.mdl"
@@ -81,15 +85,15 @@ VEHICLE.Upgradeable = {}
 VEHICLE.Upgrades = {}
 
 --- Fuel capacity
-VEHICLE.Upgradeable.fuelTank = { 150, 200, 250, 300 }
+VEHICLE.Upgradeable.fuelTank = { 1, 1.5, 2.5, 3 }
 VEHICLE.Upgrades.fuelTank = 1
 
 --- Engine power
-VEHICLE.Upgradeable.engine = { 50, 65, 80 }
+VEHICLE.Upgradeable.engine = { 1, 1.5, 2 }
 VEHICLE.Upgrades.engine = 1
 
 --- Horsepower
-VEHICLE.Upgradeable.horsepower = { 50, 65, 80 }
+VEHICLE.Upgradeable.horsepower = { 1, 1.1, 1.2, 1.4 }
 VEHICLE.Upgrades.horsepower = 1
 
 --- Create a new vehicle
@@ -109,6 +113,44 @@ function VEHICLE:New(identifier, name)
   print("│ [IonRP Vehicles] ├ Registered vehicle: " .. identifier .. " - " .. name)
 
   return newVehicle
+end
+
+--- Create a new vehicle from it's existing class name in GMod's vehicle list.
+---
+--- This will automatically assign the model and script based on the vehicle data.
+--- @param vehicleClassName string The class name of the vehicle
+--- @param identifier_override string|nil Optional override for the vehicle identifier
+--- @return VEHICLE|nil
+function VEHICLE:NewFrom(vehicleClassName, identifier_override)
+  --[[
+    Example:
+    ["bmwm613tdm"]:
+      ["Author"]          =       TheDanishMaster, Turn 10
+      ["Category"]        =       TDM Cars
+      ["Class"]           =       prop_vehicle_jeep
+      ["Information"]     =       A drivable BMW M6 2013 by TheDanishMaster
+      ["KeyValues"]:
+        ["vehiclescript"] =       scripts/vehicles/TDMCars/bmwm613.txt
+      ["Model"]           =       models/tdmcars/bmw_m6_13.mdl
+      ["Name"]            =       BMW M6 2013
+  ]] --
+  local vehicleData = GetVehicleList()[vehicleClassName]
+  if not vehicleData then return nil end
+
+  local newVehicle = self:New(identifier_override or vehicleClassName, vehicleData.Name)
+  newVehicle.model = vehicleData.Model
+  newVehicle.script = vehicleData.KeyValues.vehiclescript
+  newVehicle.description = vehicleData.Information
+
+  return newVehicle
+end
+
+local _cachedVehicleList = nil
+function GetVehicleList()
+  if not _cachedVehicleList then
+    _cachedVehicleList = list.Get("Vehicles") or {}
+  end
+  return _cachedVehicleList
 end
 
 --- Create an instance of the vehicle with a player as the owner context.
@@ -159,7 +201,7 @@ if SERVER then
     veh.VehicleInstance = self
 
     IonRP.Vehicles:SV_DefineVehicleEntity(veh)
-    
+
     self.entity = veh
     IonRP.Vehicles.Active[veh:EntIndex()] = self
 
@@ -196,22 +238,60 @@ if SERVER then
   function SetKeyValueTable(tbl, keyPath, value)
     local keys = string.Explode(".", keyPath)
     local current = tbl
-    for i = 1, #keys - 1 do
+    for i = 1, #keys do
       local key = keys[i]
       for _, entry in ipairs(current) do
         if entry["Key"] == key then
+          if i == #keys then
+            entry["Value"] = value
+            return tbl
+          end
           current = entry["Value"]
           break
         end
       end
     end
-    current["Value"] = value
 
     return tbl
   end
 
-  function VEHICLE:SV_GetVehicleScriptFilepath()
+  --- Get a value in a KeyvaluesToTablePreserveOrder converted table by its key path
+  --- @param tbl table The table to search
+  --- @param keyPath string The dot-separated key path (e.g. "engine.horsepower")
+  --- @return number|string|nil
+  function GetKeyValueTable(tbl, keyPath)
+    -- PrintTable(tbl)
+    -- print(keyPath)
+    local keys = string.Explode(".", keyPath)
+    local current = tbl
+    for i = 1, #keys do
+      local key = keys[i]
+      local foundLayer = false
+      for _, entry in ipairs(current) do
+        if entry["Key"] == key then
+          -- print("Found:", entry["Key"], " " .. tostring(i) .. " out of " .. tostring(#keys))
+          -- PrintTable(entry["Value"])
+          current = entry["Value"]
 
+          -- if type(current) ~= "table" then
+          --   return current
+          -- end
+
+          foundLayer = true
+          break
+        end
+      end
+      if not foundLayer then
+        print("Key not found:", key)
+        -- PrintTable(current)
+        return nil
+      end
+    end
+    --- @type number|string|nil
+    return current
+  end
+
+  function VEHICLE:SV_GetVehicleScriptFilepath()
     -- Generate a unique hash based on the upgrade combination
     local upgradeHash = util.TableToJSON({ -- Only use upgrades that affect the script file
       self.Upgrades.engine,
@@ -245,18 +325,10 @@ if SERVER then
     if not self.Upgrades or not self.Upgradeable then return end
     if not self.script or self.script == "" then return end
 
-    print("Generating vehicle script for " .. self.identifier .. " with DB ID " .. tostring(self.databaseId))
+    print("Generating vehicle script for " .. self.identifier)
     local data = file.Read(self.script, "GAME")
     local toTable = util.KeyValuesToTablePreserveOrder("root" .. "\n{\n" .. data .. "\n}")
     local items = table.GetKeys(toTable)
-    local newData = ""
-    for _, k in ipairs(items) do
-      local v = toTable[k]
-      newData = newData .. TablePreservedOrderToKeyValues(v["Value"], v["Key"]) .. "\n\n"
-    end
-    print("------------")
-    -- TODO: Test what data i even have to work with and implement
-    -- Manipulate the data...
 
     --- @param upgradeable string
     --- @return number|string
@@ -264,15 +336,27 @@ if SERVER then
       return self.Upgradeable[upgradeable][self.Upgrades[upgradeable] or 1] or self.Upgradeable[upgradeable][1]
     end
 
-    -- data.engine.horsepower = data.engine.horsepower * (self.Upgrades.horsepower or 1)
-    SetKeyValueTable(toTable, "engine.horsepower", getLevel("horsepower"))
-    SetKeyValueTable(toTable, "engine.power", getLevel("engine"))
+    -- Manipulate the data...
+    local horsepower = GetKeyValueTable(toTable, "vehicle.engine.horsepower")
+    SetKeyValueTable(toTable, "vehicle.engine.horsepower", horsepower * getLevel("horsepower"))
+    
+    -- local maxreversespeed = GetKeyValueTable(toTable, "vehicle.engine.maxreversespeed")
+    -- SetKeyValueTable(toTable, "vehicle.engine.maxreversespeed", maxreversespeed * getLevel("engine"))
+
+    -- local power = GetKeyValueTable(toTable, "vehicle.engine.power")
+    -- SetKeyValueTable(toTable, "vehicle.engine.power", power * getLevel("engine"))
 
     -- Convert back to string
+    local newData = ""
+    for _, k in ipairs(items) do
+      local v = toTable[k]
+      newData = newData .. TablePreservedOrderToKeyValues(v["Value"], v["Key"]) .. "\n\n"
+    end
+    
     local path = self:SV_GetVehicleScriptFilepath()
     file.Write(path, newData)
     -- Reload scripts to apply changes
-    RunConsoleCommand("vehicle_flushscript")
+    -- RunConsoleCommand("vehicle_flushscript")
 
     return path
   end
@@ -373,13 +457,44 @@ IonRP.Commands.Add("listvehicles", function(ply, args, rawArgs)
 end, "List all registered vehicles", "developer")
 
 IonRP.Commands.Add("listvehiclescripts", function(ply, args, rawArgs)
-  local files, _ = file.Find("scripts/vehicles/*.txt", "GAME")
-  for _, file in ipairs(files) do
-    if IsValid(ply) then
-      ply:ChatPrint(string.format("Found vehicle script: %s", file))
-    else
-      print(string.format("Found vehicle script: %s", file))
+  -- Recursively find all vehicle scripts
+  local function findScriptsRecursive(basePath, relativePath)
+    local results = {}
+    local files, dirs = file.Find(basePath .. "/*", "GAME")
+
+    -- Add all .txt files in current directory
+    for _, fileName in ipairs(files) do
+      if string.EndsWith(fileName, ".txt") then
+        local fullPath = relativePath .. fileName
+        table.insert(results, fullPath)
+      end
     end
+
+    -- Recursively search subdirectories
+    for _, dirName in ipairs(dirs) do
+      local subResults = findScriptsRecursive(basePath .. "/" .. dirName, relativePath .. dirName .. "/")
+      for _, path in ipairs(subResults) do
+        table.insert(results, path)
+      end
+    end
+
+    return results
+  end
+
+  local allScripts = findScriptsRecursive("scripts/vehicles", "")
+
+  for _, scriptPath in ipairs(allScripts) do
+    if IsValid(ply) then
+      ply:ChatPrint(string.format("Found vehicle script: %s", scriptPath))
+    else
+      print(string.format("Found vehicle script: %s", scriptPath))
+    end
+  end
+
+  if IsValid(ply) then
+    ply:ChatPrint(string.format("Total scripts found: %d", #allScripts))
+  else
+    print(string.format("Total scripts found: %d", #allScripts))
   end
 end, "List all registered vehicle scripts", "developer")
 
@@ -412,6 +527,20 @@ IonRP.Commands.Add("spawncar", function(ply, args, rawArgs)
 
   ply:ChatPrint(string.format("[IonRP] Spawned vehicle: %s", vehData.name))
 end, "Spawn a vehicle by ID", "developer")
+
+IonRP.Commands.Add("allvehicles", function(ply, args, rawArgs)
+  local data = GetVehicleList()
+
+  for className, veh in pairs(data) do
+    local str = string.format("%s - %s (\n  Model: %s\n  Script: %s\n)", className, veh.Name, veh.Model,
+      veh.KeyValues.vehiclescript)
+    if IsValid(ply) then
+      ply:ChatPrint(str)
+    else
+      print(str)
+    end
+  end
+end, "List all vehicles", "developer")
 
 if SERVER then
   include("sv_vehicle.lua")
