@@ -26,15 +26,20 @@ local function FormatMoney(amount)
   return "$" .. formatted
 end
 
---[[
-	Open the main bank menu
---]]
+--- @type boolean
+IonRP.Bank.isOpen = false
+
+--- Open the main bank menu
+--- @param wallet number|nil The player's wallet balance
+--- @param bank number|nil The player's bank balance
 function IonRP.Bank:OpenMenu(wallet, bank)
   local ply = LocalPlayer()
   if not IsValid(ply) then return end
+  if self.isOpen then return end
+  self.isOpen = true
 
-  local wallet = wallet or ply:GetWallet()
-  local bank = bank or ply:GetBank()
+  wallet = wallet or ply:GetWallet()
+  bank = bank or ply:GetBank()
 
   IonRP.Dialog:Create({
     title = "Bank of IonRP - ATM",
@@ -66,6 +71,7 @@ function IonRP.Bank:OpenMenu(wallet, bank)
       {
         text = "Close",
         callback = function()
+          self.isOpen = false
           return true -- Animate on close
         end,
         color = Color(100, 100, 110, 255)

@@ -26,6 +26,11 @@ function IonRP.Database:InitializeTables()
     IonRP.Vehicles:InitializeTables()
   end
 
+  -- Initialize ATM tables if available
+  if IonRP.ATM and IonRP.ATM.InitializeTables then
+    IonRP.ATM:InitializeTables()
+  end
+
   -- Create characters table
   local query = self:query([[
         CREATE TABLE IF NOT EXISTS ionrp_characters (

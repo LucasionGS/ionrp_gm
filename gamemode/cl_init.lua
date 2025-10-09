@@ -35,7 +35,6 @@ include("item/sh_item.lua")
 include("job/sh_job.lua")
 -- Vehicles
 include("vehicle/sh_vehicle.lua")
--- Inventory
-include("inventory/cl_inventory.lua")
--- IonSys (Admin Panel)
-include("ionsys/cl_ionsys.lua")
+-- ATM System
+include("atm/sh_atm.lua")
+include("atm/cl_atm.lua")

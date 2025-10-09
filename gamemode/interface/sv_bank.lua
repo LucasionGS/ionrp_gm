@@ -113,9 +113,8 @@ function IonRP.Bank:Deposit(ply, amount)
   return true
 end
 
---[[
-  Open bank menu for player
---]]
+--- Open bank menu for player
+--- @param ply Player The player
 function IonRP.Bank:OpenMenu(ply)
   net.Start("IonRP_BankOpenMenu")
   net.Send(ply)

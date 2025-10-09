@@ -27,12 +27,9 @@ AddCSLuaFile("item/sh_item.lua")
 AddCSLuaFile("job/sh_job.lua")
 -- Vehicles
 AddCSLuaFile("vehicle/sh_vehicle.lua")
--- Inventory
-AddCSLuaFile("inventory/sh_inventory.lua")
-AddCSLuaFile("inventory/cl_inventory.lua")
--- IonSys (Admin Panel)
-AddCSLuaFile("ionsys/sh_ionsys.lua")
-AddCSLuaFile("ionsys/cl_ionsys.lua")
+-- ATM System
+AddCSLuaFile("atm/sh_atm.lua")
+AddCSLuaFile("atm/cl_atm.lua")
 
 -- Load shared code
 include("shared.lua")
@@ -67,6 +64,10 @@ include("vehicle/sh_vehicle.lua")
 
 -- Inventory
 include("inventory/sv_inventory.lua")
+
+-- ATM System
+include("atm/sh_atm.lua")
+include("atm/sv_atm.lua")
 
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")
