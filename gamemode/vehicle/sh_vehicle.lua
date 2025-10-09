@@ -102,8 +102,8 @@ function VEHICLE:New(identifier, name)
   newVehicle.__index = VEHICLE
   newVehicle.identifier = identifier
   newVehicle.name = name
-  newVehicle.Upgrades = table.Copy(self.Upgrades)
-  newVehicle.Upgradeable = table.Copy(self.Upgradeable)
+  newVehicle.Upgrades = table.Copy(VEHICLE.Upgrades)
+  newVehicle.Upgradeable = table.Copy(VEHICLE.Upgradeable)
 
   IonRP.Vehicles.List[identifier] = newVehicle
   print("│ [IonRP Vehicles] ├ Registered vehicle: " .. identifier .. " - " .. name)
@@ -116,9 +116,9 @@ end
 --- @param databaseId number|nil The database ID for this vehicle instance (if owned).
 --- @return VEHICLE
 function VEHICLE:MakeOwnedInstance(owner, databaseId)
-  local vehicleInstance = {}
-  setmetatable(vehicleInstance, VEHICLE)
-  vehicleInstance.__index = VEHICLE
+  local vehicleInstance = table.Copy(self)
+  setmetatable(vehicleInstance, self)
+  vehicleInstance.__index = self
   vehicleInstance.owner = owner
   vehicleInstance.databaseId = databaseId or nil
   vehicleInstance.Upgrades = table.Copy(self.Upgrades)
@@ -393,11 +393,13 @@ IonRP.Commands.Add("spawncar", function(ply, args, rawArgs)
     return
   end
 
+  PrintTable(vehData)
+
   local trace = ply:GetEyeTrace()
   local spawnPos = trace.HitPos + Vector(0, 0, 10)
   local spawnAng = Angle(0, ply:EyeAngles().y - 90, 0)
 
-  local vehInstance = vehData:MakeOwnedInstance(ply, 1)
+  local vehInstance = vehData:MakeOwnedInstance(ply)
   local vehEnt = vehInstance:SV_Spawn(spawnPos, spawnAng)
   if not vehEnt or not IsValid(vehEnt) then
     ply:ChatPrint("[IonRP] Failed to spawn vehicle.")

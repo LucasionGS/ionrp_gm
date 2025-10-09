@@ -80,7 +80,7 @@ end
 --- @param owner Player The player who owns this item instance.
 --- @return ITEM
 function ITEM:MakeOwnedInstance(owner)
-  local itemInstance = {}
+  local itemInstance = table.Copy(self)
   setmetatable(itemInstance, self)
   self.__index = self
   itemInstance.owner = owner
