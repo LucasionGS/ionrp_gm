@@ -15,7 +15,8 @@ services:
     environment:
       - GMOD_PORT=27015
       - GMOD_MAXPLAYERS=32
-      - GMOD_MAP=rp_evocity_v33x
+      # - GMOD_MAP=rp_evocity_v33x
+      - GMOD_MAP=rp_riverden_v1a
       - GMOD_GAMEMODE=ionrp
       - GMOD_HOSTNAME=IonRP Server - Roleplay
       # Get your Steam Web API key from: https://steamcommunity.com/dev/apikey

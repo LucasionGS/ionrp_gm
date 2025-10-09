@@ -52,6 +52,7 @@ JOB.ammo = {}
 --- @type table<string>
 JOB.defaultWeapons = {
   "weapon_physcannon",
+  "weapon_physgun",
   "weapon_fists"
 }
 
