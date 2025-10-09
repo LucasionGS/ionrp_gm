@@ -413,8 +413,6 @@ IonRP.Commands.Add("spawncar", function(ply, args, rawArgs)
   ply:ChatPrint(string.format("[IonRP] Spawned vehicle: %s", vehData.name))
 end, "Spawn a vehicle by ID", "developer")
 
-print(VEHICLE_JEEP:MakeOwnedInstance(Player(1)):SV_Spawn(Vector(0,0,0), Angle(0,0,0)))
-
 if SERVER then
   include("sv_vehicle.lua")
 end
