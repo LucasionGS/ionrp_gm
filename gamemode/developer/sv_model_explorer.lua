@@ -91,7 +91,7 @@ IonRP.Commands.Add("models", function(activator, args, rawArgs)
   -- Send net message to open the model explorer
   net.Start("IonRP_OpenModelExplorer")
   net.Send(activator)
-end, "Open the Model Explorer", "modelexplorer")
+end, "Open the Model Explorer", "developer")
 
 -- Network string to open model explorer
 util.AddNetworkString("IonRP_OpenModelExplorer")

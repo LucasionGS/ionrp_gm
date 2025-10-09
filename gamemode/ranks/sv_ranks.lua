@@ -75,7 +75,6 @@ IonRP.Ranks.Permissions = {
 
   -- Development
   ["developer"] = { minRank = RANK_DEVELOPER, description = "Access developer tools" },
-  ["modelexplorer"] = { minRank = RANK_DEVELOPER, description = "Access Model Explorer" },
 
   -- Admin Panel
   ["ionsys"] = { minRank = RANK_ADMIN, description = "Access IonSys admin panel" },
