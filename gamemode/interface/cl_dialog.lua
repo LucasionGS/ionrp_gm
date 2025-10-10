@@ -372,9 +372,8 @@ function IonRP.Dialog:ShowOptions(title, options)
   local overlay = vgui.Create("DPanel")
   overlay:SetSize(ScrW(), ScrH())
   overlay:SetPos(0, 0)
-  overlay:MakePopup()
   overlay:SetKeyboardInputEnabled(false)
-  overlay:SetMouseInputEnabled(true)
+  overlay:SetMouseInputEnabled(false)
   overlay.Alpha = 0
   overlay.Paint = function(self, w, h)
     draw.RoundedBox(0, 0, 0, w, h, ColorAlpha(IonRP.Dialog.Config.Colors.Overlay, self.Alpha))
@@ -388,9 +387,10 @@ function IonRP.Dialog:ShowOptions(title, options)
   local totalOptions = #options
   local frameHeight = headerHeight + (totalOptions * optionHeight) + (IonRP.Dialog.Config.Padding * 2)
 
-  -- Create dialog frame
-  local frame = vgui.Create("DPanel", overlay)
+  -- Create dialog frame (use EditablePanel for proper MakePopup support)
+  local frame = vgui.Create("EditablePanel", overlay)
   frame:SetSize(IonRP.Dialog.Config.Width, frameHeight)
+  frame:MakePopup()
 
   local scrW, scrH = ScrW(), ScrH()
   local x = (scrW - IonRP.Dialog.Config.Width) / 2
@@ -468,13 +468,11 @@ function IonRP.Dialog:ShowOptions(title, options)
   activeDialog = overlay
 end
 
---[[
-  Request string input from the player
-  @param title string Dialog title
-  @param message string Message to display
-  @param default string Default value
-  @param callback function Callback with the entered string (or nil if cancelled)
---]]
+--- Request string input from the player
+--- @param title string Dialog title
+--- @param message string Message to display
+--- @param default string Default value
+--- @param callback function Callback with the entered string (or nil if cancelled)
 function IonRP.Dialog:RequestString(title, message, default, callback)
   -- Close existing dialog
   if IsValid(activeDialog) then
@@ -487,9 +485,8 @@ function IonRP.Dialog:RequestString(title, message, default, callback)
   local overlay = vgui.Create("DPanel")
   overlay:SetSize(ScrW(), ScrH())
   overlay:SetPos(0, 0)
-  overlay:MakePopup()
-  overlay:SetKeyboardInputEnabled(true)
-  overlay:SetMouseInputEnabled(true)
+  overlay:SetKeyboardInputEnabled(false)
+  overlay:SetMouseInputEnabled(false)
   overlay.Alpha = 0
   overlay.Paint = function(self, w, h)
     draw.RoundedBox(0, 0, 0, w, h, ColorAlpha(IonRP.Dialog.Config.Colors.Overlay, self.Alpha))
@@ -497,10 +494,11 @@ function IonRP.Dialog:RequestString(title, message, default, callback)
 
   overlay:AlphaTo(255, IonRP.Dialog.Config.AnimationTime, 0)
 
-  -- Create dialog frame
-  local frame = vgui.Create("DPanel", overlay)
+  -- Create dialog frame (use EditablePanel for proper MakePopup support)
+  local frame = vgui.Create("EditablePanel", overlay)
   local frameHeight = 220
   frame:SetSize(IonRP.Dialog.Config.Width, frameHeight)
+  frame:MakePopup()
 
   local scrW, scrH = ScrW(), ScrH()
   local x = (scrW - IonRP.Dialog.Config.Width) / 2
