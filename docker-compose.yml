@@ -18,7 +18,7 @@ services:
       # - GMOD_MAP=rp_evocity_v33x
       - GMOD_MAP=rp_riverden_v1a
       - GMOD_GAMEMODE=ionrp
-      - GMOD_HOSTNAME=IonRP Server - Roleplay
+      - GMOD_HOSTNAME=IonRP Development Server
       # Get your Steam Web API key from: https://steamcommunity.com/dev/apikey
       # This is required for your server to appear in the server browser
       - GMOD_STEAMTOKEN=${STEAM_TOKEN:-}

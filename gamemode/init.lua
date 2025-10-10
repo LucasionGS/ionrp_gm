@@ -34,6 +34,8 @@ AddCSLuaFile("atm/cl_atm.lua")
 AddCSLuaFile("property/sh_property.lua")
 AddCSLuaFile("property/cl_property.lua")
 AddCSLuaFile("property/cl_property_shop.lua")
+-- NPC System
+AddCSLuaFile("npc/sh_npc.lua")
 -- IonSys (Admin Panel)
 AddCSLuaFile("ionsys/sh_ionsys.lua")
 AddCSLuaFile("ionsys/cl_ionsys.lua")
@@ -80,6 +82,10 @@ include("atm/sv_atm.lua")
 include("property/sh_property.lua")
 include("property/sv_property.lua")
 include("property/sv_property_shop.lua")
+
+-- NPC System
+include("npc/sh_npc.lua")
+include("npc/sv_npc.lua")
 
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")
