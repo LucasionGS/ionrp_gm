@@ -35,6 +35,8 @@ include("item/sh_item.lua")
 include("job/sh_job.lua")
 -- Vehicles
 include("vehicle/sh_vehicle.lua")
+-- Inventory
+include("inventory/cl_inventory.lua")
 -- ATM System
 include("atm/sh_atm.lua")
 include("atm/cl_atm.lua")

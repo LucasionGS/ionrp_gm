@@ -104,6 +104,7 @@ function IonRP.Bank:OpenWithdrawMenu()
 
           -- Reopen menu after transaction
           timer.Simple(0.1, function()
+            IonRP.Bank.isOpen = false
             IonRP.Bank:OpenMenu(wallet + amount, bank - amount)
           end)
           -- Don't animate, opening new dialog
@@ -117,6 +118,7 @@ function IonRP.Bank:OpenWithdrawMenu()
   table.insert(buttons, {
     text = "Back",
     callback = function()
+      IonRP.Bank.isOpen = false
       IonRP.Bank:OpenMenu()
       -- Don't animate, opening previous dialog
     end,
@@ -160,6 +162,7 @@ function IonRP.Bank:OpenDepositMenu()
 
           -- Reopen menu after transaction
           timer.Simple(0.1, function()
+            IonRP.Bank.isOpen = false
             IonRP.Bank:OpenMenu(wallet - amount, bank + amount)
           end)
           -- Don't animate, opening new dialog
@@ -180,6 +183,7 @@ function IonRP.Bank:OpenDepositMenu()
 
         -- Reopen menu after transaction
         timer.Simple(0.1, function()
+          IonRP.Bank.isOpen = false
           IonRP.Bank:OpenMenu()
         end)
         -- Don't animate, opening new dialog
@@ -192,6 +196,7 @@ function IonRP.Bank:OpenDepositMenu()
   table.insert(buttons, {
     text = "Back",
     callback = function()
+      IonRP.Bank.isOpen = false
       IonRP.Bank:OpenMenu()
       -- Don't animate, opening previous dialog
     end,

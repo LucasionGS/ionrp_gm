@@ -152,7 +152,7 @@ hook.Add("PostDrawTranslucentRenderables", "IonRP_Properties_DrawDoorText", func
       subText = "For Sale: $" .. string.Comma(property.price)
       subColor = Colors.PropertyPrice
     else
-      subText = "Not for sale"
+      subText = ""
       subColor = Color(180, 180, 180)
     end
     
