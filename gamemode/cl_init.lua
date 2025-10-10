@@ -40,5 +40,6 @@ include("atm/sh_atm.lua")
 include("atm/cl_atm.lua")
 -- Property System
 include("property/sh_property.lua")
+include("property/cl_property.lua")
 -- IonSys (Admin Panel)
 include("ionsys/cl_ionsys.lua")

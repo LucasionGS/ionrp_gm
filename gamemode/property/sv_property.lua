@@ -90,6 +90,11 @@ function PROPERTY:Save(callback)
         if callback then
           callback(doorsSuccess, propertyId)
         end
+        
+        -- Sync to all clients
+        if doorsSuccess then
+          IonRP.Properties:SyncPropertyToClients(self)
+        end
       end)
       
       -- Register in list
@@ -126,7 +131,16 @@ function PROPERTY:Update(callback)
       print("[IonRP Properties] Updated property ID: " .. self.id)
       
       -- Update doors as well
-      self:SaveDoors(callback)
+      self:SaveDoors(function(success)
+        if callback then
+          callback(success)
+        end
+        
+        -- Sync to all clients
+        if success then
+          IonRP.Properties:SyncPropertyToClients(self)
+        end
+      end)
     end,
     function(err)
       print("[IonRP Properties] Failed to update property: " .. err)
@@ -300,12 +314,84 @@ function IonRP.Properties:LoadProperty(propData)
       -- Register property
       IonRP.Properties.List[property.id] = property
       
+      -- Sync to all clients
+      self:SyncPropertyToClients(property)
+      
       print("[IonRP Properties] Loaded property: " .. property.name .. " (ID: " .. property.id .. ") with " .. #property.doors .. " doors")
     end,
     function(err)
       print("[IonRP Properties] Failed to load doors for property ID " .. propData.id .. ": " .. err)
     end
   )
+end
+
+--- Sync a property to all clients
+--- @param property Property The property to sync
+function IonRP.Properties:SyncPropertyToClients(property)
+  local propertyData = {
+    id = property.id,
+    name = property.name,
+    description = property.description,
+    category = property.category,
+    purchasable = property.purchasable,
+    price = property.price,
+    owner = IsValid(property.owner) and property.owner or nil,
+    doors = {}
+  }
+  
+  -- Include door data
+  for _, door in ipairs(property.doors) do
+    table.insert(propertyData.doors, {
+      pos = door.pos,
+      isLocked = door.isLocked,
+      isGate = door.isGate,
+      group = door.group
+    })
+  end
+  
+  net.Start("IonRP_Property_Sync")
+    net.WriteTable(propertyData)
+  net.Broadcast()
+end
+
+--- Sync property to a specific player
+--- @param ply Player The player to sync to
+--- @param property Property The property to sync
+function IonRP.Properties:SyncPropertyToPlayer(ply, property)
+  if not IsValid(ply) then return end
+  
+  local propertyData = {
+    id = property.id,
+    name = property.name,
+    description = property.description,
+    category = property.category,
+    purchasable = property.purchasable,
+    price = property.price,
+    owner = IsValid(property.owner) and property.owner or nil,
+    doors = {}
+  }
+  
+  -- Include door data
+  for _, door in ipairs(property.doors) do
+    table.insert(propertyData.doors, {
+      pos = door.pos,
+      isLocked = door.isLocked,
+      isGate = door.isGate,
+      group = door.group
+    })
+  end
+  
+  net.Start("IonRP_Property_Sync")
+    net.WriteTable(propertyData)
+  net.Send(ply)
+end
+
+--- Sync all properties to a player (on join)
+--- @param ply Player The player to sync to
+function IonRP.Properties:SyncAllToPlayer(ply)
+  for id, property in pairs(self.List) do
+    self:SyncPropertyToPlayer(ply, property)
+  end
 end
 
 --- Find door entities for all doors in this property
@@ -398,6 +484,16 @@ hook.Add("PlayerDisconnected", "IonRP_Properties_CleanupPropertyGun", function(p
   -- Clear any property gun editing state
   ply.PropertyGun_EditingProperty = nil
   ply.PropertyGun_IsNewProperty = nil
+end)
+
+--- Hook: Sync all properties to player when they join
+hook.Add("PlayerInitialSpawn", "IonRP_Properties_SyncToPlayer", function(ply)
+  -- Delay sync slightly to ensure client is ready
+  timer.Simple(2, function()
+    if IsValid(ply) then
+      IonRP.Properties:SyncAllToPlayer(ply)
+    end
+  end)
 end)
 
 print("[IonRP Properties] Server module loaded")
