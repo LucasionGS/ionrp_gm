@@ -34,6 +34,9 @@ AddCSLuaFile("atm/cl_atm.lua")
 AddCSLuaFile("property/sh_property.lua")
 AddCSLuaFile("property/cl_property.lua")
 AddCSLuaFile("property/cl_property_shop.lua")
+-- Shop
+AddCSLuaFile("shop/sh_shop.lua")
+AddCSLuaFile("shop/cl_shop.lua")
 -- NPC System
 AddCSLuaFile("npc/sh_npc.lua")
 -- IonSys (Admin Panel)
@@ -61,6 +64,7 @@ include("developer/sv_model_explorer.lua")
 -- Load commands
 include("commands/sv_rank_commands.lua")
 include("commands/sv_inventory_commands.lua")
+include("commands/sv_shop_commands.lua")
 
 -- Items
 include("item/sh_item.lua")
@@ -73,6 +77,11 @@ include("vehicle/sh_vehicle.lua")
 
 -- Inventory
 include("inventory/sv_inventory.lua")
+
+-- Shop System
+include("shop/sh_shop.lua")
+include("shop/sv_shop.lua")
+include("shop/shops/shop_general_store.lua")
 
 -- ATM System
 include("atm/sh_atm.lua")

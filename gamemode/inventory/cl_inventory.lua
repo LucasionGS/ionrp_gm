@@ -68,6 +68,13 @@ net.Receive("IonRP_SyncInventory", function()
   end
 
   IonRP.InventoryUI.CurrentInventory = inv
+  
+  -- Store on player for shop access
+  local ply = LocalPlayer()
+  if IsValid(ply) then
+    ply.IonRP_ClientInventory = inv
+  end
+  
   print("[IonRP Inventory] Client inventory updated successfully")
 
   -- Refresh UI if open

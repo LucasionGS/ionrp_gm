@@ -210,6 +210,57 @@ function INVENTORY:FindStackableSlot(item)
   return nil, nil, nil
 end
 
+--- Check if a quantity of items can fit in the inventory
+--- @param item ITEM The item to check
+--- @param quantity number How many items to fit
+--- @return boolean canFit Whether the items can fit
+--- @return string|nil reason Reason if they can't fit
+function INVENTORY:CanFitQuantity(item, quantity)
+  if not item or quantity <= 0 then
+    return false, "Invalid item or quantity"
+  end
+  
+  -- Check weight limit
+  if self:WouldExceedWeight(item, quantity) then
+    return false, "Would exceed weight limit"
+  end
+  
+  local remainingQuantity = quantity
+  
+  -- Check existing stacks first
+  if item.stackSize > 1 then
+    for key, slot in pairs(self.slots) do
+      if slot.item and slot.item.identifier == item.identifier and slot.quantity < item.stackSize then
+        local canAdd = item.stackSize - slot.quantity
+        remainingQuantity = remainingQuantity - canAdd
+        if remainingQuantity <= 0 then
+          return true, nil
+        end
+      end
+    end
+  end
+  
+  -- Check how many new slots we need
+  local slotsNeeded = math.ceil(remainingQuantity / item.stackSize)
+  local itemWidth, itemHeight = item.size[1], item.size[2]
+  local availableSlots = 0
+  
+  -- Count available positions
+  for y = 0, self.height - 1 do
+    for x = 0, self.width - 1 do
+      local canFit, _ = self:CanFitItem(item, x, y, false)
+      if canFit then
+        availableSlots = availableSlots + 1
+        if availableSlots >= slotsNeeded then
+          return true, nil
+        end
+      end
+    end
+  end
+  
+  return false, string.format("Not enough space (need %d slots, have %d)", slotsNeeded, availableSlots)
+end
+
 --- Add an item to the inventory
 --- @param item ITEM
 --- @param quantity number
@@ -481,6 +532,44 @@ end
 --- Clear the entire inventory
 function INVENTORY:Clear()
   self.slots = {}
+end
+
+--- Count total quantity of an item by identifier
+--- @param item ITEM The item definition
+--- @return number Total quantity of the item in inventory
+function INVENTORY:CountItem(item)
+  local total = 0
+  local items = self:GetAllItems()
+  
+  for _, entry in ipairs(items) do
+    if entry.item.identifier == item.identifier then
+      total = total + entry.quantity
+    end
+  end
+  
+  return total
+end
+
+--- Remove items by identifier (removes from multiple stacks if needed)
+--- @param item ITEM The item definition
+--- @param quantity number Quantity to remove
+--- @return number Quantity actually removed
+function INVENTORY:RemoveItemByIdentifier(item, quantity)
+  local remaining = quantity
+  local items = self:GetAllItems()
+  
+  -- Sort by quantity (remove from smallest stacks first)
+  table.sort(items, function(a, b) return a.quantity < b.quantity end)
+  
+  for _, entry in ipairs(items) do
+    if entry.item.identifier == item.identifier and remaining > 0 then
+      local toRemove = math.min(remaining, entry.quantity)
+      self:RemoveItem(entry.x, entry.y, toRemove)
+      remaining = remaining - toRemove
+    end
+  end
+  
+  return quantity - remaining
 end
 
 --- Debug: Print inventory contents
