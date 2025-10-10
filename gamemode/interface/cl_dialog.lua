@@ -358,11 +358,322 @@ function IonRP.Dialog:Choice(title, message, onYes, onNo)
 end
 
 --[[
+  Show options menu
+  @param title string Dialog title
+  @param options table Array of option objects with {text, callback, isLabel?}
+--]]
+function IonRP.Dialog:ShowOptions(title, options)
+  -- Close existing dialog
+  if IsValid(activeDialog) then
+    self:Close()
+  end
+
+  -- Create overlay
+  local overlay = vgui.Create("DPanel")
+  overlay:SetSize(ScrW(), ScrH())
+  overlay:SetPos(0, 0)
+  overlay:MakePopup()
+  overlay:SetKeyboardInputEnabled(false)
+  overlay:SetMouseInputEnabled(true)
+  overlay.Alpha = 0
+  overlay.Paint = function(self, w, h)
+    draw.RoundedBox(0, 0, 0, w, h, ColorAlpha(IonRP.Dialog.Config.Colors.Overlay, self.Alpha))
+  end
+
+  overlay:AlphaTo(255, IonRP.Dialog.Config.AnimationTime, 0)
+
+  -- Calculate dialog height based on options
+  local headerHeight = 40
+  local optionHeight = 35
+  local totalOptions = #options
+  local frameHeight = headerHeight + (totalOptions * optionHeight) + (IonRP.Dialog.Config.Padding * 2)
+
+  -- Create dialog frame
+  local frame = vgui.Create("DPanel", overlay)
+  frame:SetSize(IonRP.Dialog.Config.Width, frameHeight)
+
+  local scrW, scrH = ScrW(), ScrH()
+  local x = (scrW - IonRP.Dialog.Config.Width) / 2
+  local y = (scrH - frameHeight) / 2
+  frame:SetPos(x, y)
+
+  frame.Paint = function(self, w, h)
+    -- Background
+    draw.RoundedBox(8, 0, 0, w, h, IonRP.Dialog.Config.Colors.Background)
+
+    -- Border
+    surface.SetDrawColor(100, 100, 110, 255)
+    surface.DrawOutlinedRect(0, 0, w, h, 2)
+  end
+
+  -- Title bar
+  if title then
+    local titleBar = vgui.Create("DPanel", frame)
+    titleBar:Dock(TOP)
+    titleBar:SetTall(headerHeight)
+
+    titleBar.Paint = function(self, w, h)
+      draw.RoundedBoxEx(8, 0, 0, w, h, IonRP.Dialog.Config.Colors.Header, true, true, false, false)
+      draw.SimpleText(title, "DermaDefaultBold", w / 2, h / 2, IonRP.Dialog.Config.Colors.Title, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+  end
+
+  -- Options container
+  local optionsContainer = vgui.Create("DPanel", frame)
+  optionsContainer:Dock(FILL)
+  optionsContainer:DockMargin(IonRP.Dialog.Config.Padding, IonRP.Dialog.Config.Padding, IonRP.Dialog.Config.Padding, IonRP.Dialog.Config.Padding)
+  optionsContainer.Paint = function() end
+
+  -- Create option buttons
+  for i, option in ipairs(options) do
+    if option.isLabel then
+      -- Label (non-clickable)
+      local label = vgui.Create("DLabel", optionsContainer)
+      label:Dock(TOP)
+      label:DockMargin(0, 0, 0, 2)
+      label:SetTall(optionHeight - 2)
+      label:SetText("")
+
+      label.Paint = function(self, w, h)
+        draw.RoundedBox(4, 0, 0, w, h, Color(50, 50, 60, 200))
+        draw.SimpleText(option.text, "DermaDefaultBold", w / 2, h / 2, Color(150, 150, 170), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+      end
+    else
+      -- Button
+      local btn = vgui.Create("DButton", optionsContainer)
+      btn:Dock(TOP)
+      btn:DockMargin(0, 0, 0, 2)
+      btn:SetTall(optionHeight - 2)
+      btn:SetText("")
+
+      btn.Paint = function(self, w, h)
+        local col = IonRP.Dialog.Config.Colors.ButtonNormal
+        if self:IsHovered() then
+          col = IonRP.Dialog.Config.Colors.ButtonHover
+        end
+        draw.RoundedBox(4, 0, 0, w, h, col)
+        draw.SimpleText(option.text, "DermaDefaultBold", w / 2, h / 2, IonRP.Dialog.Config.Colors.ButtonText, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+      end
+
+      btn.DoClick = function()
+        overlay:Remove()
+        activeDialog = nil
+        if option.callback then
+          option.callback()
+        end
+      end
+    end
+  end
+
+  activeDialog = overlay
+end
+
+--[[
+  Request string input from the player
+  @param title string Dialog title
+  @param message string Message to display
+  @param default string Default value
+  @param callback function Callback with the entered string (or nil if cancelled)
+--]]
+function IonRP.Dialog:RequestString(title, message, default, callback)
+  -- Close existing dialog
+  if IsValid(activeDialog) then
+    self:Close(false)
+  end
+
+  default = default or ""
+
+  -- Create overlay
+  local overlay = vgui.Create("DPanel")
+  overlay:SetSize(ScrW(), ScrH())
+  overlay:SetPos(0, 0)
+  overlay:MakePopup()
+  overlay:SetKeyboardInputEnabled(true)
+  overlay:SetMouseInputEnabled(true)
+  overlay.Alpha = 0
+  overlay.Paint = function(self, w, h)
+    draw.RoundedBox(0, 0, 0, w, h, ColorAlpha(IonRP.Dialog.Config.Colors.Overlay, self.Alpha))
+  end
+
+  overlay:AlphaTo(255, IonRP.Dialog.Config.AnimationTime, 0)
+
+  -- Create dialog frame
+  local frame = vgui.Create("DPanel", overlay)
+  local frameHeight = 220
+  frame:SetSize(IonRP.Dialog.Config.Width, frameHeight)
+
+  local scrW, scrH = ScrW(), ScrH()
+  local x = (scrW - IonRP.Dialog.Config.Width) / 2
+  local y = (scrH - frameHeight) / 2
+  frame:SetPos(x, y)
+
+  frame.Paint = function(self, w, h)
+    -- Background
+    draw.RoundedBox(8, 0, 0, w, h, IonRP.Dialog.Config.Colors.Background)
+
+    -- Border
+    surface.SetDrawColor(100, 100, 110, 255)
+    surface.DrawOutlinedRect(0, 0, w, h, 2)
+  end
+
+  -- Title bar
+  if title then
+    local titleBar = vgui.Create("DPanel", frame)
+    titleBar:Dock(TOP)
+    titleBar:SetTall(40)
+
+    titleBar.Paint = function(self, w, h)
+      draw.RoundedBoxEx(8, 0, 0, w, h, IonRP.Dialog.Config.Colors.Header, true, true, false, false)
+      draw.SimpleText(title, "DermaDefaultBold", w / 2, h / 2, IonRP.Dialog.Config.Colors.Title, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+  end
+
+  -- Message
+  if message then
+    local messageLabel = vgui.Create("DLabel", frame)
+    messageLabel:Dock(TOP)
+    messageLabel:DockMargin(IonRP.Dialog.Config.Padding, IonRP.Dialog.Config.Padding, IonRP.Dialog.Config.Padding, 10)
+    messageLabel:SetText(message)
+    messageLabel:SetFont("DermaDefault")
+    messageLabel:SetTextColor(IonRP.Dialog.Config.Colors.Message)
+    messageLabel:SetWrap(true)
+    messageLabel:SetAutoStretchVertical(true)
+  end
+
+  -- Text entry
+  ---@type DTextEntry
+  local textEntry = vgui.Create("DTextEntry", frame)
+  textEntry:Dock(TOP)
+  textEntry:DockMargin(IonRP.Dialog.Config.Padding, 0, IonRP.Dialog.Config.Padding, IonRP.Dialog.Config.Padding)
+  textEntry:SetTall(30)
+  textEntry:SetText(default)
+  textEntry:RequestFocus()
+  textEntry:SelectAll()
+
+  textEntry.Paint = function(self, w, h)
+    draw.RoundedBox(4, 0, 0, w, h, Color(30, 30, 35, 255))
+    surface.SetDrawColor(60, 60, 70, 255)
+    surface.DrawOutlinedRect(0, 0, w, h, 1)
+    self:DrawTextEntryText(Color(255, 255, 255), Color(100, 150, 255), Color(255, 255, 255))
+  end
+
+  -- Handle Enter key
+  textEntry.OnEnter = function()
+    local value = textEntry:GetValue()
+    overlay:Remove()
+    activeDialog = nil
+    if callback then
+      callback(value)
+    end
+  end
+
+  -- Buttons container
+  local buttonContainer = vgui.Create("DPanel", frame)
+  buttonContainer:Dock(TOP)
+  buttonContainer:DockMargin(IonRP.Dialog.Config.Padding, 0, IonRP.Dialog.Config.Padding, IonRP.Dialog.Config.Padding)
+  buttonContainer:SetTall(IonRP.Dialog.Config.ButtonHeight)
+  buttonContainer.Paint = function() end
+
+  -- Cancel button
+  local cancelBtn = vgui.Create("DButton", buttonContainer)
+  cancelBtn:Dock(RIGHT)
+  cancelBtn:SetWide(120)
+  cancelBtn:DockMargin(5, 0, 0, 0)
+  cancelBtn:SetText("")
+
+  cancelBtn.Paint = function(self, w, h)
+    local col = Color(100, 100, 110, 255)
+    if self:IsHovered() then
+      col = Color(120, 120, 130, 255)
+    end
+    draw.RoundedBox(4, 0, 0, w, h, col)
+    draw.SimpleText("Cancel", "DermaDefaultBold", w / 2, h / 2, IonRP.Dialog.Config.Colors.ButtonText, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+
+  cancelBtn.DoClick = function()
+    overlay:Remove()
+    activeDialog = nil
+    if callback then
+      callback(nil)
+    end
+  end
+
+  -- Confirm button
+  local confirmBtn = vgui.Create("DButton", buttonContainer)
+  confirmBtn:Dock(RIGHT)
+  confirmBtn:SetWide(120)
+  confirmBtn:SetText("")
+
+  confirmBtn.Paint = function(self, w, h)
+    local col = IonRP.Dialog.Config.Colors.ButtonNormal
+    if self:IsHovered() then
+      col = IonRP.Dialog.Config.Colors.ButtonHover
+    end
+    draw.RoundedBox(4, 0, 0, w, h, col)
+    draw.SimpleText("Confirm", "DermaDefaultBold", w / 2, h / 2, IonRP.Dialog.Config.Colors.ButtonText, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+
+  confirmBtn.DoClick = function()
+    local value = textEntry:GetValue()
+    overlay:Remove()
+    activeDialog = nil
+    if callback then
+      callback(value)
+    end
+  end
+
+  activeDialog = overlay
+end
+
+--[[
   Network receiver for server-initiated dialogs
 --]]
 net.Receive("IonRP_OpenDialog", function()
   local data = net.ReadTable()
   IonRP.Dialog:Create(data)
+end)
+
+--[[
+  Network receiver for server-initiated RequestString
+--]]
+net.Receive("IonRP_RequestString", function()
+  local title = net.ReadString()
+  local message = net.ReadString()
+  local default = net.ReadString()
+  local callbackId = net.ReadString()
+
+  IonRP.Dialog:RequestString(title, message, default, function(result)
+    -- Send result back to server
+    net.Start("IonRP_RequestStringResponse")
+      net.WriteString(callbackId)
+      net.WriteBool(result ~= nil)
+      net.WriteString(result or "")
+    net.SendToServer()
+  end)
+end)
+
+--[[
+  Network receiver for server-initiated ShowOptions
+--]]
+net.Receive("IonRP_ShowOptions", function()
+  local title = net.ReadString()
+  local options = net.ReadTable()
+  local callbackId = net.ReadString()
+
+  -- Wrap callbacks to send response to server
+  for i, option in ipairs(options) do
+    if not option.isLabel then
+      option.callback = function()
+        -- Send selection back to server
+        net.Start("IonRP_ShowOptionsResponse")
+          net.WriteString(callbackId)
+          net.WriteUInt(i, 8)
+        net.SendToServer()
+      end
+    end
+  end
+
+  IonRP.Dialog:ShowOptions(title, options)
 end)
 
 -- Console commands for testing

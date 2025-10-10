@@ -394,3 +394,7 @@ hook.Add("InitPostEntity", "IonRP_Properties_LoadMap", function()
 end)
 
 print("[IonRP Properties] Server module loaded")
+
+IonRP.Commands.Add("property_gun", function(ply)
+  ply:Give("weapon_ionrp_property_gun")
+end, "Give yourself the property management gun", "developer")

@@ -4,8 +4,16 @@
 --]]
 
 util.AddNetworkString("IonRP_OpenDialog")
+util.AddNetworkString("IonRP_RequestString")
+util.AddNetworkString("IonRP_RequestStringResponse")
+util.AddNetworkString("IonRP_ShowOptions")
+util.AddNetworkString("IonRP_ShowOptionsResponse")
 
 IonRP.Dialog = IonRP.Dialog or {}
+
+-- Callback storage
+local callbackStorage = {}
+local nextCallbackId = 1
 
 --- Send a dialog to a player or players
 --- @param ply Player or table of players
@@ -103,5 +111,137 @@ end
     }
   })
 --]]
+
+--[[
+  Request string input from a player
+]]
+--- @param ply Player The player to show the dialog to
+--- @param title string Dialog title
+--- @param message string Message to display
+--- @param default string Default value
+--- @param callback fun(result: string|nil) Callback with the entered string (or nil if cancelled)
+function IonRP.Dialog:RequestString(ply, title, message, default, callback)
+  if not IsValid(ply) then return end
+
+  -- Generate callback ID
+  local callbackId = "reqstr_" .. nextCallbackId
+  nextCallbackId = nextCallbackId + 1
+
+  -- Store callback
+  callbackStorage[callbackId] = {
+    player = ply,
+    callback = callback,
+    expiry = CurTime() + 300 -- 5 minute timeout
+  }
+
+  -- Send to client
+  net.Start("IonRP_RequestString")
+    net.WriteString(title)
+    net.WriteString(message)
+    net.WriteString(default or "")
+    net.WriteString(callbackId)
+  net.Send(ply)
+end
+
+--[[
+  Show options menu to a player
+]]
+--- @param ply Player The player to show the dialog to
+--- @param title string Dialog title
+--- @param options table Array of option objects with {text, callback, isLabel?}
+function IonRP.Dialog:ShowOptions(ply, title, options)
+  if not IsValid(ply) then return end
+
+  -- Generate callback ID
+  local callbackId = "showopts_" .. nextCallbackId
+  nextCallbackId = nextCallbackId + 1
+
+  -- Store callbacks
+  local callbacks = {}
+  for i, option in ipairs(options) do
+    if not option.isLabel then
+      callbacks[i] = option.callback
+    end
+  end
+
+  callbackStorage[callbackId] = {
+    player = ply,
+    callbacks = callbacks,
+    expiry = CurTime() + 300 -- 5 minute timeout
+  }
+
+  -- Send to client (without callback functions)
+  local clientOptions = {}
+  for i, option in ipairs(options) do
+    table.insert(clientOptions, {
+      text = option.text,
+      isLabel = option.isLabel or false
+    })
+  end
+
+  net.Start("IonRP_ShowOptions")
+    net.WriteString(title)
+    net.WriteTable(clientOptions)
+    net.WriteString(callbackId)
+  net.Send(ply)
+end
+
+--[[
+  Handle RequestString response from client
+]]
+net.Receive("IonRP_RequestStringResponse", function(len, ply)
+  local callbackId = net.ReadString()
+  local hasResult = net.ReadBool()
+  local result = net.ReadString()
+
+  local stored = callbackStorage[callbackId]
+  if not stored then return end
+
+  -- Verify player
+  if stored.player ~= ply then return end
+
+  -- Execute callback
+  if stored.callback then
+    stored.callback(hasResult and result or nil)
+  end
+
+  -- Clean up
+  callbackStorage[callbackId] = nil
+end)
+
+--[[
+  Handle ShowOptions response from client
+]]
+net.Receive("IonRP_ShowOptionsResponse", function(len, ply)
+  local callbackId = net.ReadString()
+  local selectedIndex = net.ReadUInt(8)
+
+  local stored = callbackStorage[callbackId]
+  if not stored then return end
+
+  -- Verify player
+  if stored.player ~= ply then return end
+
+  -- Execute callback
+  local callback = stored.callbacks[selectedIndex]
+  if callback then
+    callback()
+  end
+
+  -- Clean up
+  callbackStorage[callbackId] = nil
+end)
+
+--[[
+  Clean up expired callbacks
+]]
+timer.Create("IonRP_CleanDialogCallbacks", 60, 0, function()
+  local now = CurTime()
+  for id, data in pairs(callbackStorage) do
+    if data.expiry < now then
+      callbackStorage[id] = nil
+    end
+  end
+end)
 
 print("[IonRP] Dialog system (server) loaded")
