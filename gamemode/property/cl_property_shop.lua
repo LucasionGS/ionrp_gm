@@ -1,13 +1,13 @@
 --[[
-    Vehicle Shop - Client Side UI
-    Modern vehicle dealership interface
+    Property Shop - Client Side UI
+    Modern real estate interface
 ]] --
 
-IonRP.VehicleShop = IonRP.VehicleShop or {}
-IonRP.VehicleShop.UI = IonRP.VehicleShop.UI or {}
+IonRP.PropertyShop = IonRP.PropertyShop or {}
+IonRP.PropertyShop.UI = IonRP.PropertyShop.UI or {}
 
 -- Configuration
-IonRP.VehicleShop.UI.Config = {
+IonRP.PropertyShop.UI.Config = {
   Width = ScrW() * 0.9,
   Height = ScrH() * 0.9,
   Padding = 20,
@@ -28,8 +28,6 @@ IonRP.VehicleShop.UI.Config = {
     ButtonBuy = Color(46, 204, 113, 240),
     ButtonBuyHover = Color(52, 224, 123, 255),
     ButtonBuyGlow = Color(46, 204, 113, 100),
-    ButtonSpawn = Color(155, 89, 182, 240),
-    ButtonSpawnHover = Color(175, 109, 202, 255),
     Text = Color(255, 255, 255, 255),
     TextDim = Color(220, 220, 230, 255),
     TextMuted = Color(160, 160, 175, 220),
@@ -42,9 +40,9 @@ IonRP.VehicleShop.UI.Config = {
   }
 }
 
---- Open the vehicle shop with a specific category
+--- Open the property shop with a specific category
 --- @param category string|nil The category to show (default: first available)
-function IonRP.VehicleShop.UI:Open(category)
+function IonRP.PropertyShop.UI:Open(category)
   if IsValid(self.Frame) then
     self.Frame:Remove()
   end
@@ -52,20 +50,20 @@ function IonRP.VehicleShop.UI:Open(category)
   local cfg = self.Config
   local ply = LocalPlayer()
 
-  -- Get categories from vehicle list
+  -- Get categories from property list
   local categories = {}
-  local categoryVehicles = {}
+  local categoryProperties = {}
 
-  for identifier, vehicle in pairs(IonRP.Vehicles.List) do
-    if vehicle.purchasable then
-      local cat = vehicle.category or IonRP.Vehicles.Categories.OTHER
+  for identifier, property in pairs(IonRP.Properties.List) do
+    if property.purchasable then
+      local cat = property.category or "Other"
 
       if not categories[cat] then
         categories[cat] = true
-        categoryVehicles[cat] = {}
+        categoryProperties[cat] = {}
       end
 
-      table.insert(categoryVehicles[cat], vehicle)
+      table.insert(categoryProperties[cat], property)
     end
   end
 
@@ -128,12 +126,12 @@ function IonRP.VehicleShop.UI:Open(category)
     draw.RoundedBoxEx(10, 0, 0, w, h, cfg.Colors.Header, true, true, false, false)
 
     -- Title with shadow
-    draw.SimpleText("VEHICLE DEALERSHIP", "DermaLarge", cfg.Padding + 2, 22, Color(0, 0, 0, 100), TEXT_ALIGN_LEFT,
+    draw.SimpleText("REAL ESTATE AGENCY", "DermaLarge", cfg.Padding + 2, 22, Color(0, 0, 0, 100), TEXT_ALIGN_LEFT,
       TEXT_ALIGN_TOP)
-    draw.SimpleText("VEHICLE DEALERSHIP", "DermaLarge", cfg.Padding, 20, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    draw.SimpleText("REAL ESTATE AGENCY", "DermaLarge", cfg.Padding, 20, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
 
     -- Subtitle
-    draw.SimpleText("Browse and purchase premium vehicles", "DermaDefault", cfg.Padding, 52, cfg.Colors.TextDim,
+    draw.SimpleText("Browse and purchase premium properties", "DermaDefault", cfg.Padding, 52, cfg.Colors.TextDim,
       TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
 
     -- Player money with icon-like background
@@ -251,14 +249,14 @@ function IonRP.VehicleShop.UI:Open(category)
     CreateCategoryTab(cat)
   end
 
-  -- Populate vehicle list
-  self:PopulateVehicleList(contentArea, categoryVehicles[category] or {})
+  -- Populate property list
+  self:PopulatePropertyList(contentArea, categoryProperties[category] or {})
 end
 
---- Populate the vehicle list for the selected category
+--- Populate the property list for the selected category
 --- @param parent Panel The parent panel
---- @param vehicles VEHICLE[] List of vehicles to display
-function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
+--- @param properties Property[] List of properties to display
+function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
   local cfg = self.Config
   local ply = LocalPlayer()
 
@@ -280,20 +278,20 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
     draw.RoundedBox(4, 0, 0, w, h, col)
   end
 
-  -- Sort vehicles by market value
-  table.sort(vehicles, function(a, b)
-    return a.marketValue < b.marketValue
+  -- Sort properties by price
+  table.sort(properties, function(a, b)
+    return a.price < b.price
   end)
 
-  -- Create vehicle entries
-  for i, vehicle in ipairs(vehicles) do
-    local vehPanel = vgui.Create("DPanel", scroll)
-    vehPanel:Dock(TOP)
-    vehPanel:SetTall(170)
-    vehPanel:DockMargin(0, 0, 0, 12)
-    vehPanel.HoverAlpha = 0
+  -- Create property entries
+  for i, property in ipairs(properties) do
+    local propPanel = vgui.Create("DPanel", scroll)
+    propPanel:Dock(TOP)
+    propPanel:SetTall(170)
+    propPanel:DockMargin(0, 0, 0, 12)
+    propPanel.HoverAlpha = 0
 
-    vehPanel.Paint = function(self, w, h)
+    propPanel.Paint = function(self, w, h)
       local isHovered = self:IsHovered()
 
       -- Animate hover effect
@@ -326,12 +324,12 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
       surface.DrawOutlinedRect(1, 1, w - 2, h - 2, 1)
     end
 
-    -- 3D Model preview container
-    local modelContainer = vgui.Create("DPanel", vehPanel)
-    modelContainer:SetSize(180, 170)
-    modelContainer:Dock(LEFT)
-    modelContainer.Paint = function(self, w, h)
-      -- Gradient background for model
+    -- Icon container (left side)
+    local iconContainer = vgui.Create("DPanel", propPanel)
+    iconContainer:SetSize(180, 170)
+    iconContainer:Dock(LEFT)
+    iconContainer.Paint = function(self, w, h)
+      -- Gradient background for icon
       draw.RoundedBox(8, 5, 5, w - 10, h - 10, Color(15, 15, 22, 255))
 
       -- Subtle gradient overlay
@@ -341,32 +339,17 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
       -- Border accent
       surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, 80)
       surface.DrawOutlinedRect(5, 5, w - 10, h - 10, 1)
+      
+      -- Property icon (house symbol)
+      draw.SimpleText("🏠", "DermaLarge", w / 2, h / 2 - 10, cfg.Colors.AccentCyan, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+      
+      -- Door count
+      local doorText = #property.doors .. " Door" .. (#property.doors ~= 1 and "s" or "")
+      draw.SimpleText(doorText, "DermaDefault", w / 2, h / 2 + 30, cfg.Colors.TextMuted, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
-
-    -- 3D Model preview
-    local modelPanel = vgui.Create("DModelPanel", modelContainer)
-    modelPanel:SetSize(170, 160)
-    modelPanel:SetPos(5, 5)
-    modelPanel:SetModel(vehicle.model)
-
-    local ent = modelPanel:GetEntity()
-    if IsValid(ent) then
-      local mn, mx = ent:GetRenderBounds()
-      local size = 0
-      size = math.max(size, math.abs(mn.x) + math.abs(mx.x))
-      size = math.max(size, math.abs(mn.y) + math.abs(mx.y))
-      size = math.max(size, math.abs(mn.z) + math.abs(mx.z))
-
-      local scale = 2.2
-      modelPanel:SetCamPos(Vector(size * scale, size * scale, size * scale * 0.5))
-      modelPanel:SetLookAt((mn + mx) * 0.5)
-      modelPanel:SetFOV(25)
-    end
-
-    modelPanel.LayoutEntity = function() end
 
     -- Info container
-    local infoContainer = vgui.Create("DPanel", vehPanel)
+    local infoContainer = vgui.Create("DPanel", propPanel)
     infoContainer:Dock(FILL)
     infoContainer:DockMargin(12, 12, 12, 12)
     infoContainer.Paint = function() end
@@ -383,26 +366,41 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
     leftContainer:Dock(FILL)
     leftContainer.Paint = function() end
 
-    -- Vehicle name
+    -- Property name
     local nameLabel = vgui.Create("DLabel", leftContainer)
     nameLabel:Dock(TOP)
-    nameLabel:SetText(vehicle.name)
+    nameLabel:SetText(property.name)
     nameLabel:SetFont("DermaLarge")
     nameLabel:SetTextColor(cfg.Colors.Text)
     nameLabel:SetTall(30)
     nameLabel:DockMargin(0, 0, 0, 5)
 
-    -- Vehicle description
-    if vehicle.description and vehicle.description ~= "<No description>" then
+    -- Property description
+    if property.description and property.description ~= "<No description>" then
       local descLabel = vgui.Create("DLabel", leftContainer)
       descLabel:Dock(TOP)
-      descLabel:SetText(vehicle.description)
+      descLabel:SetText(property.description)
       descLabel:SetFont("DermaDefault")
       descLabel:SetTextColor(cfg.Colors.TextMuted)
       descLabel:SetWrap(true)
       descLabel:SetAutoStretchVertical(true)
       descLabel:DockMargin(0, 0, 0, 10)
     end
+
+    -- Ownership status
+    local ownerLabel = vgui.Create("DLabel", leftContainer)
+    ownerLabel:Dock(TOP)
+    ownerLabel:SetTall(20)
+    ownerLabel:DockMargin(0, 5, 0, 0)
+    
+    if property.owner and IsValid(property.owner) then
+      ownerLabel:SetText("Currently owned by: " .. property.owner:Nick())
+      ownerLabel:SetTextColor(Color(255, 100, 100))
+    else
+      ownerLabel:SetText("Available for purchase")
+      ownerLabel:SetTextColor(Color(100, 255, 100))
+    end
+    ownerLabel:SetFont("DermaDefault")
 
     -- Purchase button
     local buyBtn = vgui.Create("DButton", buttonContainer)
@@ -412,7 +410,8 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
     buyBtn.PulseAlpha = 0
     buyBtn.PulseDirection = 1
 
-    local canAfford = ply:GetBank() >= vehicle.marketValue
+    local isOwned = property.owner and IsValid(property.owner)
+    local canAfford = ply:GetBank() >= property.price and not isOwned
 
     buyBtn.Paint = function(self, w, h)
       local isHovered = self:IsHovered()
@@ -430,7 +429,7 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
       local col = canAfford and cfg.Colors.ButtonBuy or Color(70, 70, 80, 220)
       local hoverCol = canAfford and cfg.Colors.ButtonBuyHover or Color(80, 80, 90, 240)
 
-      if isHovered then
+      if isHovered and canAfford then
         col = hoverCol
       end
 
@@ -451,7 +450,13 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
         surface.DrawRect(5, 5, w - 10, 2)
       end
 
-      local text = canAfford and "PURCHASE VEHICLE" or "INSUFFICIENT FUNDS"
+      local text = "PURCHASE PROPERTY"
+      if isOwned then
+        text = "ALREADY OWNED"
+      elseif not canAfford then
+        text = "INSUFFICIENT FUNDS"
+      end
+      
       local textCol = canAfford and Color(255, 255, 255) or Color(180, 180, 190)
 
       -- Text shadow
@@ -463,85 +468,43 @@ function IonRP.VehicleShop.UI:PopulateVehicleList(parent, vehicles)
 
       -- Price
       local priceCol = canAfford and Color(230, 255, 230) or Color(160, 160, 170)
-      draw.SimpleText(IonRP.Util:FormatMoney(vehicle.marketValue), "DermaDefault", w / 2, h / 2 + 10, priceCol,
+      draw.SimpleText(IonRP.Util:FormatMoney(property.price), "DermaDefault", w / 2, h / 2 + 10, priceCol,
         TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     buyBtn.DoClick = function()
+      if isOwned then
+        chat.AddText(Color(255, 100, 100), "[IonRP] ", Color(255, 255, 255), "This property is already owned!")
+        surface.PlaySound("buttons/button10.wav")
+        return
+      end
+      
       if not canAfford then
-        chat.AddText(Color(255, 100, 100), "[IonRP] ", Color(255, 255, 255), "You cannot afford this vehicle!")
+        chat.AddText(Color(255, 100, 100), "[IonRP] ", Color(255, 255, 255), "You cannot afford this property!")
         surface.PlaySound("buttons/button10.wav")
         return
       end
 
       -- Show confirmation dialog
-      self:ShowPurchaseConfirmation(vehicle)
-    end
-
-    -- Admin spawn button (if superadmin)
-    if ply:IsSuperAdmin() then
-      local spawnBtn = vgui.Create("DButton", buttonContainer)
-      spawnBtn:Dock(TOP)
-      spawnBtn:SetTall(45)
-      spawnBtn:DockMargin(0, 10, 0, 0)
-      spawnBtn:SetText("")
-
-      spawnBtn.Paint = function(self, w, h)
-        local isHovered = self:IsHovered()
-        local col = cfg.Colors.ButtonSpawn
-
-        if isHovered then
-          col = cfg.Colors.ButtonSpawnHover
-        end
-
-        -- Shadow
-        draw.RoundedBox(8, 1, 1, w, h, Color(0, 0, 0, 100))
-
-        -- Button background
-        draw.RoundedBox(8, 0, 0, w, h, col)
-
-        -- Border glow
-        surface.SetDrawColor(cfg.Colors.Accent.r, cfg.Colors.Accent.g, cfg.Colors.Accent.b, isHovered and 150 or 80)
-        surface.DrawOutlinedRect(0, 0, w, h, 1)
-
-        -- Inner highlight
-        if isHovered then
-          surface.SetDrawColor(255, 255, 255, 20)
-          surface.DrawRect(5, 5, w - 10, 2)
-        end
-
-        -- Text with shadow
-        draw.SimpleText("⚡ SPAWN (ADMIN)", "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 100),
-          TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        draw.SimpleText("⚡ SPAWN (ADMIN)", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER,
-          TEXT_ALIGN_CENTER)
-      end
-
-      spawnBtn.DoClick = function()
-        net.Start("IonRP_VehicleShop_AdminSpawn")
-        net.WriteString(vehicle.identifier)
-        net.SendToServer()
-        surface.PlaySound("buttons/button15.wav")
-        self:Close()
-      end
+      self:ShowPurchaseConfirmation(property)
     end
   end
 
-  -- No vehicles message
-  if #vehicles == 0 then
-    local noVehLabel = vgui.Create("DLabel", scroll)
-    noVehLabel:SetText("No vehicles available in this category")
-    noVehLabel:SetFont("DermaLarge")
-    noVehLabel:SetTextColor(cfg.Colors.TextMuted)
-    noVehLabel:SetContentAlignment(5)
-    noVehLabel:Dock(TOP)
-    noVehLabel:SetTall(100)
+  -- No properties message
+  if #properties == 0 then
+    local noPropLabel = vgui.Create("DLabel", scroll)
+    noPropLabel:SetText("No properties available in this category")
+    noPropLabel:SetFont("DermaLarge")
+    noPropLabel:SetTextColor(cfg.Colors.TextMuted)
+    noPropLabel:SetContentAlignment(5)
+    noPropLabel:Dock(TOP)
+    noPropLabel:SetTall(100)
   end
 end
 
 --- Show purchase confirmation dialog
---- @param vehicle VEHICLE The vehicle to purchase
-function IonRP.VehicleShop.UI:ShowPurchaseConfirmation(vehicle)
+--- @param property Property The property to purchase
+function IonRP.PropertyShop.UI:ShowPurchaseConfirmation(property)
   local cfg = self.Config
 
   local dialog = vgui.Create("DFrame")
@@ -586,8 +549,8 @@ function IonRP.VehicleShop.UI:ShowPurchaseConfirmation(vehicle)
   local message = vgui.Create("DLabel", dialog)
   message:SetPos(16, 55)
   message:SetWide(418)
-  message:SetText(string.format("Are you sure you want to purchase a %s for %s?",
-    vehicle.name, IonRP.Util:FormatMoney(vehicle.marketValue)))
+  message:SetText(string.format("Are you sure you want to purchase %s for %s?",
+    property.name, IonRP.Util:FormatMoney(property.price)))
   message:SetFont("DermaDefault")
   message:SetTextColor(cfg.Colors.TextDim)
   message:SetWrap(true)
@@ -597,7 +560,7 @@ function IonRP.VehicleShop.UI:ShowPurchaseConfirmation(vehicle)
   local warning = vgui.Create("DLabel", dialog)
   warning:SetPos(16, 110)
   warning:SetWide(418)
-  warning:SetText("This vehicle will be added to your garage and can be spawned at any time.")
+  warning:SetText("Ownership is temporary and will be reset on server restart. Funds will be deducted from your bank account.")
   warning:SetFont("DermaDefault")
   warning:SetTextColor(cfg.Colors.TextMuted)
   warning:SetWrap(true)
@@ -673,8 +636,8 @@ function IonRP.VehicleShop.UI:ShowPurchaseConfirmation(vehicle)
   end
 
   confirmBtn.DoClick = function()
-    net.Start("IonRP_VehicleShop_Purchase")
-    net.WriteString(vehicle.identifier)
+    net.Start("IonRP_PropertyShop_Purchase")
+    net.WriteInt(property.id, 32)
     net.SendToServer()
     surface.PlaySound("buttons/button15.wav")
     dialog:Close()
@@ -682,8 +645,8 @@ function IonRP.VehicleShop.UI:ShowPurchaseConfirmation(vehicle)
   end
 end
 
---- Close the vehicle shop
-function IonRP.VehicleShop.UI:Close()
+--- Close the property shop
+function IonRP.PropertyShop.UI:Close()
   if IsValid(self.Frame) then
     self.Frame:AlphaTo(0, 0.2, 0, function()
       if IsValid(self.Frame) then
@@ -694,8 +657,13 @@ function IonRP.VehicleShop.UI:Close()
 end
 
 -- Network receivers
-net.Receive("IonRP_VehicleShop_Open", function()
-  IonRP.VehicleShop.UI:Open()
+net.Receive("IonRP_PropertyShop_Open", function()
+  IonRP.PropertyShop.UI:Open()
 end)
 
-print("[IonRP Vehicle Shop] Client-side UI loaded")
+-- Console command
+concommand.Add("ionrp_propertyshop", function()
+  IonRP.PropertyShop.UI:Open()
+end)
+
+print("[IonRP Property Shop] Client-side UI loaded")

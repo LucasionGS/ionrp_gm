@@ -33,6 +33,7 @@ AddCSLuaFile("atm/cl_atm.lua")
 -- Property System
 AddCSLuaFile("property/sh_property.lua")
 AddCSLuaFile("property/cl_property.lua")
+AddCSLuaFile("property/cl_property_shop.lua")
 -- IonSys (Admin Panel)
 AddCSLuaFile("ionsys/sh_ionsys.lua")
 AddCSLuaFile("ionsys/cl_ionsys.lua")
@@ -77,6 +78,8 @@ include("atm/sv_atm.lua")
 
 -- Property System
 include("property/sh_property.lua")
+include("property/sv_property.lua")
+include("property/sv_property_shop.lua")
 
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")

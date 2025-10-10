@@ -470,6 +470,60 @@ function PROPERTY:SetOwner(ply)
   else
     print("[IonRP Properties] Cleared owner of property '" .. self.name .. "'")
   end
+  
+  -- Sync to clients
+  IonRP.Properties:SyncPropertyToClients(self)
+end
+
+--- Purchase a property (handles bank transaction and ownership)
+--- @param ply Player The player purchasing the property
+--- @param propertyId number The ID of the property to purchase
+--- @param callback function|nil Optional callback(success, message)
+function IonRP.Properties:SV_PurchaseProperty(ply, propertyId, callback)
+  if not IsValid(ply) then
+    if callback then callback(false, "Invalid player") end
+    return
+  end
+  
+  -- Get property
+  local property = self.List[propertyId]
+  if not property then
+    if callback then callback(false, "Property not found") end
+    return
+  end
+  
+  -- Check if property is purchasable
+  if not property.purchasable then
+    if callback then callback(false, "This property is not for sale") end
+    return
+  end
+  
+  -- Check if already owned
+  if property.owner and IsValid(property.owner) then
+    if callback then callback(false, "This property is already owned by " .. property.owner:Nick()) end
+    return
+  end
+  
+  -- Check if player has enough money in bank
+  local bank = ply:GetBank()
+  if bank < property.price then
+    if callback then callback(false, "Insufficient funds in bank account") end
+    return
+  end
+  
+  -- Deduct money from bank
+  ply:SetBank(bank - property.price)
+  
+  -- Set owner
+  property:SetOwner(ply)
+  
+  -- Success callback
+  if callback then
+    callback(true, string.format("Successfully purchased %s for %s", property.name, IonRP.Util:FormatMoney(property.price)))
+  end
+  
+  print(string.format("[IonRP Properties] %s purchased property '%s' (ID: %d) for %s", 
+    ply:Nick(), property.name, property.id, IonRP.Util:FormatMoney(property.price)))
 end
 
 --- Hook: Initialize on map load

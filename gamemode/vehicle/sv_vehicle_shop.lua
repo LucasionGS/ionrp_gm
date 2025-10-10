@@ -73,14 +73,6 @@ end)
 -- Chat command to open shop
 IonRP.Commands.Add("vehicleshop", function(activator, args, rawArgs)
   IonRP.VehicleShop:OpenForPlayer(activator)
-end, "Open the vehicle shop")
-
-IonRP.Commands.Add("dealership", function(activator, args, rawArgs)
-  IonRP.VehicleShop:OpenForPlayer(activator)
-end, "Open the vehicle dealership")
-
-IonRP.Commands.Add("buyvehicle", function(activator, args, rawArgs)
-  IonRP.VehicleShop:OpenForPlayer(activator)
-end, "Open the vehicle shop")
+end, "Open the vehicle shop", "developer")
 
 print("[IonRP Vehicle Shop] Server-side loaded")

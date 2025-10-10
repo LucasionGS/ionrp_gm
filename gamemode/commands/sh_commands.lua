@@ -9,7 +9,7 @@ IonRP.Commands.List = IonRP.Commands.List or {}
 
 --- Register a new command
 --- @param name string - Command name (without /)
---- @param callback fun(activator: Player, args: table, rawArgs: string, permission: string|nil) - Function to execute (activator, args, rawArgs)
+--- @param callback fun(activator: Player, args: table<number, string>, rawArgs: string, permission: string|nil) - Function to execute (activator, args, rawArgs)
 --- @param description string - Optional description
 --- @param permission string|nil - Optional permission requirement
 function IonRP.Commands.Add(name, callback, description, permission)
