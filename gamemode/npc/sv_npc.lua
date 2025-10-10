@@ -89,8 +89,22 @@ function NPC_INSTANCE:Save(callback)
         callback(true, npcId)
       end
     end,
-    function(err)
+    function(err, sql)
       print("[IonRP NPCs] Failed to save NPC: " .. err)
+      print("[IonRP NPCs] SQL: " .. sql)
+      -- print("[IonRP NPCs] Parameters: ", self.npcType.identifier, self.mapName, self.customName, self.customModel, self.pos.x, self.pos.y, self.pos.z, self.ang.p, self.ang.y, self.ang.r)
+      print("[IonRP NPCs] Parameters: ",
+        "self.npcType.identifier = \n\t"..self.npcType.identifier,
+        "self.mapName = \n\t"..self.mapName,
+        "self.customName = \n\t"..self.customName,
+        "self.customModel = \n\t"..self.customModel,
+        "self.pos.x = \n\t"..self.pos.x,
+        "self.pos.y = \n\t"..self.pos.y,
+        "self.pos.z = \n\t"..self.pos.z,
+        "self.ang.p = \n\t"..self.ang.p,
+        "self.ang.y = \n\t"..self.ang.y,
+        "self.ang.r = \n\t"..self.ang.r
+      )
       if callback then
         callback(false)
       end

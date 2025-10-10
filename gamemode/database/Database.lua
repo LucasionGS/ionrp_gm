@@ -30,6 +30,7 @@ local password = MYSQL_PASSWORD or "ionrp"
 local database = MYSQL_DATABASE or "ionrp"
 local socket   = MYSQL_SOCKET or "/var/run/mysqld/mysqld.sock"
 local port     = MYSQL_PORT or 3306
+--- @type Database
 IonRP.Database = mysqloo.connect(hostname, username, password, database, port, socket)
 
 function IonRP.Database:onConnected()

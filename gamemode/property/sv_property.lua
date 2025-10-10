@@ -338,11 +338,6 @@ function IonRP.Properties:SyncPropertyToClients(property)
     ownerSteamID = IsValid(property.owner) and property.owner:SteamID64() or nil,
     doors = {}
   }
-
-  print("--- PROPERTY")
-  PrintTable(property)
-  print("--- PROPERTYDATA")
-  PrintTable(propertyData)
   
   -- Include door data
   for _, door in ipairs(property.doors) do

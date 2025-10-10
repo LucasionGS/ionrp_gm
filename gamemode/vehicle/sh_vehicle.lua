@@ -560,8 +560,6 @@ IonRP.Commands.Add("spawncar", function(ply, args, rawArgs)
     return
   end
 
-  PrintTable(vehData)
-
   local trace = ply:GetEyeTrace()
   local spawnPos = trace.HitPos + Vector(0, 0, 10)
   local spawnAng = Angle(0, ply:EyeAngles().y - 90, 0)

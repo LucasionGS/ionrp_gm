@@ -3,6 +3,7 @@
     Creates and manages database tables
 ]] --
 
+--- @class Database
 IonRP.Database = IonRP.Database or {}
 
 --[[
@@ -74,14 +75,14 @@ end
 --- Execute a prepared query safely
 --- @param sql string - SQL query with ? placeholders
 --- @param params table - Parameters to bind
---- @param onSuccess function - Callback on success
---- @param onError function - Callback on error
+--- @param onSuccess fun(data: table, query: Query) - Callback on success
+--- @param onError fun(err: string, sql: string) - Callback on error
 function IonRP.Database:PreparedQuery(sql, params, onSuccess, onError)
   local query = self:prepare(sql)
 
   if not query then
     if onError then
-      onError("Failed to prepare query")
+      onError("Failed to prepare query", "")
     end
     return
   end

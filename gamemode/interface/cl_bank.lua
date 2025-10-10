@@ -103,10 +103,8 @@ function IonRP.Bank:OpenWithdrawMenu()
           net.SendToServer()
 
           -- Reopen menu after transaction
-          timer.Simple(0.1, function()
-            IonRP.Bank.isOpen = false
-            IonRP.Bank:OpenMenu(wallet + amount, bank - amount)
-          end)
+          IonRP.Bank.isOpen = false
+          IonRP.Bank:OpenMenu(wallet + amount, bank - amount)
           -- Don't animate, opening new dialog
         end,
         color = Color(180, 70, 70, 255)
@@ -161,10 +159,8 @@ function IonRP.Bank:OpenDepositMenu()
           net.SendToServer()
 
           -- Reopen menu after transaction
-          timer.Simple(0.1, function()
-            IonRP.Bank.isOpen = false
-            IonRP.Bank:OpenMenu(wallet - amount, bank + amount)
-          end)
+          IonRP.Bank.isOpen = false
+          IonRP.Bank:OpenMenu(wallet - amount, bank + amount)
           -- Don't animate, opening new dialog
         end,
         color = Color(70, 180, 70, 255)
@@ -182,10 +178,8 @@ function IonRP.Bank:OpenDepositMenu()
         net.SendToServer()
 
         -- Reopen menu after transaction
-        timer.Simple(0.1, function()
-          IonRP.Bank.isOpen = false
-          IonRP.Bank:OpenMenu()
-        end)
+        IonRP.Bank.isOpen = false
+        IonRP.Bank:OpenMenu()
         -- Don't animate, opening new dialog
       end,
       color = Color(90, 150, 90, 255)

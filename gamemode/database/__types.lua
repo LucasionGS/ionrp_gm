@@ -1,0 +1,58 @@
+--- @class Database
+--- @field onConnected fun(db: Database)|nil Called when the connection to the MySQL server is successful
+--- @field onConnectionFailed fun(db: Database, err: string)|nil Called when the connection to the MySQL server fails
+--- @field onDisconnected fun(db: Database)|nil Called after disconnect has been called and all queries have finished executing
+--- @field connect fun(self: Database) Connects to the database (non blocking)
+--- @field disconnect fun(self: Database, shouldWait: boolean|nil) Disconnects from the database and waits for all queries to finish if shouldWait is true
+--- @field query fun(self: Database, sql: string): Query Initializes a query to the database
+--- @field prepare fun(self: Database, sql: string): PreparedQuery Creates a prepared query associated with the database
+--- @field createTransaction fun(self: Database): Transaction Creates a transaction that executes multiple statements atomically
+--- @field escape fun(self: Database, str: string): string Escapes a string so that it is safe to use in a query
+--- @field abortAllQueries fun(self: Database): number Aborts all waiting queries and returns the amount aborted successfully
+--- @field status fun(self: Database): number Checks the connection to the database (returns mysqloo.DATABASE_* enums)
+--- @field setAutoReconnect fun(self: Database, shouldReconnect: boolean) Enables or disables the autoreconnect feature (must be called before connect)
+--- @field setMultiStatements fun(self: Database, useMultiStatements: boolean) Enables or disables multi statements (must be called before connect)
+--- @field setCachePreparedStatements fun(self: Database, cachePreparedStatements: boolean) Disables caching of prepared query handles to avoid server limits
+--- @field wait fun(self: Database) Forces the server to wait for the connection to finish (may only be called after connect)
+--- @field serverVersion fun(self: Database): number Gets the MySQL server's version number
+--- @field serverInfo fun(self: Database): string Gets a fancy string of the MySQL server's version
+--- @field hostInfo fun(self: Database): string Gets information about the connection
+--- @field queueSize fun(self: Database): number Gets the amount of queries waiting to be processed
+--- @field ping fun(self: Database): boolean Actively checks if the database connection is still up and attempts to reconnect
+--- @field setCharacterSet fun(self: Database, charSetName: string): boolean Attempts to set the connection's character set
+--- @field setSSLSettings fun(self: Database, key: string|nil, cert: string|nil, ca: string|nil, capath: string|nil, cipher: string|nil) Sets the SSL configuration of the database object
+--- @field setReadTimeout fun(self: Database, timeout: number) Sets the read timeout value in seconds (minimum 1)
+--- @field setWriteTimeout fun(self: Database, timeout: number) Sets the write timeout value in seconds (minimum 1)
+--- @field setConnectTimeout fun(self: Database, timeout: number) Sets the connect timeout value in seconds (minimum 1)
+
+--- @class Query
+--- @field onAborted fun(q: Query)|nil Called when the query is aborted
+--- @field onError fun(q: Query, err: string, sql: string)|nil Called when the query errors
+--- @field onSuccess fun(q: Query, data: table)|nil Called when the query is successful
+--- @field onData fun(q: Query, data: table)|nil Called when the query retrieves a row of data
+--- @field start fun(self: Query) Starts the query
+--- @field isRunning fun(self: Query): boolean Returns true if the query is running or waiting
+--- @field getData fun(self: Query): table Gets the data the query returned from the server
+--- @field abort fun(self: Query): boolean Attempts to abort the query if it is still in the state QUERY_WAITING
+--- @field lastInsert fun(self: Query): number Gets the autoincrement index of the last inserted row of the current result set
+--- @field affectedRows fun(self: Query): number Gets the number of rows the query has affected
+--- @field setOption fun(self: Query, option: number) Changes how the query returns data (mysqloo.OPTION_* enums)
+--- @field wait fun(self: Query, shouldSwap: boolean|nil) Forces the server to wait for the query to finish
+--- @field error fun(self: Query): string Gets the error caused by the query, or "" if there was no error
+--- @field hasMoreResults fun(self: Query): boolean Returns true if the query still has more data associated with it
+--- @field getNextResults fun(self: Query): table Pops the current result set and returns the rows of the next result set
+
+--- @class PreparedQuery : Query
+--- @field setNumber fun(self: PreparedQuery, index: number, number: number) Sets the parameter at index (1-based) to be of type double
+--- @field setString fun(self: PreparedQuery, index: number, str: string) Sets the parameter at index (1-based) to be of type string (should not be escaped)
+--- @field setBoolean fun(self: PreparedQuery, index: number, bool: boolean) Sets the parameter at index (1-based) to be of type boolean
+--- @field setNull fun(self: PreparedQuery, index: number) Sets the parameter at index (1-based) to be NULL
+--- @field clearParameters fun(self: PreparedQuery) Clears all currently set parameters inside the prepared statement
+--- @field putNewParameters fun(self: PreparedQuery) Deprecated: Start the same prepared statement multiple times instead
+
+--- @class Transaction
+--- @field onError fun(tr: Transaction, err: string)|nil Called when any of the queries caused an error, no queries will have had any effect
+--- @field onSuccess fun(tr: Transaction)|nil Called when all queries in the transaction have been executed successfully
+--- @field addQuery fun(self: Transaction, query: Query|PreparedQuery) Adds a query to the transaction (query callbacks will not be called)
+--- @field getQueries fun(self: Transaction): table Returns all queries that have been added to this transaction
+--- @field start fun(self: Transaction) Starts the transaction

@@ -177,7 +177,6 @@ net.Receive("IonRP_Property_Sync", function()
 
   
   print("[IonRP Properties] Syncing property ID " .. tostring(propertyData.id))
-  PrintTable(propertyData)
   -- Convert ownerSteamID to player entity
   if propertyData.ownerSteamID then
     print("[IonRP Properties] Finding owner with SteamID: " .. propertyData.ownerSteamID)
