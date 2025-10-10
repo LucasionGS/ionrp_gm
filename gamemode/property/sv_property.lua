@@ -335,9 +335,14 @@ function IonRP.Properties:SyncPropertyToClients(property)
     category = property.category,
     purchasable = property.purchasable,
     price = property.price,
-    owner = IsValid(property.owner) and property.owner or nil,
+    ownerSteamID = IsValid(property.owner) and property.owner:SteamID64() or nil,
     doors = {}
   }
+
+  print("--- PROPERTY")
+  PrintTable(property)
+  print("--- PROPERTYDATA")
+  PrintTable(propertyData)
   
   -- Include door data
   for _, door in ipairs(property.doors) do
@@ -367,7 +372,7 @@ function IonRP.Properties:SyncPropertyToPlayer(ply, property)
     category = property.category,
     purchasable = property.purchasable,
     price = property.price,
-    owner = IsValid(property.owner) and property.owner or nil,
+    ownerSteamID = IsValid(property.owner) and property.owner:SteamID64() or nil,
     doors = {}
   }
   
@@ -486,6 +491,7 @@ function IonRP.Properties:SV_PurchaseProperty(ply, propertyId, callback)
   end
   
   -- Get property
+  --- @type Property|nil
   local property = self.List[propertyId]
   if not property then
     if callback then callback(false, "Property not found") end
@@ -552,6 +558,13 @@ end)
 
 print("[IonRP Properties] Server module loaded")
 
+-- Commands
 IonRP.Commands.Add("property_gun", function(ply)
   ply:Give("weapon_ionrp_property_gun")
+  ply:ChatPrint("[IonRP] Given property gun")
 end, "Give yourself the property management gun", "developer")
+
+IonRP.Commands.Add("keys", function(ply)
+  ply:Give("weapon_ionrp_keys")
+  ply:ChatPrint("[IonRP] Given keys")
+end, "Give yourself keys to lock/unlock your properties and vehicles")

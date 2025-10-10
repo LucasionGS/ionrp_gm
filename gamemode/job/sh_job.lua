@@ -53,7 +53,8 @@ JOB.ammo = {}
 JOB.defaultWeapons = {
   "weapon_physcannon",
   "weapon_physgun",
-  "weapon_fists"
+  "weapon_fists",
+  "weapon_ionrp_keys"
 }
 
 --- Player models used for this job based on the player's desired appearance.

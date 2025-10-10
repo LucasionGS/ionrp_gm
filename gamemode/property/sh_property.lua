@@ -107,7 +107,7 @@ function PROPERTY:New(propertyData, doors)
     newProperty.purchasable = propertyData.purchasable
     newProperty.price = propertyData.price
     newProperty.doors = {} -- Initialize a fresh doors table for this instance
-    newProperty.owner = nil -- Initialize owner as nil for this instance
+    newProperty.owner = propertyData.owner or nil -- Initialize owner as nil for this instance if none if provided
     for _, doorData in ipairs(doors) do
       if doorData.__index ~= PROPERTY_DOOR then
         doorData = PROPERTY_DOOR:New(doorData)

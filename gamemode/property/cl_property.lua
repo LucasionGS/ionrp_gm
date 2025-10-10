@@ -174,6 +174,21 @@ end)
 ]]
 net.Receive("IonRP_Property_Sync", function()
   local propertyData = net.ReadTable()
+
+  
+  print("[IonRP Properties] Syncing property ID " .. tostring(propertyData.id))
+  PrintTable(propertyData)
+  -- Convert ownerSteamID to player entity
+  if propertyData.ownerSteamID then
+    print("[IonRP Properties] Finding owner with SteamID: " .. propertyData.ownerSteamID)
+    for _, ply in ipairs(player.GetAll()) do
+      print("  Checking: " .. ply:SteamID64() .. " == " .. propertyData.ownerSteamID)
+      if ply:SteamID64() == propertyData.ownerSteamID then
+        propertyData.owner = ply
+        break
+      end
+    end
+  end
   
   -- Create or update property instance on client
   local property = PROPERTY:New(propertyData, propertyData.doors)
@@ -190,7 +205,11 @@ concommand.Add("ionrp_list_properties", function()
   local count = 0
   for id, property in pairs(IonRP.Properties.List) do
     count = count + 1
-    print("  - ID: " .. id .. " | Name: " .. property.name .. " | Doors: " .. #property.doors)
+    local ownerText = "Unowned"
+    if property.owner and IsValid(property.owner) then
+      ownerText = "Owned by " .. property.owner:Nick()
+    end
+    print("  - ID: " .. id .. " | Name: " .. property.name .. " | Doors: " .. #property.doors .. " | " .. ownerText)
   end
   print("Total properties: " .. count)
 end)
