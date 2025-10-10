@@ -307,7 +307,7 @@ function SWEP:ShowNPCOptions(ply, npcInstance)
     }
   }
   
-  IonRP.Dialog:OptionList(ply, "NPC Gun - Edit NPC", options)
+  IonRP.Dialog:ShowOptions(ply, "NPC Gun - Edit NPC", options)
 end
 
 --- Confirm NPC deletion
@@ -339,7 +339,7 @@ function SWEP:ConfirmDelete(ply, npcInstance)
     }
   }
   
-  IonRP.Dialog:OptionList(ply, "NPC Gun - Confirm Delete", options)
+  IonRP.Dialog:ShowOptions(ply, "NPC Gun - Confirm Delete", options)
 end
 
 --- Draw crosshair with placement preview

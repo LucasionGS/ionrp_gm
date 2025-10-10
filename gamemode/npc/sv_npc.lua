@@ -61,8 +61,8 @@ function NPC_INSTANCE:Save(callback)
     {
       self.npcType.identifier,
       self.mapName,
-      self.customName,
-      self.customModel,
+      self.customName or nil,
+      self.customModel or nil,
       self.pos.x,
       self.pos.y,
       self.pos.z,
@@ -92,19 +92,19 @@ function NPC_INSTANCE:Save(callback)
     function(err, sql)
       print("[IonRP NPCs] Failed to save NPC: " .. err)
       print("[IonRP NPCs] SQL: " .. sql)
-      -- print("[IonRP NPCs] Parameters: ", self.npcType.identifier, self.mapName, self.customName, self.customModel, self.pos.x, self.pos.y, self.pos.z, self.ang.p, self.ang.y, self.ang.r)
-      print("[IonRP NPCs] Parameters: ",
-        "self.npcType.identifier = \n\t"..self.npcType.identifier,
-        "self.mapName = \n\t"..self.mapName,
-        "self.customName = \n\t"..self.customName,
-        "self.customModel = \n\t"..self.customModel,
-        "self.pos.x = \n\t"..self.pos.x,
-        "self.pos.y = \n\t"..self.pos.y,
-        "self.pos.z = \n\t"..self.pos.z,
-        "self.ang.p = \n\t"..self.ang.p,
-        "self.ang.y = \n\t"..self.ang.y,
-        "self.ang.r = \n\t"..self.ang.r
-      )
+      print("[IonRP NPCs] Parameters: ", self.npcType.identifier, self.mapName, self.customName, self.customModel, self.pos.x, self.pos.y, self.pos.z, self.ang.p, self.ang.y, self.ang.r)
+      -- print("[IonRP NPCs] Parameters: \n",
+      --   "self.npcType.identifier = \n\t"..self.npcType.identifier,
+      --   "self.mapName = \n\t"..self.mapName,
+      --   "self.customName = \n\t"..(self.customName or "nil"),
+      --   "self.customModel = \n\t"..(self.customModel or "nil"),
+      --   "self.pos.x = \n\t"..self.pos.x,
+      --   "self.pos.y = \n\t"..self.pos.y,
+      --   "self.pos.z = \n\t"..self.pos.z,
+      --   "self.ang.p = \n\t"..self.ang.p,
+      --   "self.ang.y = \n\t"..self.ang.y,
+      --   "self.ang.r = \n\t"..self.ang.r
+      -- )
       if callback then
         callback(false)
       end
@@ -216,6 +216,7 @@ function NPC_INSTANCE:SV_Spawn()
   end
   
   -- Create NPC entity
+  --- @type NPC
   local npc = ents.Create("npc_citizen")
   if not IsValid(npc) then
     print("[IonRP NPCs] Failed to create NPC entity")
@@ -241,9 +242,20 @@ function NPC_INSTANCE:SV_Spawn()
     npc:AddRelationship("player D_LI 99")
   end
   
-  -- Disable movement
-  npc:SetSchedule(SCHED_IDLE_STAND)
-  npc:SetMoveType(MOVETYPE_NONE)
+  -- Configure NPC to stay in place using AI
+  npc:SetHullType(HULL_HUMAN)
+  npc:SetHullSizeNormal()
+  npc:SetSolid(SOLID_BBOX)
+  
+  -- Enable basic movement capabilities so pathfinding works
+  npc:CapabilitiesClear()
+  npc:CapabilitiesAdd(CAP_MOVE_GROUND)
+  npc:CapabilitiesAdd(CAP_ANIMATEDFACE)
+  npc:CapabilitiesAdd(CAP_TURN_HEAD)
+  
+  -- Store the home position for pathfinding back
+  npc.IonRP_HomePos = self.pos
+  npc.IonRP_HomeAng = self.ang
   
   -- Store reference to instance
   npc.IonRP_NPCInstance = self
@@ -261,8 +273,29 @@ function NPC_INSTANCE:SV_Spawn()
   print("[IonRP NPCs] Spawned NPC '" .. self:GetName() .. "' at " .. tostring(self.pos))
 end
 
+--- Remove all spawned NPCs and clear the spawned list
+function IonRP.NPCs:RemoveAllSpawned()
+  local count = 0
+  for id, npcInstance in pairs(self.Spawned) do
+    if IsValid(npcInstance.entity) then
+      npcInstance.entity:Remove()
+    end
+    count = count + 1
+  end
+  
+  -- Clear the spawned list
+  self.Spawned = {}
+  
+  if count > 0 then
+    print("[IonRP NPCs] Removed " .. count .. " spawned NPCs")
+  end
+end
+
 --- Load all NPCs for the current map
 function IonRP.NPCs:LoadNPCsForMap()
+  -- Remove any existing spawned NPCs first to prevent duplicates
+  self:RemoveAllSpawned()
+  
   local mapName = game.GetMap()
   
   local query = "SELECT * FROM ionrp_npcs WHERE map_name = ?"
@@ -424,6 +457,37 @@ hook.Add("PlayerInitialSpawn", "IonRP_NPCs_SyncToPlayer", function(ply)
       IonRP.NPCs:SyncAllToPlayer(ply)
     end
   end)
+end)
+
+--- Hook: Make NPCs constantly return to their home position
+hook.Add("Think", "IonRP_NPCs_ReturnHome", function()
+  for id, npcInstance in pairs(IonRP.NPCs.Spawned) do
+    --- @type NPC
+    local npc = npcInstance.entity
+    if npc and IsValid(npc) and npc.IonRP_HomePos then
+      local homePos = npc.IonRP_HomePos
+      local currentPos = npc:GetPos()
+      local distance = currentPos:Distance(homePos)
+      
+      -- If NPC is more than 50 units away from home, make it walk back
+      if distance > 50 then
+        -- Set destination to home position
+        npc:SetLastPosition(homePos)
+        npc:SetSchedule(SCHED_FORCED_GO_RUN)
+      -- If NPC is close to home but not exactly there, snap it back
+      elseif distance > 5 then
+        npc:SetLastPosition(homePos)
+        npc:SetSchedule(SCHED_FORCED_GO)
+      -- If NPC is at home, make it face the right direction and idle
+      else
+        npc:SetPos(homePos)
+        npc:SetAngles(npc.IonRP_HomeAng)
+        -- if npc:GetSchedule() ~= SCHED_IDLE_STAND then
+        --   npc:SetSchedule(SCHED_IDLE_STAND)
+        -- end
+      end
+    end
+  end
 end)
 
 print("[IonRP NPCs] Server module loaded")

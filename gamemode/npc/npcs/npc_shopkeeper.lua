@@ -71,7 +71,7 @@ if SERVER then
       }
     }
     
-    IonRP.Dialog:OptionList(ply, "Shopkeeper", options)
+    IonRP.Dialog:ShowOptions(ply, "Shopkeeper", options)
   end
   
   --- Called when the shopkeeper spawns

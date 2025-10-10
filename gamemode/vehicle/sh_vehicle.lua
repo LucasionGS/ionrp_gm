@@ -50,6 +50,10 @@ VEHICLE.script = "scripts/vehicles/airboat.txt"
 --- @type number
 VEHICLE.marketValue = 10000
 
+--- Inventory size for the vehicle
+--- @type [number, number]
+VEHICLE.inventorySize = { 0, 0 }
+
 --- Whether or not this vehicle can be purchased from shops
 --- @type boolean
 VEHICLE.purchasable = true

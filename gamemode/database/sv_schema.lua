@@ -89,7 +89,7 @@ function IonRP.Database:PreparedQuery(sql, params, onSuccess, onError)
 
   -- Bind parameters
   if params then
-    for i, param in ipairs(params) do
+    for i, param in pairs(params) do
       query:setString(i, tostring(param))
     end
   end

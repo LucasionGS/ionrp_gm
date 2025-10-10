@@ -61,7 +61,7 @@ if SERVER then
       }
     }
     
-    IonRP.Dialog:OptionList(ply, "Information Guide", options)
+    IonRP.Dialog:ShowOptions(ply, "Information Guide", options)
   end
   
   --- Called when the info NPC spawns
