@@ -393,6 +393,13 @@ hook.Add("InitPostEntity", "IonRP_Properties_LoadMap", function()
   end)
 end)
 
+--- Hook: Clean up property gun editing state when player disconnects
+hook.Add("PlayerDisconnected", "IonRP_Properties_CleanupPropertyGun", function(ply)
+  -- Clear any property gun editing state
+  ply.PropertyGun_EditingProperty = nil
+  ply.PropertyGun_IsNewProperty = nil
+end)
+
 print("[IonRP Properties] Server module loaded")
 
 IonRP.Commands.Add("property_gun", function(ply)

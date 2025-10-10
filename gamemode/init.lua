@@ -32,6 +32,9 @@ AddCSLuaFile("atm/sh_atm.lua")
 AddCSLuaFile("atm/cl_atm.lua")
 -- Property System
 AddCSLuaFile("property/sh_property.lua")
+-- IonSys (Admin Panel)
+AddCSLuaFile("ionsys/sh_ionsys.lua")
+AddCSLuaFile("ionsys/cl_ionsys.lua")
 
 -- Load shared code
 include("shared.lua")

@@ -37,6 +37,13 @@ SWEP.DrawCrosshair = true
 -- ply.PropertyGun_EditingProperty (Property instance)
 -- ply.PropertyGun_IsNewProperty (boolean)
 
+--- Clear the player's property editing state
+--- @param ply Player
+local function ClearEditingState(ply)
+  ply.PropertyGun_EditingProperty = nil
+  ply.PropertyGun_IsNewProperty = nil
+end
+
 --- Get the door entity the player is looking at
 --- @param ply Player
 --- @return Entity|nil
@@ -180,13 +187,30 @@ function SWEP:Reload()
   -- Check if looking at an existing property door to edit
   local door = GetLookingAtDoor(ply)
   if door then
+    local doorPos = door:GetPos()
+    
+    -- First try to get property from door's networked variable
     local propertyId = door:GetNWInt("PropertyID", 0)
     if propertyId > 0 and IonRP.Properties.List[propertyId] then
       local property = IonRP.Properties.List[propertyId]
       ply.PropertyGun_EditingProperty = property
       ply.PropertyGun_IsNewProperty = false
       ply:ChatPrint("[IonRP] Started editing property: " .. property.name)
+      ply:ChatPrint("[IonRP] Use LEFT CLICK to add/remove doors, RIGHT CLICK for settings")
       return
+    end
+    
+    -- Fallback: Search through all properties for this door position
+    for id, property in pairs(IonRP.Properties.List) do
+      for _, doorObj in ipairs(property.doors) do
+        if doorPos:DistToSqr(doorObj.pos) < 100 then -- Within ~10 units
+          ply.PropertyGun_EditingProperty = property
+          ply.PropertyGun_IsNewProperty = false
+          ply:ChatPrint("[IonRP] Started editing property: " .. property.name)
+          ply:ChatPrint("[IonRP] Use LEFT CLICK to add/remove doors, RIGHT CLICK for settings")
+          return
+        end
+      end
     end
   end
 
@@ -282,14 +306,20 @@ function SWEP:ShowPropertyOptions(ply, property)
       end
     },
     {
-      text = "Toggle Purchasable (" .. tostring(property.purchasable) .. ")",
+      text = "Toggle Purchasable: " .. (property.purchasable and "YES" or "NO"),
       callback = function()
         property.purchasable = not property.purchasable
-        ply:ChatPrint("[IonRP] Purchasable: " .. tostring(property.purchasable))
+        ply:ChatPrint("[IonRP] Purchasable: " .. (property.purchasable and "YES" or "NO"))
+        -- Reopen the menu to show updated value
+        timer.Simple(0.1, function()
+          if IsValid(ply) then
+            self:ShowPropertyOptions(ply, property)
+          end
+        end)
       end
     },
     {
-      text = "Cancel",
+      text = "Done",
       callback = function() end
     }
   }
@@ -364,6 +394,7 @@ end
 function SWEP:ShowFinishOptions(ply)
   if CLIENT then return end
 
+  --- @type Property
   local property = ply.PropertyGun_EditingProperty
   local isNew = ply.PropertyGun_IsNewProperty
 
@@ -386,9 +417,8 @@ function SWEP:ShowFinishOptions(ply)
 
         property:Save(function(success, propId)
           if success then
-            ply:ChatPrint("[IonRP] Property saved successfully! (ID: " .. propId .. ")")
-            ply.PropertyGun_EditingProperty = nil
-            ply.PropertyGun_IsNewProperty = nil
+            ply:ChatPrint("[IonRP] Property saved successfully! (ID: " .. property.id .. ")")
+            ClearEditingState(ply)
           else
             ply:ChatPrint("[IonRP] Failed to save property!")
           end
@@ -404,8 +434,7 @@ function SWEP:ShowFinishOptions(ply)
     {
       text = "Cancel (Discard Changes)",
       callback = function()
-        ply.PropertyGun_EditingProperty = nil
-        ply.PropertyGun_IsNewProperty = nil
+        ClearEditingState(ply)
         ply:ChatPrint("[IonRP] Cancelled property editing")
       end
     }
@@ -479,6 +508,28 @@ if CLIENT then
       end
 
       halo.Add({ ent }, color, 2, 2, 2, true, true)
+    end
+  end
+end
+
+--[[
+    Cleanup when weapon is holstered
+]]--
+function SWEP:Holster()
+  -- Don't clear state on holster - let player resume editing when they re-equip
+  return true
+end
+
+--[[
+    Cleanup when weapon is removed/dropped
+]]--
+function SWEP:OnRemove()
+  if SERVER then
+    local ply = self:GetOwner()
+    if IsValid(ply) then
+      -- Optionally: Clear editing state when weapon is removed
+      -- ClearEditingState(ply)
+      -- For now, keep the state so players can continue editing after picking it back up
     end
   end
 end
