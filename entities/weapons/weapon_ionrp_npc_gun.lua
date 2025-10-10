@@ -64,6 +64,7 @@ end
 function SWEP:PrimaryAttack()
   if CLIENT then return end
 
+  --- @type Player
   local ply = self:GetOwner()
   
   -- Check if player is placing an NPC
@@ -93,6 +94,7 @@ end
 function SWEP:SecondaryAttack()
   if CLIENT then return end
 
+  --- @type Player
   local ply = self:GetOwner()
   
   -- Cancel placing mode
@@ -121,6 +123,7 @@ end
 function SWEP:Reload()
   if CLIENT then return end
 
+  --- @type Player
   local ply = self:GetOwner()
   
   -- Clear editing state
@@ -307,9 +310,9 @@ function SWEP:ShowNPCOptions(ply, npcInstance)
   IonRP.Dialog:OptionList(ply, "NPC Gun - Edit NPC", options)
 end
 
---[[
-    Confirm NPC deletion
-]]--
+--- Confirm NPC deletion
+--- @param ply Player
+--- @param npcInstance NPCInstance
 function SWEP:ConfirmDelete(ply, npcInstance)
   local options = {
     {
@@ -339,9 +342,7 @@ function SWEP:ConfirmDelete(ply, npcInstance)
   IonRP.Dialog:OptionList(ply, "NPC Gun - Confirm Delete", options)
 end
 
---[[
-    Draw crosshair with placement preview
-]]--
+--- Draw crosshair with placement preview
 function SWEP:DrawHUD()
   local ply = LocalPlayer()
   
@@ -350,22 +351,20 @@ function SWEP:DrawHUD()
   end
 end
 
---[[
-    Holster the weapon
-]]--
+--- Holster the weapon
 function SWEP:Holster()
   if SERVER then
+    --- @type Player
     local ply = self:GetOwner()
     ClearEditingState(ply)
   end
   return true
 end
 
---[[
-    When the weapon is removed
-]]--
+--- When the weapon is removed
 function SWEP:OnRemove()
   if SERVER then
+    --- @type Player
     local ply = self:GetOwner()
     if IsValid(ply) then
       ClearEditingState(ply)
