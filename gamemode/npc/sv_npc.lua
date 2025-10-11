@@ -1,7 +1,7 @@
 --[[
     NPC System - Server
     Handles NPC persistence, spawning, and interactions
-]]--
+]] --
 
 util.AddNetworkString("IonRP_NPC_Sync")
 util.AddNetworkString("IonRP_NPC_Remove")
@@ -30,7 +30,7 @@ function IonRP.NPCs:InitializeTables()
 
   IonRP.Database:PreparedQuery(query, {}, function()
     print("[IonRP NPCs] NPC table initialized")
-    
+
     -- Load NPCs for current map after table is ready
     timer.Simple(0.5, function()
       IonRP.NPCs:LoadNPCsForMap()
@@ -48,7 +48,7 @@ function NPC_INSTANCE:Save(callback)
     self:Update(callback)
     return
   end
-  
+
   -- Insert new NPC
   local query = [[
     INSERT INTO ionrp_npcs (npc_identifier, map_name, custom_name, custom_model, pos_x, pos_y, pos_z, ang_pitch, ang_yaw, ang_roll)
@@ -73,18 +73,18 @@ function NPC_INSTANCE:Save(callback)
     function(data, query)
       local npcId = query:lastInsert()
       self.id = npcId
-      
+
       print("[IonRP NPCs] Saved NPC '" .. self:GetName() .. "' with ID: " .. npcId)
-      
+
       -- Register in spawned list
       IonRP.NPCs.Spawned[npcId] = self
-      
+
       -- Spawn the entity
       self:SV_Spawn()
-      
+
       -- Sync to all clients
       IonRP.NPCs:SyncNPCToClients(self)
-      
+
       if callback then
         callback(true, npcId)
       end
@@ -92,7 +92,8 @@ function NPC_INSTANCE:Save(callback)
     function(err, sql)
       print("[IonRP NPCs] Failed to save NPC: " .. err)
       print("[IonRP NPCs] SQL: " .. sql)
-      print("[IonRP NPCs] Parameters: ", self.npcType.identifier, self.mapName, self.customName, self.customModel, self.pos.x, self.pos.y, self.pos.z, self.ang.p, self.ang.y, self.ang.r)
+      print("[IonRP NPCs] Parameters: ", self.npcType.identifier, self.mapName, self.customName, self.customModel,
+        self.pos.x, self.pos.y, self.pos.z, self.ang.p, self.ang.y, self.ang.r)
       -- print("[IonRP NPCs] Parameters: \n",
       --   "self.npcType.identifier = \n\t"..self.npcType.identifier,
       --   "self.mapName = \n\t"..self.mapName,
@@ -120,13 +121,13 @@ function NPC_INSTANCE:Update(callback)
     if callback then callback(false) end
     return
   end
-  
+
   local query = [[
-    UPDATE ionrp_npcs 
+    UPDATE ionrp_npcs
     SET custom_name = ?, custom_model = ?, pos_x = ?, pos_y = ?, pos_z = ?, ang_pitch = ?, ang_yaw = ?, ang_roll = ?
     WHERE id = ?
   ]]
-  
+
   IonRP.Database:PreparedQuery(
     query,
     {
@@ -142,16 +143,16 @@ function NPC_INSTANCE:Update(callback)
     },
     function()
       print("[IonRP NPCs] Updated NPC ID: " .. self.id)
-      
+
       -- Respawn the entity with new data
       if IsValid(self.entity) then
         self.entity:Remove()
       end
       self:SV_Spawn()
-      
+
       -- Sync to all clients
       IonRP.NPCs:SyncNPCToClients(self)
-      
+
       if callback then
         callback(true)
       end
@@ -173,28 +174,28 @@ function NPC_INSTANCE:Delete(callback)
     if callback then callback(false) end
     return
   end
-  
+
   local query = "DELETE FROM ionrp_npcs WHERE id = ?"
-  
+
   IonRP.Database:PreparedQuery(
     query,
     { self.id },
     function()
       print("[IonRP NPCs] Deleted NPC ID: " .. self.id)
-      
+
       -- Remove entity
       if IsValid(self.entity) then
         self.entity:Remove()
       end
-      
+
       -- Remove from spawned list
       IonRP.NPCs.Spawned[self.id] = nil
-      
+
       -- Notify clients to remove
       net.Start("IonRP_NPC_Remove")
-        net.WriteInt(self.id, 32)
+      net.WriteInt(self.id, 32)
       net.Broadcast()
-      
+
       if callback then
         callback(true)
       end
@@ -214,7 +215,7 @@ function NPC_INSTANCE:SV_Spawn()
   if IsValid(self.entity) then
     self.entity:Remove()
   end
-  
+
   -- Create NPC entity
   --- @type NPC
   local npc = ents.Create("npc_citizen")
@@ -222,54 +223,57 @@ function NPC_INSTANCE:SV_Spawn()
     print("[IonRP NPCs] Failed to create NPC entity")
     return
   end
-  
+
   npc:SetPos(self.pos)
   npc:SetAngles(self.ang)
   npc:SetModel(self:GetModel())
   npc:Spawn()
   npc:Activate()
-  
+
   -- Configure NPC
   npc:SetHealth(self.npcType.health)
   npc:SetMaxHealth(self.npcType.health)
-  
+
   if not self.npcType.canBeKilled then
     npc:SetHealth(999999)
     npc:SetMaxHealth(999999)
   end
-  
+
   if self.npcType.friendly then
     npc:AddRelationship("player D_LI 99")
   end
-  
+
   -- Configure NPC to stay in place using AI
   npc:SetHullType(HULL_HUMAN)
   npc:SetHullSizeNormal()
   npc:SetSolid(SOLID_BBOX)
-  
+
   -- Enable basic movement capabilities so pathfinding works
   npc:CapabilitiesClear()
   npc:CapabilitiesAdd(CAP_MOVE_GROUND)
   npc:CapabilitiesAdd(CAP_ANIMATEDFACE)
   npc:CapabilitiesAdd(CAP_TURN_HEAD)
-  
+
+  -- No spammy
+  npc:SetUseType(SIMPLE_USE)
+
   -- Store the home position for pathfinding back
   npc.IonRP_HomePos = self.pos
   npc.IonRP_HomeAng = self.ang
-  
+
   -- Store reference to instance
   npc.IonRP_NPCInstance = self
   self.entity = npc
-  
+
   -- Store NPC ID for networking
   npc:SetNWInt("IonRP_NPCID", self.id or 0)
   npc:SetNWString("IonRP_NPCName", self:GetName())
-  
+
   -- Call OnSpawn callback
   if self.npcType.OnSpawn then
     self.npcType.OnSpawn(self.npcType, self)
   end
-  
+
   print("[IonRP NPCs] Spawned NPC '" .. self:GetName() .. "' at " .. tostring(self.pos))
 end
 
@@ -282,10 +286,10 @@ function IonRP.NPCs:RemoveAllSpawned()
     end
     count = count + 1
   end
-  
+
   -- Clear the spawned list
   self.Spawned = {}
-  
+
   if count > 0 then
     print("[IonRP NPCs] Removed " .. count .. " spawned NPCs")
   end
@@ -295,11 +299,11 @@ end
 function IonRP.NPCs:LoadNPCsForMap()
   -- Remove any existing spawned NPCs first to prevent duplicates
   self:RemoveAllSpawned()
-  
+
   local mapName = game.GetMap()
-  
+
   local query = "SELECT * FROM ionrp_npcs WHERE map_name = ?"
-  
+
   IonRP.Database:PreparedQuery(
     query,
     { mapName },
@@ -308,9 +312,9 @@ function IonRP.NPCs:LoadNPCsForMap()
         print("[IonRP NPCs] No NPCs found for map: " .. mapName)
         return
       end
-      
+
       print("[IonRP NPCs] Loading " .. #data .. " NPCs for map: " .. mapName)
-      
+
       for _, npcData in ipairs(data) do
         self:LoadNPC(npcData)
       end
@@ -330,7 +334,7 @@ function IonRP.NPCs:LoadNPC(npcData)
     print("[IonRP NPCs] Unknown NPC type: " .. npcData.npc_identifier)
     return
   end
-  
+
   -- Create instance
   local instance = NPC_INSTANCE:New(
     npcType,
@@ -341,13 +345,13 @@ function IonRP.NPCs:LoadNPC(npcData)
   )
   instance.id = npcData.id
   instance.mapName = npcData.map_name
-  
+
   -- Register in spawned list
   self.Spawned[instance.id] = instance
-  
+
   -- Spawn the entity
   instance:SV_Spawn()
-  
+
   print("[IonRP NPCs] Loaded NPC: " .. instance:GetName() .. " (ID: " .. instance.id .. ")")
 end
 
@@ -362,9 +366,9 @@ function IonRP.NPCs:SyncNPCToClients(npcInstance)
     pos = npcInstance.pos,
     ang = npcInstance.ang
   }
-  
+
   net.Start("IonRP_NPC_Sync")
-    net.WriteTable(npcData)
+  net.WriteTable(npcData)
   net.Broadcast()
 end
 
@@ -380,40 +384,52 @@ function IonRP.NPCs:SyncAllToPlayer(ply)
       pos = npcInstance.pos,
       ang = npcInstance.ang
     }
-    
+
     net.Start("IonRP_NPC_Sync")
-      net.WriteTable(npcData)
+    net.WriteTable(npcData)
     net.Send(ply)
   end
 end
 
+--- Player Index -> Time of last click
+--- @type table<number, boolean>
+local playerHoldingE = {}
 --- Hook: Handle player USE key on NPCs
 hook.Add("PlayerUse", "IonRP_NPCs_HandleUse", function(ply, ent)
   if not IsValid(ent) or not ent.IonRP_NPCInstance then return end
-  
+
+  -- Simple debounce to prevent spamming
+  timer.Create("IonRP_NPCs_Debounce_" .. ply:UserID(), 0.1, 1, function()
+    if IsValid(ply) then
+      playerHoldingE[ply:UserID()] = nil
+    end
+  end)
+  if playerHoldingE[ply:UserID()] then return false end
+  playerHoldingE[ply:UserID()] = true
+
   local npcInstance = ent.IonRP_NPCInstance
   local npcType = npcInstance.npcType
-  
+
   -- Call OnUse callback
   if npcType.OnUse then
     npcType.OnUse(npcType, ply, npcInstance)
   end
-  
+
   return false -- Allow default use behavior
 end)
 
 --- Hook: Handle NPC damage
 hook.Add("EntityTakeDamage", "IonRP_NPCs_HandleDamage", function(target, dmginfo)
   if not IsValid(target) or not target.IonRP_NPCInstance then return end
-  
+
   local npcInstance = target.IonRP_NPCInstance
   local npcType = npcInstance.npcType
-  
+
   -- Call OnDamage callback
   if npcType.OnDamage then
     npcType.OnDamage(npcType, npcInstance, dmginfo)
   end
-  
+
   -- Prevent death if canBeKilled is false
   if not npcType.canBeKilled then
     dmginfo:ScaleDamage(0)
@@ -424,15 +440,16 @@ end)
 --- Hook: Handle NPC death
 hook.Add("OnNPCKilled", "IonRP_NPCs_HandleDeath", function(npc, attacker, inflictor)
   if not IsValid(npc) or not npc.IonRP_NPCInstance then return end
-  
+
+  --- @type NPCInstance
   local npcInstance = npc.IonRP_NPCInstance
   local npcType = npcInstance.npcType
-  
+
   -- Call OnDeath callback
   if npcType.OnDeath then
     npcType.OnDeath(npcType, npcInstance, attacker)
   end
-  
+
   -- Respawn after a delay if can't be killed
   if not npcType.canBeKilled then
     timer.Simple(5, function()
@@ -468,17 +485,17 @@ hook.Add("Think", "IonRP_NPCs_ReturnHome", function()
       local homePos = npc.IonRP_HomePos
       local currentPos = npc:GetPos()
       local distance = currentPos:Distance(homePos)
-      
+
       -- If NPC is more than 50 units away from home, make it walk back
       if distance > 50 then
         -- Set destination to home position
         npc:SetLastPosition(homePos)
         npc:SetSchedule(SCHED_FORCED_GO_RUN)
-      -- If NPC is close to home but not exactly there, snap it back
+        -- If NPC is close to home but not exactly there, snap it back
       elseif distance > 5 then
         npc:SetLastPosition(homePos)
         npc:SetSchedule(SCHED_FORCED_GO)
-      -- If NPC is at home, make it face the right direction and idle
+        -- If NPC is at home, make it face the right direction and idle
       else
         npc:SetPos(homePos)
         npc:SetAngles(npc.IonRP_HomeAng)
