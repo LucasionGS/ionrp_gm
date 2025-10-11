@@ -42,6 +42,11 @@ function IonRP.Database:InitializeTables()
     IonRP.NPCs:InitializeTables()
   end
 
+  -- Initialize Garage tables if available
+  if IonRP.Garage and IonRP.Garage.InitializeTables then
+    IonRP.Garage:InitializeTables()
+  end
+
   -- Create characters table
   local query = self:query([[
         CREATE TABLE IF NOT EXISTS ionrp_characters (

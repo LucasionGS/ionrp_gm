@@ -41,6 +41,9 @@ AddCSLuaFile("shop/cl_shop.lua")
 AddCSLuaFile("npc/sh_npc.lua")
 -- Physgun Restrictions
 AddCSLuaFile("physgun/sh_physgun.lua")
+-- Garage System
+AddCSLuaFile("garage/sh_garage.lua")
+AddCSLuaFile("garage/cl_garage.lua")
 -- IonSys (Admin Panel)
 AddCSLuaFile("ionsys/sh_ionsys.lua")
 AddCSLuaFile("ionsys/cl_ionsys.lua")
@@ -67,6 +70,7 @@ include("developer/sv_model_explorer.lua")
 include("commands/sv_rank_commands.lua")
 include("commands/sv_inventory_commands.lua")
 include("commands/sv_shop_commands.lua")
+include("commands/sv_garage_commands.lua")
 
 -- Items
 include("item/sh_item.lua")
@@ -101,6 +105,10 @@ include("npc/sv_npc.lua")
 -- Physgun Restrictions
 include("physgun/sh_physgun.lua")
 include("physgun/sv_physgun.lua")
+
+-- Garage System
+include("garage/sh_garage.lua")
+include("garage/sv_garage.lua")
 
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")

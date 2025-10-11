@@ -51,5 +51,8 @@ include("property/cl_property_shop.lua")
 include("npc/sh_npc.lua")
 -- Physgun Restrictions
 include("physgun/sh_physgun.lua")
+-- Garage System
+include("garage/sh_garage.lua")
+include("garage/cl_garage.lua")
 -- IonSys (Admin Panel)
 include("ionsys/cl_ionsys.lua")
