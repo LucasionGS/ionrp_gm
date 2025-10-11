@@ -35,6 +35,7 @@ include("item/sh_item.lua")
 include("job/sh_job.lua")
 -- Vehicles
 include("vehicle/sh_vehicle.lua")
+include("vehicle/cl_vehicle_interaction.lua")
 -- Inventory
 include("inventory/cl_inventory.lua")
 -- Shop System

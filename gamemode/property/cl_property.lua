@@ -175,7 +175,6 @@ end)
 ]]
 net.Receive("IonRP_Property_Sync", function()
   local propertyData = net.ReadTable()
-
   
   print("[IonRP Properties] Syncing property ID " .. tostring(propertyData.id))
   -- Convert ownerSteamID to player entity

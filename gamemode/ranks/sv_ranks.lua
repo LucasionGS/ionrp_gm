@@ -12,22 +12,27 @@ IonRP.Ranks = IonRP.Ranks or {}
 --- @type RankData[]
 IonRP.Ranks.List = {}
 
+BUILTIN_RANK_USER = 0
+BUILTIN_RANK_ADMIN = 1
+BUILTIN_RANK_SUPERADMIN = 2
+
 --- Add a rank to the rank list
 --- @param id number Unique rank identifier
 --- @param name string Display name of the rank
 --- @param color Color RGB color for the rank
 --- @param immunity number Immunity level
-local function AddRank(id, name, color, immunity)
-  table.insert(IonRP.Ranks.List, { id = id, name = name, color = color, immunity = immunity })
+--- @param builtin 0|1|2|nil Which builtin rank should be given to the player loading this rank
+local function AddRank(id, name, color, immunity, builtin)
+  table.insert(IonRP.Ranks.List, { id = id, name = name, color = color, immunity = immunity, builtin = builtin })
 end
 -- Define rank hierarchy (higher number = higher rank)
 -- Define ranks (constants are in sh_ranks_types.lua)
 AddRank(RANK_USER, "User", Color(200, 200, 200), 0)
 AddRank(RANK_MODERATOR, "Moderator", Color(46, 204, 113), 1)
-AddRank(RANK_ADMIN, "Admin", Color(52, 152, 219), 2)
-AddRank(RANK_SUPERADMIN, "Superadmin", Color(231, 76, 60), 3)
-AddRank(RANK_LEAD_ADMIN, "Lead Admin", Color(155, 89, 182), 4)
-AddRank(RANK_DEVELOPER, "Developer", Color(241, 196, 15), 5)
+AddRank(RANK_ADMIN, "Admin", Color(52, 152, 219), 2, BUILTIN_RANK_ADMIN)
+AddRank(RANK_SUPERADMIN, "Superadmin", Color(231, 76, 60), 3, BUILTIN_RANK_SUPERADMIN)
+AddRank(RANK_LEAD_ADMIN, "Lead Admin", Color(155, 89, 182), 4, BUILTIN_RANK_SUPERADMIN)
+AddRank(RANK_DEVELOPER, "Developer", Color(241, 196, 15), 5, BUILTIN_RANK_SUPERADMIN)
 
 
 --- Permission categories with minimum rank requirements
@@ -157,6 +162,21 @@ function IonRP.Ranks:LoadPlayerRank(ply, callback)
       ply:SetNWInt("IonRP_Rank", rankId)
 
       local rankData = self:GetRankData(rankId)
+
+      if rankData.builtin then
+        -- Assign built-in GMod rank if applicable
+        if rankData.builtin == BUILTIN_RANK_ADMIN then
+          ply:SetUserGroup("admin")
+        elseif rankData.builtin == BUILTIN_RANK_SUPERADMIN then
+          ply:SetUserGroup("superadmin")
+        else
+          ply:SetUserGroup("user")
+        end
+      else
+        -- Default to user group if no built-in rank
+        ply:SetUserGroup("user")
+      end
+      
       print(string.format("[IonRP] Loaded rank for %s: %s (ID: %d)", ply:Nick(), rankData.name, rankId))
 
       -- Send rank data to client

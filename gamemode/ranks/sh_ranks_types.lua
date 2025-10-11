@@ -8,6 +8,7 @@
 --- @field name string Display name of the rank
 --- @field color Color RGB color for the rank
 --- @field immunity number Immunity level (higher can't be targeted by lower)
+--- @field builtin number|nil Built-in GMod rank (e.g., admin, superadmin), if applicable
 
 --- @class PermissionData
 --- @field minRank number Minimum rank ID required for this permission

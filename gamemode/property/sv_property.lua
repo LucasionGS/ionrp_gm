@@ -345,7 +345,8 @@ function IonRP.Properties:SyncPropertyToClients(property)
       pos = door.pos,
       isLocked = door.isLocked,
       isGate = door.isGate,
-      group = door.group
+      group = door.group,
+      _entityIndex = door._entityIndex or (door.entity and door.entity:EntIndex()) or nil,
     })
   end
   
@@ -368,7 +369,7 @@ function IonRP.Properties:SyncPropertyToPlayer(ply, property)
     purchasable = property.purchasable,
     price = property.price,
     ownerSteamID = IsValid(property.owner) and property.owner:SteamID64() or nil,
-    doors = {}
+    doors = {},
   }
   
   -- Include door data
@@ -377,7 +378,8 @@ function IonRP.Properties:SyncPropertyToPlayer(ply, property)
       pos = door.pos,
       isLocked = door.isLocked,
       isGate = door.isGate,
-      group = door.group
+      group = door.group,
+      _entityIndex = door._entityIndex or (door.entity and door.entity:EntIndex()) or nil,
     })
   end
   
@@ -419,6 +421,7 @@ function PROPERTY_DOOR:FindEntity()
   
   if closestDoor and IsValid(closestDoor) then
     self.entity = closestDoor
+    self._entityIndex = closestDoor:EntIndex()
     
     -- Set door state
     if self.isLocked then

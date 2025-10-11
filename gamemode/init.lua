@@ -79,7 +79,9 @@ include("item/sh_item.lua")
 include("job/sh_job.lua")
 
 -- Vehicles
+AddCSLuaFile("vehicle/cl_vehicle_interaction.lua")
 include("vehicle/sh_vehicle.lua")
+include("vehicle/sv_vehicle_interaction.lua")
 
 -- Inventory
 include("inventory/sv_inventory.lua")

@@ -40,6 +40,11 @@ PROPERTY_DOOR.group = nil
 --- @type Entity|nil
 PROPERTY_DOOR.entity = nil
 
+--- The entity index of the door
+--- This is used to restore the entity after a client/server sync
+--- @type number|nil
+PROPERTY_DOOR._entityIndex = nil
+
 --- Create a new property door instance
 --- @param doorData table The door data (pos, isLocked, isGate, group)
 --- @return PropertyDoor # The new property door object
@@ -50,6 +55,7 @@ function PROPERTY_DOOR:New(doorData)
     newDoor.isLocked = doorData.isLocked or false
     newDoor.isGate = doorData.isGate or false
     newDoor.group = doorData.group or nil
+    newDoor.entity = doorData.entity or (doorData._entityIndex and Entity(doorData._entityIndex)) or nil
     return newDoor
 end
 

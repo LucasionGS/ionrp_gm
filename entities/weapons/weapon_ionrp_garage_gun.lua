@@ -439,39 +439,44 @@ if SERVER then
   function SWEP:ConfirmDeleteGroup(ply, group)
     if not group.id then return end
     
-    IonRP.Dialog:ShowDialog(ply, {
-      title = "Delete Garage?",
-      message = "Are you sure you want to delete '" .. group.name .. "' and all its " .. #group.spots .. " parking spots?",
-      buttons = {
-        {
-          text = "Delete",
-          callback = function()
-            IonRP.Garage:DeleteGroup(group.id, function(success)
-              if success then
-                -- Remove all entities
-                for _, ent in pairs(IonRP.Garage.Entities) do
-                  if IsValid(ent) and ent:GetNWInt("GarageGroupID") == group.id then
-                    ent:Remove()
-                  end
+    local options = {
+      {
+        text = "Delete '" .. group.name .. "'?",
+        isLabel = true
+      },
+      {
+        text = "This will delete all " .. #group.spots .. " parking spots!",
+        isLabel = true
+      },
+      {
+        text = "Delete Garage",
+        callback = function()
+          IonRP.Garage:DeleteGroup(group.id, function(success)
+            if success then
+              -- Remove all entities
+              for _, ent in pairs(IonRP.Garage.Entities) do
+                if IsValid(ent) and ent:GetNWInt("GarageGroupID") == group.id then
+                  ent:Remove()
                 end
-                
-                ClearEditingState(ply)
-                ply:ChatPrint("[IonRP Garage Gun] Deleted garage: " .. group.name)
-              else
-                ply:ChatPrint("[IonRP Garage Gun] Failed to delete garage!")
               end
-            end)
-          end,
-          color = Color(200, 50, 50)
-        },
-        {
-          text = "Cancel",
-          callback = function()
-            ply:ChatPrint("[IonRP Garage Gun] Cancelled")
-          end
-        }
+              
+              ClearEditingState(ply)
+              ply:ChatPrint("[IonRP Garage Gun] Deleted garage: " .. group.name)
+            else
+              ply:ChatPrint("[IonRP Garage Gun] Failed to delete garage!")
+            end
+          end)
+        end
+      },
+      {
+        text = "Cancel",
+        callback = function()
+          ply:ChatPrint("[IonRP Garage Gun] Cancelled")
+        end
       }
-    })
+    }
+    
+    IonRP.Dialog:ShowOptions(ply, "Confirm Deletion", options)
   end
 end
 
