@@ -46,6 +46,10 @@ NPC.health = 100
 --- @type boolean
 NPC.canBeKilled = false
 
+--- Time in seconds before the NPC respawns after being killed. 0 = no respawn
+--- @type number
+NPC.respawn = 30
+
 --- Whether the NPC is friendly (won't be targeted by NPCs/players)
 --- @type boolean
 NPC.friendly = true

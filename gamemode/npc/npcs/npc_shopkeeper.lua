@@ -8,8 +8,8 @@ NPC_SHOPKEEPER.description = "A friendly merchant who sells various items"
 NPC_SHOPKEEPER.model = "models/player/group01/male_07.mdl"
 NPC_SHOPKEEPER.category = "Commerce"
 NPC_SHOPKEEPER.health = 100
-NPC_SHOPKEEPER.canBeKilled = false
-NPC_SHOPKEEPER.friendly = true
+NPC_SHOPKEEPER.canBeKilled = true
+NPC_SHOPKEEPER.friendly = false
 
 if SERVER then
   --- Called when a player uses the shopkeeper

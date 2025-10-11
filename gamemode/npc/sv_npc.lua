@@ -451,8 +451,8 @@ hook.Add("OnNPCKilled", "IonRP_NPCs_HandleDeath", function(npc, attacker, inflic
   end
 
   -- Respawn after a delay if can't be killed
-  if not npcType.canBeKilled then
-    timer.Simple(5, function()
+  if npcType.respawn ~= nil and npcType.respawn > 0 then
+    timer.Simple(npcType.respawn, function()
       if npcInstance and npcInstance.id then
         npcInstance:SV_Spawn()
       end
