@@ -1,4 +1,5 @@
 IonRP.Properties = IonRP.Properties or {}
+--- @type Property[]
 IonRP.Properties.List = IonRP.Properties.List or {}
 
 --[[

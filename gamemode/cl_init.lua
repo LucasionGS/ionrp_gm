@@ -49,5 +49,7 @@ include("property/cl_property.lua")
 include("property/cl_property_shop.lua")
 -- NPC System
 include("npc/sh_npc.lua")
+-- Physgun Restrictions
+include("physgun/sh_physgun.lua")
 -- IonSys (Admin Panel)
 include("ionsys/cl_ionsys.lua")

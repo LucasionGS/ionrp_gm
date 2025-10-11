@@ -17,6 +17,7 @@ function IonRP.ATM:InitializeTables()
       ang_p FLOAT NOT NULL,
       ang_y FLOAT NOT NULL,
       ang_r FLOAT NOT NULL,
+      model VARCHAR(255) NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_map_name (map_name)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -37,18 +38,19 @@ end
 --- Save an ATM position to the database
 --- @param pos Vector Position
 --- @param ang Angle Angles
+--- @param model string|nil Optional model path
 --- @param callback function|nil Optional callback(success, id)
-function IonRP.ATM:SaveATM(pos, ang, callback)
+function IonRP.ATM:SaveATM(pos, ang, model, callback)
   local mapName = game.GetMap()
   
   local query = [[
-    INSERT INTO ionrp_atms (map_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO ionrp_atms (map_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, model)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   ]]
   
   IonRP.Database:PreparedQuery(
     query,
-    { mapName, pos.x, pos.y, pos.z, ang.p, ang.y, ang.r },
+    { mapName, pos.x, pos.y, pos.z, ang.p, ang.y, ang.r, model },
     function(data, query)
       local insertId = query:lastInsert()
       print("[IonRP ATM] Saved ATM at " .. tostring(pos) .. " with ID: " .. insertId)
@@ -66,21 +68,22 @@ function IonRP.ATM:SaveATM(pos, ang, callback)
   )
 end
 
---- Update an ATM's position and angle in the database
+--- Update an ATM's position, angle, and model in the database
 --- @param id number Database ID
 --- @param pos Vector New position
 --- @param ang Angle New angles
+--- @param model string|nil New model path (or nil)
 --- @param callback function|nil Optional callback(success)
-function IonRP.ATM:UpdateATM(id, pos, ang, callback)
+function IonRP.ATM:UpdateATM(id, pos, ang, model, callback)
   local query = [[
     UPDATE ionrp_atms 
-    SET pos_x = ?, pos_y = ?, pos_z = ?, ang_p = ?, ang_y = ?, ang_r = ?
+    SET pos_x = ?, pos_y = ?, pos_z = ?, ang_p = ?, ang_y = ?, ang_r = ?, model = ?
     WHERE id = ?
   ]]
   
   IonRP.Database:PreparedQuery(
     query,
-    { pos.x, pos.y, pos.z, ang.p, ang.y, ang.r, id },
+    { pos.x, pos.y, pos.z, ang.p, ang.y, ang.r, model, id },
     function()
       print("[IonRP ATM] Updated ATM ID: " .. id .. " at " .. tostring(pos))
       if callback then
@@ -144,8 +147,9 @@ function IonRP.ATM:LoadATMsForMap()
       for _, atmData in ipairs(data) do
         local pos = Vector(atmData.pos_x, atmData.pos_y, atmData.pos_z)
         local ang = Angle(atmData.ang_p, atmData.ang_y, atmData.ang_r)
+        local model = atmData.model
         
-        self:SpawnATM(pos, ang, atmData.id)
+        self:SpawnATM(pos, ang, atmData.id, model)
       end
       
       print("[IonRP ATM] Spawned " .. #data .. " ATMs")
@@ -160,29 +164,41 @@ end
 --- @param pos Vector Position
 --- @param ang Angle Angles
 --- @param dbId number|nil Database ID (if loading from DB)
+--- @param model string|nil Custom model path (if nil, uses bounding box)
 --- @return Entity|nil The spawned ATM entity
-function IonRP.ATM:SpawnATM(pos, ang, dbId)
+function IonRP.ATM:SpawnATM(pos, ang, dbId, model)
   local atm = ents.Create("prop_physics")
   if not IsValid(atm) then
     print("[IonRP ATM] Failed to create ATM entity")
     return nil
   end
   
-  atm:SetModel("models/hunter/blocks/cube025x025x025.mdl")
-  atm:SetPos(pos)
-  atm:SetAngles(ang)
-  atm:SetMaterial("models/effects/vol_light001")
-  atm:SetColor(Color(100, 200, 255, 50))
-  atm:SetRenderMode(RENDERMODE_TRANSALPHA)
+  -- Use custom model if provided, otherwise use default visual box
+  if model and model ~= "" then
+    -- Custom model mode
+    util.PrecacheModel(model)
+    atm:SetModel(model)
+    atm:SetPos(pos)
+    atm:SetAngles(ang)
+  else
+    -- Default bounding box mode (invisible)
+    atm:SetModel("models/hunter/blocks/cube025x025x025.mdl")
+    atm:SetPos(pos)
+    atm:SetAngles(ang)
+    atm:SetMaterial("models/effects/vol_light001")
+    atm:SetColor(Color(100, 200, 255, 50))
+    atm:SetRenderMode(RENDERMODE_TRANSALPHA)
+    
+    -- Set collision bounds for proper USE detection (only for bounding box mode)
+    atm:SetCollisionBounds(IonRP.ATM.BoundsMin, IonRP.ATM.BoundsMax)
+  end
+  
   atm:Spawn()
   
   -- Make it solid but non-movable
   atm:SetMoveType(MOVETYPE_NONE)
   atm:SetSolid(SOLID_VPHYSICS)
   atm:SetCollisionGroup(COLLISION_GROUP_WORLD)
-  
-  -- Set collision bounds for proper USE detection
-  atm:SetCollisionBounds(IonRP.ATM.BoundsMin, IonRP.ATM.BoundsMax)
   
   -- Enable USE on entire entity
   atm:SetUseType(SIMPLE_USE)
@@ -300,8 +316,8 @@ IonRP.Commands.Add("placeatm", function(activator, args, rawArgs)
   ang.p = 0 -- Keep it level
   ang.r = 0
   
-  -- Spawn the ATM entity
-  local atm = IonRP.ATM:SpawnATM(pos, ang)
+  -- Spawn the ATM entity (without model by default)
+  local atm = IonRP.ATM:SpawnATM(pos, ang, nil, nil)
   
   if not IsValid(atm) then
     activator:ChatPrint("[IonRP] Failed to spawn ATM entity!")
@@ -309,10 +325,12 @@ IonRP.Commands.Add("placeatm", function(activator, args, rawArgs)
   end
   
   -- Save to database
-  IonRP.ATM:SaveATM(pos, ang, function(success, id)
+  IonRP.ATM:SaveATM(pos, ang, nil, function(success, id)
     if success and IsValid(atm) then
-      atm:SetNWInt("ATM_ID", id)
-      activator:ChatPrint("[IonRP] ATM placed successfully! (ID: " .. id .. ")")
+      if id then
+        atm:SetNWInt("ATM_ID", id)
+      end
+      activator:ChatPrint("[IonRP] ATM placed successfully! (ID: " .. (id or "unknown") .. ")")
     else
       activator:ChatPrint("[IonRP] ATM spawned but failed to save to database!")
     end
@@ -376,12 +394,18 @@ IonRP.Commands.Add("saveatm", function(activator, args, rawArgs)
     return
   end
   
-  -- Get current position and angle
+  -- Get current position, angle, and model
   local pos = atm:GetPos()
   local ang = atm:GetAngles()
+  local model = atm:GetModel()
+  
+  -- Only store model if it's not the default bounding box
+  if model == "models/hunter/blocks/cube025x025x025.mdl" then
+    model = nil
+  end
   
   -- Update in database
-  IonRP.ATM:UpdateATM(atmId, pos, ang, function(success)
+  IonRP.ATM:UpdateATM(atmId, pos, ang, model, function(success)
     if success then
       activator:ChatPrint("[IonRP] ATM position saved! (ID: " .. atmId .. ")")
       activator:ChatPrint("[IonRP] Position: " .. tostring(pos))
@@ -415,5 +439,78 @@ IonRP.Commands.Add("listatms", function(activator, args, rawArgs)
     end
   end
 end, "List all ATMs on the current map", "developer")
+
+--- Command: Set model for ATM you're looking at
+IonRP.Commands.Add("atmmodel", function(activator, args, rawArgs)
+  if not activator:HasPermission("developer") then
+    activator:ChatPrint("[IonRP] You don't have permission to set ATM models!")
+    return
+  end
+  
+  local atm = IonRP.ATM:GetLookingAtATM(activator, 150)
+  
+  if not atm or not IsValid(atm) then
+    activator:ChatPrint("[IonRP] You're not looking at an ATM!")
+    return
+  end
+  
+  local atmId = atm:GetNWInt("ATM_ID", 0)
+  
+  if atmId == 0 then
+    activator:ChatPrint("[IonRP] This ATM has no database ID! Cannot set model.")
+    return
+  end
+  
+  -- Get model path from arguments
+  --- @type string|nil
+  local modelPath = rawArgs
+  
+  if not modelPath or modelPath == "" then
+    activator:ChatPrint("[IonRP] Usage: /atmmodel <model/path>")
+    activator:ChatPrint("[IonRP] Example: /atmmodel models/props_c17/consolebox01a.mdl")
+    activator:ChatPrint("[IonRP] Use 'none' to remove model and use bounding box")
+    return
+  end
+  
+  -- Handle "none" to remove model
+  if modelPath:lower() == "none" then
+    modelPath = nil
+  elseif modelPath then
+    -- Validate model exists
+    if not file.Exists(modelPath, "GAME") then
+      activator:ChatPrint("[IonRP] Model file not found: " .. modelPath)
+      activator:ChatPrint("[IonRP] Make sure the path is correct (e.g., models/props/file.mdl)")
+      return
+    end
+  end
+  
+  -- Get current position and angle
+  local pos = atm:GetPos()
+  local ang = atm:GetAngles()
+  
+  -- Update in database with new model
+  IonRP.ATM:UpdateATM(atmId, pos, ang, modelPath, function(success)
+    if success then
+      -- Remove old ATM
+      atm:Remove()
+      
+      -- Spawn new ATM with new model
+      local newAtm = IonRP.ATM:SpawnATM(pos, ang, atmId, modelPath)
+      
+      if IsValid(newAtm) then
+        if modelPath then
+          activator:ChatPrint("[IonRP] ATM model updated! (ID: " .. atmId .. ")")
+          activator:ChatPrint("[IonRP] Model: " .. modelPath)
+        else
+          activator:ChatPrint("[IonRP] ATM model removed, using bounding box! (ID: " .. atmId .. ")")
+        end
+      else
+        activator:ChatPrint("[IonRP] Model updated in database but failed to respawn ATM!")
+      end
+    else
+      activator:ChatPrint("[IonRP] Failed to update ATM model in database!")
+    end
+  end)
+end, "Set or remove the model for the ATM you're looking at", "developer")
 
 print("[IonRP ATM] Server module loaded")

@@ -4,6 +4,7 @@
 ]]--
 
 IonRP.Properties = IonRP.Properties or {}
+--- @type Property[]
 IonRP.Properties.List = IonRP.Properties.List or {}
 
 -- Display settings
@@ -146,7 +147,7 @@ hook.Add("PostDrawTranslucentRenderables", "IonRP_Properties_DrawDoorText", func
     local subColor = Colors.PropertyUnowned
     
     if property.owner and IsValid(property.owner) then
-      subText = "Owned by " .. property.owner:Nick()
+      subText = "Owned by " .. property.owner:GetRPName()
       subColor = Colors.PropertyOwned
     elseif property.purchasable then
       subText = "For Sale: $" .. string.Comma(property.price)
@@ -206,7 +207,7 @@ concommand.Add("ionrp_list_properties", function()
     count = count + 1
     local ownerText = "Unowned"
     if property.owner and IsValid(property.owner) then
-      ownerText = "Owned by " .. property.owner:Nick()
+      ownerText = "Owned by " .. property.owner:GetRPName()
     end
     print("  - ID: " .. id .. " | Name: " .. property.name .. " | Doors: " .. #property.doors .. " | " .. ownerText)
   end

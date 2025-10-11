@@ -362,7 +362,11 @@ function SWEP:ShowDoorOptions(ply, property, doorObj)
               ply:ChatPrint("[IonRP] Cleared door group")
             else
               doorObj.group = group
-              ply:ChatPrint("[IonRP] Set door group to: " .. group)
+              if group == nil then
+                ply:ChatPrint("[IonRP] Set door group to nil")
+              else
+                ply:ChatPrint("[IonRP] Set door group to: " .. group)
+              end
             end
           end)
       end

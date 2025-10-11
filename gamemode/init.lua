@@ -39,6 +39,8 @@ AddCSLuaFile("shop/sh_shop.lua")
 AddCSLuaFile("shop/cl_shop.lua")
 -- NPC System
 AddCSLuaFile("npc/sh_npc.lua")
+-- Physgun Restrictions
+AddCSLuaFile("physgun/sh_physgun.lua")
 -- IonSys (Admin Panel)
 AddCSLuaFile("ionsys/sh_ionsys.lua")
 AddCSLuaFile("ionsys/cl_ionsys.lua")
@@ -95,6 +97,10 @@ include("property/sv_property_shop.lua")
 -- NPC System
 include("npc/sh_npc.lua")
 include("npc/sv_npc.lua")
+
+-- Physgun Restrictions
+include("physgun/sh_physgun.lua")
+include("physgun/sv_physgun.lua")
 
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")
