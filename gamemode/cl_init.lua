@@ -54,5 +54,6 @@ include("physgun/sh_physgun.lua")
 -- Garage System
 include("garage/sh_garage.lua")
 include("garage/cl_garage.lua")
+include("garage/cl_garage_vehicles.lua")
 -- IonSys (Admin Panel)
 include("ionsys/cl_ionsys.lua")

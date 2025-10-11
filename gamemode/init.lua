@@ -107,8 +107,10 @@ include("physgun/sh_physgun.lua")
 include("physgun/sv_physgun.lua")
 
 -- Garage System
+AddCSLuaFile("garage/cl_garage_vehicles.lua")
 include("garage/sh_garage.lua")
 include("garage/sv_garage.lua")
+include("garage/sv_garage_vehicles.lua")
 
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")

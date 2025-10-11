@@ -200,7 +200,7 @@ if SERVER then
   --- Spawn an instanced vehicle in the world
   --- @param pos Vector The position to spawn the vehicle at
   --- @param ang Angle The angle to spawn the vehicle with
-  --- @return Entity|nil # The spawned vehicle entity, or nil on failure
+  --- @return Vehicle|nil # The spawned vehicle entity, or nil on failure
   function VEHICLE:SV_Spawn(pos, ang)
     if not pos or not ang then return nil end
     if not self.model or self.model == "" then return nil end
@@ -657,21 +657,21 @@ local plyMeta = FindMetaTable("Player")
 
 if SERVER then
   --- Get all vehicles owned by this player
-  --- @param callback function Callback with signature (vehicles: VEHICLE[])
+  --- @param callback fun(vehicles: VEHICLE[]) Callback with signature (vehicles: VEHICLE[])
   function plyMeta:SV_GetOwnedVehicles(callback)
     IonRP.Vehicles:SV_GetOwnedVehicles(self, callback)
   end
 
   --- Purchase a vehicle
   --- @param vehicleIdentifier string The vehicle identifier
-  --- @param callback function|nil Optional callback with signature (success: boolean, message: string, vehicleInstance: VEHICLE|nil)
+  --- @param callback fun(success: boolean, message: string, vehicleInstance: VEHICLE|nil)|nil Optional callback with signature (success: boolean, message: string, vehicleInstance: VEHICLE|nil)
   function plyMeta:SV_PurchaseVehicle(vehicleIdentifier, callback)
     IonRP.Vehicles:SV_PurchaseVehicle(self, vehicleIdentifier, callback)
   end
 
   --- Get a specific owned vehicle by database ID
   --- @param vehicleId number The database ID of the vehicle
-  --- @param callback function Callback with signature (vehicleInstance: VEHICLE|nil)
+  --- @param callback fun(veh: VEHICLE) Callback with signature (vehicleInstance: VEHICLE|nil)
   function plyMeta:SV_GetOwnedVehicleById(vehicleId, callback)
     IonRP.Vehicles:SV_GetOwnedVehicleById(self, vehicleId, callback)
   end
