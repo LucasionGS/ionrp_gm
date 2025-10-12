@@ -148,7 +148,7 @@ function GM:HUDShouldDraw(name)
 end
 
 --[[
-  Draw player names above their heads for all nearby players
+  Draw player names above their heads for all nearby players and NPCs
 --]]
 function GM:HUDDrawTargetID()
   local localPly = LocalPlayer()
@@ -156,6 +156,7 @@ function GM:HUDDrawTargetID()
   
   local eyePos = localPly:EyePos()
 
+  -- Draw player names
   for _, ply in ipairs(player.GetAll()) do
     if ply == localPly or not ply:Alive() or ply:Crouching() then continue end
 
@@ -223,6 +224,49 @@ function GM:HUDDrawTargetID()
           surface.DrawTexturedRect(x, y, starSize, starSize)
 
           x = x + starSize + spacing
+        end
+      end
+    end
+  end
+
+  -- Draw NPC names
+  for _, npc in ipairs(ents.FindByClass("npc_*")) do
+    if not IsValid(npc) or not npc:GetNWString("IonRP_NPCName", "") or npc:GetNWString("IonRP_NPCName", "") == "" then continue end
+
+    local distance = npc:GetPos():Distance(eyePos)
+
+    if distance < 250 then
+      local pos = npc:GetPos() + Vector(0, 0, 75)
+      local screenPos = pos:ToScreen()
+      local npcName = npc:GetNWString("IonRP_NPCName", "Unknown NPC")
+      local npcType = npc:GetNWString("IonRP_NPCType", "")
+
+      local traceData = {
+        start = eyePos,
+        endpos = pos,
+        filter = {localPly, npc}
+      }
+
+      local trace = util.TraceLine(traceData)
+
+      local alpha = 255 * (1 - distance / 250)
+      if not trace.HitWorld then
+        surface.SetFont("DermaLarge")
+        local w, h = surface.GetTextSize(npcName)
+
+        surface.SetTextColor(255, 255, 255, alpha)
+        surface.SetTextPos(screenPos.x - w / 2, screenPos.y - h / 2)
+        surface.DrawText(npcName)
+
+        -- Draw NPC type below name
+        if npcType and npcType ~= "" and npcType ~= npcName then
+          surface.SetFont("DermaDefault")
+
+          local w, h = surface.GetTextSize(npcType)
+
+          surface.SetTextColor(0, 201, 201, alpha)
+          surface.SetTextPos(screenPos.x - w / 2, screenPos.y - h / 2 - 30)
+          surface.DrawText(npcType)
         end
       end
     end

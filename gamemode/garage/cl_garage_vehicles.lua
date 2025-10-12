@@ -106,31 +106,12 @@ function IonRP.Garage:OpenGarageMenu()
   container:SetBorder(0)
   container:Dock(FILL)
   
-  -- Show nearby vehicles section if any
+  -- Show nearby vehicles first if any
   if #self.NearbyVehicles > 0 then
-    local nearbyHeader = vgui.Create("DPanel", scroll)
-    nearbyHeader:Dock(TOP)
-    nearbyHeader:SetTall(40)
-    nearbyHeader:DockMargin(0, 0, 0, 10)
-    
-    nearbyHeader.Paint = function(self, w, h)
-      draw.RoundedBox(6, 0, 0, w, h, Colors.Header)
-      draw.SimpleText("Nearby Vehicles (Within 1000 units)", "DermaDefaultBold", 15, h / 2, 
-        Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-      draw.SimpleText("Click to return to garage", "DermaDefault", w - 15, h / 2, 
-        Colors.TextMuted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-    end
-    
     -- Create cards for nearby vehicles
     for _, vehicleData in ipairs(self.NearbyVehicles) do
       self:CreateNearbyVehicleCard(container, vehicleData, frameW - 60)
     end
-    
-    -- Spacer
-    local spacer = vgui.Create("DPanel", scroll)
-    spacer:Dock(TOP)
-    spacer:SetTall(20)
-    spacer.Paint = function() end
   end
   
   -- Section header for all vehicles
@@ -157,7 +138,7 @@ function IonRP.Garage:OpenGarageMenu()
         Colors.TextMuted, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
       draw.SimpleText("Visit a car dealer to purchase your first vehicle!", "DermaDefault", w / 2, h / 2, 
         Colors.TextMuted, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-      draw.SimpleText("Use /vehicleshop or talk to an NPC car dealer", "DermaDefault", w / 2, h / 2 + 25, 
+      draw.SimpleText("Talk to an NPC car dealer", "DermaDefault", w / 2, h / 2 + 25, 
         Colors.Accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
   else
@@ -253,42 +234,42 @@ function IonRP.Garage:CreateVehicleCard(parent, vehicleData, maxWidth)
   valueLabel:SetTextColor(Colors.Accent)
   valueLabel:SetText("Value: " .. IonRP.Util:FormatMoney(vehicleData.marketValue))
   
-  -- Spawn button
-  local spawnBtn = vgui.Create("DButton", card)
-  spawnBtn:SetPos(15, cardH - 40)
-  spawnBtn:SetSize(cardW - 30, 30)
-  spawnBtn:SetText("")
-  
-  spawnBtn.Paint = function(self, w, h)
-    local btnColor = Colors.ButtonDisabled
+  if #self.NearbyVehicles == 0 then
+    -- Spawn button
+    local spawnBtn = vgui.Create("DButton", card)
+    spawnBtn:SetPos(15, cardH - 40)
+    spawnBtn:SetSize(cardW - 30, 30)
+    spawnBtn:SetText("")
     
-    if not vehicleData.isSpawned then
-      btnColor = self:IsHovered() and Colors.ButtonPrimaryHover or Colors.ButtonPrimary
+    spawnBtn.Paint = function(self, w, h)
+      local btnColor = Colors.ButtonDisabled
+      
+      if not vehicleData.isSpawned then
+        btnColor = self:IsHovered() and Colors.ButtonPrimaryHover or Colors.ButtonPrimary
+      end
+      
+      draw.RoundedBox(6, 0, 0, w, h, btnColor)
+      
+      local text = vehicleData.isSpawned and "Already Spawned" or "Take out of Garage"
+      draw.SimpleText(text, "DermaDefaultBold", w / 2, h / 2, Colors.TextDark, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     
-    draw.RoundedBox(6, 0, 0, w, h, btnColor)
-    
-    local text = vehicleData.isSpawned and "Already Spawned" or "Spawn at Garage"
-    draw.SimpleText(text, "DermaDefaultBold", w / 2, h / 2, Colors.TextDark, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-  end
-  
-  spawnBtn.DoClick = function()
-    if vehicleData.isSpawned then
-      chat.AddText(Color(255, 100, 100), "[Garage] ", Colors.Text, "This vehicle is already spawned!")
-      return
+    spawnBtn.DoClick = function()
+      if vehicleData.isSpawned then
+        chat.AddText(Color(255, 100, 100), "[Garage] ", Colors.Text, "This vehicle is already spawned!")
+        return
+      end
+      
+      -- Send spawn request to server
+      net.Start("IonRP_Garage_SpawnVehicle")
+      net.WriteUInt(vehicleData.dbId, 32)
+      net.SendToServer()
+      
+      -- Close menu
+      if IsValid(IonRP.Garage.MenuFrame) then
+        IonRP.Garage.MenuFrame:Close()
+      end
     end
-    
-    -- Send spawn request to server
-    net.Start("IonRP_Garage_SpawnVehicle")
-    net.WriteUInt(vehicleData.dbId, 32)
-    net.SendToServer()
-    
-    -- Close menu
-    if IsValid(IonRP.Garage.MenuFrame) then
-      IonRP.Garage.MenuFrame:Close()
-    end
-    
-    chat.AddText(Colors.Accent, "[Garage] ", Colors.Text, "Requesting spawn for " .. vehicleData.name .. "...")
   end
 end
 

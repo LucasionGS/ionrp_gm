@@ -268,6 +268,7 @@ function NPC_INSTANCE:SV_Spawn()
   -- Store NPC ID for networking
   npc:SetNWInt("IonRP_NPCID", self.id or 0)
   npc:SetNWString("IonRP_NPCName", self:GetName())
+  npc:SetNWString("IonRP_NPCType", self.npcType.name)
 
   -- Call OnSpawn callback
   if self.npcType.OnSpawn then
