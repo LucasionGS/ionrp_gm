@@ -18,6 +18,12 @@ function IonRP.Properties:InitializeTables()
       category VARCHAR(64) DEFAULT 'Other',
       purchasable TINYINT(1) DEFAULT 1,
       price INT NOT NULL DEFAULT 0,
+      camera_pos_x FLOAT NULL,
+      camera_pos_y FLOAT NULL,
+      camera_pos_z FLOAT NULL,
+      camera_ang_pitch FLOAT NULL,
+      camera_ang_yaw FLOAT NULL,
+      camera_ang_roll FLOAT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       INDEX idx_map_name (map_name)
@@ -72,13 +78,21 @@ function PROPERTY:Save(callback)
   
   -- Insert new property
   local query = [[
-    INSERT INTO ionrp_properties (map_name, name, description, category, purchasable, price)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO ionrp_properties (map_name, name, description, category, purchasable, price, camera_pos_x, camera_pos_y, camera_pos_z, camera_ang_pitch, camera_ang_yaw, camera_ang_roll)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ]]
+  
+  local camPosX = self.cameraPos and self.cameraPos.x or nil
+  local camPosY = self.cameraPos and self.cameraPos.y or nil
+  local camPosZ = self.cameraPos and self.cameraPos.z or nil
+  local camAngP = self.cameraAng and self.cameraAng.p or nil
+  local camAngY = self.cameraAng and self.cameraAng.y or nil
+  local camAngR = self.cameraAng and self.cameraAng.r or nil
   
   IonRP.Database:PreparedQuery(
     query,
-    { mapName, self.name, self.description, self.category, self.purchasable and 1 or 0, self.price },
+    { mapName, self.name, self.description, self.category, self.purchasable and 1 or 0, self.price,
+      camPosX, camPosY, camPosZ, camAngP, camAngY, camAngR },
     function(data, query)
       local propertyId = query:lastInsert()
       self.id = propertyId
@@ -120,13 +134,21 @@ function PROPERTY:Update(callback)
   
   local query = [[
     UPDATE ionrp_properties 
-    SET name = ?, description = ?, category = ?, purchasable = ?, price = ?
+    SET name = ?, description = ?, category = ?, purchasable = ?, price = ?, camera_pos_x = ?, camera_pos_y = ?, camera_pos_z = ?, camera_ang_pitch = ?, camera_ang_yaw = ?, camera_ang_roll = ?
     WHERE id = ?
   ]]
   
+  local camPosX = self.cameraPos and self.cameraPos.x or nil
+  local camPosY = self.cameraPos and self.cameraPos.y or nil
+  local camPosZ = self.cameraPos and self.cameraPos.z or nil
+  local camAngP = self.cameraAng and self.cameraAng.p or nil
+  local camAngY = self.cameraAng and self.cameraAng.y or nil
+  local camAngR = self.cameraAng and self.cameraAng.r or nil
+  
   IonRP.Database:PreparedQuery(
     query,
-    { self.name, self.description, self.category, self.purchasable and 1 or 0, self.price, self.id },
+    { self.name, self.description, self.category, self.purchasable and 1 or 0, self.price,
+      camPosX, camPosY, camPosZ, camAngP, camAngY, camAngR, self.id },
     function()
       print("[IonRP Properties] Updated property ID: " .. self.id)
       
@@ -282,13 +304,26 @@ function IonRP.Properties:LoadProperty(propData)
     { propData.id },
     function(doorData)
       -- Create property instance
+      local cameraPos = nil
+      local cameraAng = nil
+      
+      if propData.camera_pos_x and propData.camera_pos_y and propData.camera_pos_z then
+        cameraPos = Vector(propData.camera_pos_x, propData.camera_pos_y, propData.camera_pos_z)
+      end
+      
+      if propData.camera_ang_pitch and propData.camera_ang_yaw and propData.camera_ang_roll then
+        cameraAng = Angle(propData.camera_ang_pitch, propData.camera_ang_yaw, propData.camera_ang_roll)
+      end
+      
       local property = PROPERTY:New({
         id = propData.id,
         name = propData.name,
         description = propData.description,
         category = propData.category,
         purchasable = propData.purchasable == 1,
-        price = propData.price
+        price = propData.price,
+        cameraPos = cameraPos,
+        cameraAng = cameraAng
       }, {})
       
       -- Add doors
@@ -336,6 +371,8 @@ function IonRP.Properties:SyncPropertyToClients(property)
     purchasable = property.purchasable,
     price = property.price,
     ownerSteamID = IsValid(property.owner) and property.owner:SteamID64() or nil,
+    cameraPos = property.cameraPos,
+    cameraAng = property.cameraAng,
     doors = {}
   }
   
@@ -369,6 +406,8 @@ function IonRP.Properties:SyncPropertyToPlayer(ply, property)
     purchasable = property.purchasable,
     price = property.price,
     ownerSteamID = IsValid(property.owner) and property.owner:SteamID64() or nil,
+    cameraPos = property.cameraPos,
+    cameraAng = property.cameraAng,
     doors = {},
   }
   

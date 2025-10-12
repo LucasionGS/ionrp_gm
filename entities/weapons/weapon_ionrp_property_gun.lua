@@ -247,9 +247,9 @@ function SWEP:StartNewProperty(ply)
   end)
 end
 
---[[
-    Show property options menu
-]] --
+--- Show property options menu
+--- @param ply Player
+--- @
 function SWEP:ShowPropertyOptions(ply, property)
   if CLIENT then return end
 
@@ -317,6 +317,45 @@ function SWEP:ShowPropertyOptions(ply, property)
           end
         end)
       end
+    },
+    {
+      text = property.cameraPos and "Update Camera Position" or "Set Camera Position",
+      callback = function()
+        -- Get player's current view position and angle
+        -- local trace = ply:GetEyeTrace()
+        -- local cameraPos = trace.HitPos + trace.HitNormal * 5 -- Slightly offset from wall
+        local cameraPos = ply:GetShootPos()
+        local cameraAng = ply:EyeAngles()
+        
+        property.cameraPos = cameraPos
+        property.cameraAng = cameraAng
+        
+        ply:ChatPrint("[IonRP] Set camera position for property preview!")
+        ply:ChatPrint("[IonRP] Position: " .. tostring(cameraPos))
+        ply:ChatPrint("[IonRP] Angle: " .. tostring(cameraAng))
+        
+        -- Reopen menu to show updated option text
+        timer.Simple(0.1, function()
+          if IsValid(ply) then
+            self:ShowPropertyOptions(ply, property)
+          end
+        end)
+      end
+    },
+    {
+      text = property.cameraPos and "Clear Camera Position" or "<No Camera Set>",
+      callback = property.cameraPos and function()
+        property.cameraPos = nil
+        property.cameraAng = nil
+        ply:ChatPrint("[IonRP] Cleared camera position")
+        
+        -- Reopen menu
+        timer.Simple(0.1, function()
+          if IsValid(ply) then
+            self:ShowPropertyOptions(ply, property)
+          end
+        end)
+      end or nil
     },
     {
       text = "Done",
@@ -476,6 +515,15 @@ if CLIENT then
         TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
       draw.SimpleText("Doors: " .. #property.doors, "DermaDefault", scrW / 2, scrH - 60, Color(255, 255, 255),
         TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      
+      -- Show camera status
+      if property.cameraPos then
+        draw.SimpleText("Camera: SET ✓", "DermaDefault", scrW / 2, scrH - 40, Color(100, 255, 100),
+          TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      else
+        draw.SimpleText("Camera: Not Set", "DermaDefault", scrW / 2, scrH - 40, Color(255, 200, 100),
+          TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      end
     else
       draw.SimpleText("Press RELOAD to start", "DermaDefault", scrW / 2, scrH - 60, Color(255, 200, 100),
         TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
@@ -512,6 +560,37 @@ if CLIENT then
       end
 
       halo.Add({ ent }, color, 2, 2, 2, true, true)
+    end
+    
+    -- Draw camera preview frame (showing what the camera will see)
+    if ply.PropertyGun_EditingProperty then
+      local frameSize = 300
+      local frameX = scrW - frameSize - 40
+      local frameY = 100
+      local borderSize = 4
+      
+      -- Draw frame border
+      surface.SetDrawColor(100, 200, 255, 200)
+      surface.DrawRect(frameX - borderSize, frameY - borderSize, frameSize + borderSize * 2, frameSize + borderSize * 2)
+      
+      -- Draw inner black box
+      surface.SetDrawColor(0, 0, 0, 230)
+      surface.DrawRect(frameX, frameY, frameSize, frameSize)
+      
+      -- Draw preview label
+      draw.SimpleText("CAMERA PREVIEW", "DermaDefaultBold", frameX + frameSize / 2, frameY - 20, 
+        Color(100, 200, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_BOTTOM)
+      
+      -- Draw crosshair in center of preview
+      local centerX = frameX + frameSize / 2
+      local centerY = frameY + frameSize / 2
+      surface.SetDrawColor(100, 200, 255, 180)
+      surface.DrawLine(centerX - 10, centerY, centerX + 10, centerY)
+      surface.DrawLine(centerX, centerY - 10, centerX, centerY + 10)
+      
+      -- Draw hint text
+      draw.SimpleText("Right-click > Set Camera Position", "DermaDefault", frameX + frameSize / 2, frameY + frameSize + 10,
+        Color(255, 255, 255, 200), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
     end
   end
 end

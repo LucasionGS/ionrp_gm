@@ -101,8 +101,16 @@ PROPERTY.doors = {}
 --- @type Player|nil
 PROPERTY.owner = nil
 
+--- Camera position for property preview in shop
+--- @type Vector|nil
+PROPERTY.cameraPos = nil
+
+--- Camera angle for property preview in shop
+--- @type Angle|nil
+PROPERTY.cameraAng = nil
+
 --- Create a new property instance
---- @param propertyData table The property data (id, name, description, price)
+--- @param propertyData table The property data (id, name, description, price, cameraPos, cameraAng)
 --- @param doors table<number, PropertyDoor>|table<number, any> List of doors (PROPERTY_DOOR) that belong to this property
 --- @return Property # The new property object
 function PROPERTY:New(propertyData, doors)
@@ -113,6 +121,8 @@ function PROPERTY:New(propertyData, doors)
     newProperty.category = propertyData.category or "Other"
     newProperty.purchasable = propertyData.purchasable
     newProperty.price = propertyData.price
+    newProperty.cameraPos = propertyData.cameraPos or nil
+    newProperty.cameraAng = propertyData.cameraAng or nil
     newProperty.doors = {} -- Initialize a fresh doors table for this instance
     newProperty.owner = propertyData.owner or nil -- Initialize owner as nil for this instance if none if provided
     for _, doorData in ipairs(doors) do

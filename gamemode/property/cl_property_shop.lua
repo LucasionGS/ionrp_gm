@@ -324,28 +324,76 @@ function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
       surface.DrawOutlinedRect(1, 1, w - 2, h - 2, 1)
     end
 
-    -- Icon container (left side)
+    -- Icon container (left side) - Camera Preview
     local iconContainer = vgui.Create("DPanel", propPanel)
     iconContainer:SetSize(180, 170)
     iconContainer:Dock(LEFT)
+
+    -- Create unique render target for this property
+    local rtName = "IonRP_PropertyPreview_" .. property.id
+    local rtMat = GetRenderTarget(rtName, 512, 512)
+    local rtMatObj = CreateMaterial(rtName .. "_Mat", "UnlitGeneric", {
+      ["$basetexture"] = rtName,
+      ["$vertexcolor"] = 1,
+      ["$vertexalpha"] = 1,
+    })
+
     iconContainer.Paint = function(self, w, h)
-      -- Gradient background for icon
+      -- Border background
       draw.RoundedBox(8, 5, 5, w - 10, h - 10, Color(15, 15, 22, 255))
 
-      -- Subtle gradient overlay
-      surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, 20)
-      surface.DrawRect(5, 5, w - 10, (h - 10) / 2)
+      -- Render live camera view if camera position is set
+      if not property.owner and property.cameraPos and property.cameraAng then
+        local oldRT = render.GetRenderTarget()
+
+        render.SetRenderTarget(rtMat)
+        render.Clear(15, 15, 22, 255)
+
+        -- Render 3D view from property camera
+        render.RenderView({
+          origin = property.cameraPos,
+          angles = property.cameraAng,
+          x = 0,
+          y = 0,
+          w = 512,
+          h = 512,
+          fov = 75,
+          drawviewmodel = false,
+        })
+
+        render.SetRenderTarget(oldRT)
+
+        -- Draw the render target to the panel
+        surface.SetDrawColor(255, 255, 255, 255)
+        surface.SetMaterial(rtMatObj)
+        surface.DrawTexturedRect(5, 5, w - 10, h - 10)
+
+        -- "LIVE" indicator
+        draw.RoundedBox(4, 10, 10, 40, 16, Color(255, 0, 0, 200))
+        draw.SimpleText("LIVE", "DermaDefault", 30, 18, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+      else
+        -- Fallback to static icon if no camera is set
+        -- Subtle gradient overlay
+        surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, 20)
+        surface.DrawRect(5, 5, w - 10, (h - 10) / 2)
+
+        -- No camera text
+        draw.SimpleText(
+          property.owner and "Owned, preview disabled" or "No Preview",
+          "DermaDefault", w / 2, h / 2 + 30, cfg.Colors.TextMuted, TEXT_ALIGN_CENTER,
+          TEXT_ALIGN_CENTER)
+      end
 
       -- Border accent
       surface.SetDrawColor(cfg.Colors.AccentCyan.r, cfg.Colors.AccentCyan.g, cfg.Colors.AccentCyan.b, 80)
       surface.DrawOutlinedRect(5, 5, w - 10, h - 10, 1)
-      
-      -- Property icon (house symbol)
-      draw.SimpleText("🏠", "DermaLarge", w / 2, h / 2 - 10, cfg.Colors.AccentCyan, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-      
-      -- Door count
+
+      -- Door count badge (bottom right)
       local doorText = #property.doors .. " Door" .. (#property.doors ~= 1 and "s" or "")
-      draw.SimpleText(doorText, "DermaDefault", w / 2, h / 2 + 30, cfg.Colors.TextMuted, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+      local doorW = surface.GetTextSize(doorText) + 16
+      draw.RoundedBox(4, w - doorW - 10, h - 25, doorW, 18, Color(0, 0, 0, 180))
+      draw.SimpleText(doorText, "DermaDefault", w - doorW / 2 - 10, h - 16, cfg.Colors.TextMuted, TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
     end
 
     -- Info container
@@ -392,7 +440,7 @@ function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
     ownerLabel:Dock(TOP)
     ownerLabel:SetTall(20)
     ownerLabel:DockMargin(0, 5, 0, 0)
-    
+
     if property.owner and IsValid(property.owner) then
       ownerLabel:SetText("Currently owned by: " .. property.owner:Nick())
       ownerLabel:SetTextColor(Color(255, 100, 100))
@@ -456,7 +504,7 @@ function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
       elseif not canAfford then
         text = "INSUFFICIENT FUNDS"
       end
-      
+
       local textCol = canAfford and Color(255, 255, 255) or Color(180, 180, 190)
 
       -- Text shadow
@@ -478,7 +526,7 @@ function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
         surface.PlaySound("buttons/button10.wav")
         return
       end
-      
+
       if not canAfford then
         chat.AddText(Color(255, 100, 100), "[IonRP] ", Color(255, 255, 255), "You cannot afford this property!")
         surface.PlaySound("buttons/button10.wav")
@@ -560,7 +608,8 @@ function IonRP.PropertyShop.UI:ShowPurchaseConfirmation(property)
   local warning = vgui.Create("DLabel", dialog)
   warning:SetPos(16, 110)
   warning:SetWide(418)
-  warning:SetText("Ownership is temporary and will be reset on server restart. Funds will be deducted from your bank account.")
+  warning:SetText(
+  "Ownership is temporary and will be reset on server restart. Funds will be deducted from your bank account.")
   warning:SetFont("DermaDefault")
   warning:SetTextColor(cfg.Colors.TextMuted)
   warning:SetWrap(true)
