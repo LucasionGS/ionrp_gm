@@ -95,6 +95,7 @@ function IonRP.Garage:SendOwnedVehiclesToClient(ply)
         marketValue = vehInstance.marketValue,
         category = vehInstance.category,
         isSpawned = vehInstance.entity and IsValid(vehInstance.entity),
+        upgrades = vehInstance.Upgrades,
       })
     end
     
@@ -186,6 +187,7 @@ function IonRP.Garage:SendNearbyVehiclesToClient(ply)
           name = vehInstance.name,
           model = vehInstance.model,
           distance = math.floor(distance),
+          upgrades = vehInstance.Upgrades,
         })
       end
     end

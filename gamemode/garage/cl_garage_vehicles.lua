@@ -213,6 +213,22 @@ function IonRP.Garage:CreateVehicleCard(parent, vehicleData, maxWidth)
   
   function modelPanel:LayoutEntity(ent)
     ent:SetAngles(Angle(0, RealTime() * 20, 0))
+    
+    -- Apply upgrades if available
+    if vehicleData.upgrades then
+      -- Apply color if set
+      if vehicleData.upgrades.color then
+        local col = IonRP.Util:HexToColor(vehicleData.upgrades.color)
+        if col then
+          ent:SetColor(col)
+        end
+      end
+      
+      -- Apply skin if set
+      if vehicleData.upgrades.skin then
+        ent:SetSkin(vehicleData.upgrades.skin)
+      end
+    end
   end
   
   modelPanel.Paint = function(self, w, h)
@@ -315,6 +331,22 @@ function IonRP.Garage:CreateNearbyVehicleCard(parent, vehicleData, maxWidth)
   
   function modelPanel:LayoutEntity(ent)
     ent:SetAngles(Angle(0, RealTime() * 20, 0))
+    
+    -- Apply upgrades if available
+    if vehicleData.upgrades then
+      -- Apply color if set
+      if vehicleData.upgrades.color then
+        local col = IonRP.Util:HexToColor(vehicleData.upgrades.color)
+        if col then
+          ent:SetColor(col)
+        end
+      end
+      
+      -- Apply skin if set
+      if vehicleData.upgrades.skin then
+        ent:SetSkin(vehicleData.upgrades.skin)
+      end
+    end
   end
   
   modelPanel.Paint = function(self, w, h)
