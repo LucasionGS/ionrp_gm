@@ -25,8 +25,8 @@ net.Receive("IonRP_Buddy_Sync", function()
   local ply = LocalPlayer()
   
   ply.IonRP_Buddies = {}
-  for _, steamID in ipairs(buddyList) do
-    ply.IonRP_Buddies[steamID] = true
+  for _, buddyData in ipairs(buddyList) do
+    ply.IonRP_Buddies[buddyData.steamID] = buddyData.permissions
   end
   
   print("[IonRP Buddy] Synced " .. #buddyList .. " buddies from server")
@@ -131,14 +131,14 @@ function IonRP.Buddy:OpenMenu()
   
   -- List current buddies
   local hasBuddies = false
-  for steamID, _ in pairs(ply.IonRP_Buddies) do
+  for steamID, permissions in pairs(ply.IonRP_Buddies) do
     hasBuddies = true
     local buddyName = GetBuddyName(steamID)
     local isOnline = buddyName ~= "Unknown (Offline)"
     
     local buddyCard = vgui.Create("DPanel", buddyScroll)
     buddyCard:SetPos(0, yPos)
-    buddyCard:SetSize(320, 50)
+    buddyCard:SetSize(320, 90)
     
     buddyCard.Paint = function(self, w, h)
       local col = self:IsHovered() and Colors.Hover or Color(45, 45, 55, 200)
@@ -146,10 +146,58 @@ function IonRP.Buddy:OpenMenu()
       
       -- Status indicator
       local statusCol = isOnline and Colors.AccentGreen or Colors.TextMuted
-      draw.RoundedBox(3, 10, h/2 - 3, 6, 6, statusCol)
+      draw.RoundedBox(3, 10, 15, 6, 6, statusCol)
       
       -- Name
-      draw.SimpleText(buddyName, "DermaDefaultBold", 25, h/2, Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+      draw.SimpleText(buddyName, "DermaDefaultBold", 25, 15, Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    end
+    
+    -- Vehicle access checkbox
+    local vehicleCheck = vgui.Create("DCheckBoxLabel", buddyCard)
+    vehicleCheck:SetPos(25, 35)
+    vehicleCheck:SetText("Access Vehicles")
+    vehicleCheck:SetFont("DermaDefault")
+    vehicleCheck:SetTextColor(Colors.Text)
+    vehicleCheck:SetValue(permissions.vehicles or false)
+    vehicleCheck:SizeToContents()
+    
+    vehicleCheck.OnChange = function(self, value)
+      local newPermissions = {
+        vehicles = value,
+        properties = permissions.properties or false
+      }
+      
+      net.Start("IonRP_Buddy_UpdatePermissions")
+        net.WriteString(steamID)
+        net.WriteTable(newPermissions)
+      net.SendToServer()
+      
+      -- Update local cache
+      permissions.vehicles = value
+    end
+    
+    -- Property access checkbox
+    local propertyCheck = vgui.Create("DCheckBoxLabel", buddyCard)
+    propertyCheck:SetPos(25, 55)
+    propertyCheck:SetText("Access Properties")
+    propertyCheck:SetFont("DermaDefault")
+    propertyCheck:SetTextColor(Colors.Text)
+    propertyCheck:SetValue(permissions.properties or false)
+    propertyCheck:SizeToContents()
+    
+    propertyCheck.OnChange = function(self, value)
+      local newPermissions = {
+        vehicles = permissions.vehicles or false,
+        properties = value
+      }
+      
+      net.Start("IonRP_Buddy_UpdatePermissions")
+        net.WriteString(steamID)
+        net.WriteTable(newPermissions)
+      net.SendToServer()
+      
+      -- Update local cache
+      permissions.properties = value
     end
     
     -- Remove button
@@ -171,7 +219,7 @@ function IonRP.Buddy:OpenMenu()
       net.SendToServer()
     end
     
-    yPos = yPos + 55
+    yPos = yPos + 95
   end
   
   if not hasBuddies then

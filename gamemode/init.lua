@@ -71,6 +71,7 @@ include("commands/sv_rank_commands.lua")
 include("commands/sv_inventory_commands.lua")
 include("commands/sv_shop_commands.lua")
 include("commands/sv_garage_commands.lua")
+include("commands/sv_admin_commands.lua")
 
 -- Items
 include("item/sh_item.lua")

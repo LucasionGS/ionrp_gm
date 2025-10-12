@@ -56,8 +56,8 @@ local function CanAccessPropertyDoor(ply, property)
     return true
   end
   
-  --- Check if owner is buddy/friend
-  if IsValid(property.owner) and property.owner:IsBuddy(ply) then
+  --- Check if owner is buddy/friend with property permission
+  if IsValid(property.owner) and property.owner:HasBuddyPermission(ply, "properties") then
     return true
   end
   
@@ -201,10 +201,10 @@ local function Action(swep, lock)
     local vehicleData = IonRP.Vehicles.Active[ent:EntIndex()]
     if not vehicleData then return end
     
-    --- Check if player owns the vehicle or is a buddy of the owner
+    --- Check if player owns the vehicle or is a buddy with vehicle permission
     local canAccess = vehicleData.owner == ply
     if not canAccess and IsValid(vehicleData.owner) then
-      canAccess = vehicleData.owner:IsBuddy(ply)
+      canAccess = vehicleData.owner:HasBuddyPermission(ply, "vehicles")
     end
     
     if not canAccess then

@@ -194,9 +194,33 @@ if SERVER then
   end
 
   --- Get all buddy steam IDs for this player
-  --- @return table<string, boolean> # Table of steam IDs
+  --- @return table<string, table|boolean> # Table of steam IDs to permissions
   function plyMeta:GetBuddies()
     return self.IonRP_Buddies or {}
+  end
+  
+  --- Check if a player has a specific buddy permission
+  --- @param targetPly Player The buddy player to check
+  --- @param permission string The permission to check ("vehicles" or "properties")
+  --- @return boolean # Whether the buddy has the permission
+  function plyMeta:HasBuddyPermission(targetPly, permission)
+    if not IsValid(targetPly) or not self.IonRP_Buddies then return false end
+    
+    local targetSteamID = targetPly:SteamID64()
+    local buddyData = self.IonRP_Buddies[targetSteamID]
+    
+    -- Not a buddy
+    if not buddyData then return false end
+    
+    -- Legacy format: true means all permissions
+    if buddyData == true then return true end
+    
+    -- Permission-based format: check specific permission
+    if type(buddyData) == "table" then
+      return buddyData[permission] == true
+    end
+    
+    return false
   end
 
   util.AddNetworkString("Player_Send_Notification")
