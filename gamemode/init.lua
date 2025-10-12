@@ -114,6 +114,12 @@ include("garage/sh_garage.lua")
 include("garage/sv_garage.lua")
 include("garage/sv_garage_vehicles.lua")
 
+-- License System
+AddCSLuaFile("license/sh_license.lua")
+AddCSLuaFile("license/cl_license.lua")
+include("license/sh_license.lua")
+include("license/sv_license.lua")
+
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")
 

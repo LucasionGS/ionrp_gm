@@ -143,6 +143,43 @@ if SERVER then
     return self:GetNWString("IonRP_LastName", "Unknown")
   end
 
+  --- Get all licenses owned by the player
+  --- @return table<string, LicenseInstance> # Table of license instances keyed by identifier
+  function plyMeta:GetLicenses()
+    return self.IonRP_Licenses or {}
+  end
+
+  --- Check if player has a specific license (regardless of state)
+  --- @param licenseIdentifier string The license identifier
+  --- @return boolean # True if player owns the license
+  function plyMeta:HasLicense(licenseIdentifier)
+    return self.IonRP_Licenses and self.IonRP_Licenses[licenseIdentifier] ~= nil
+  end
+
+  --- Get the state of a specific license
+  --- @param licenseIdentifier string The license identifier
+  --- @return "active"|"suspended"|nil # License state or nil if not owned
+  function plyMeta:GetLicenseState(licenseIdentifier)
+    if not self.IonRP_Licenses or not self.IonRP_Licenses[licenseIdentifier] then
+      return nil
+    end
+    return self.IonRP_Licenses[licenseIdentifier].state
+  end
+
+  --- Check if player has an active and valid license
+  --- @param licenseIdentifier string The license identifier
+  --- @return boolean # True if license is active and valid
+  function plyMeta:HasValidLicense(licenseIdentifier)
+    if not self.IonRP_Licenses or not self.IonRP_Licenses[licenseIdentifier] then
+      return false
+    end
+    
+    local licenseType = IonRP.Licenses.List[licenseIdentifier]
+    if not licenseType then return false end
+    
+    return LICENSE:IsValid(self.IonRP_Licenses[licenseIdentifier])
+  end
+
   util.AddNetworkString("Player_Send_Notification")
   --- Send a notification to a player
   --- @param text string The notification text

@@ -134,6 +134,11 @@ function IonRP.Vehicles:SV_PurchaseVehicle(ply, vehicleIdentifier, callback)
     return
   end
 
+  if ply:GetLicenseState("license_driver") ~= "active" then
+    if callback then callback(false, "You need a valid driver's license to purchase vehicles") end
+    return
+  end
+
   local vehicleBase = IonRP.Vehicles.List[vehicleIdentifier]
   if not vehicleBase then
     if callback then callback(false, "Invalid vehicle identifier") end

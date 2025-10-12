@@ -56,5 +56,8 @@ include("physgun/sh_physgun.lua")
 include("garage/sh_garage.lua")
 include("garage/cl_garage.lua")
 include("garage/cl_garage_vehicles.lua")
+-- License System
+include("license/sh_license.lua")
+include("license/cl_license.lua")
 -- IonSys (Admin Panel)
 include("ionsys/cl_ionsys.lua")
