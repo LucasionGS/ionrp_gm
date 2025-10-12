@@ -40,11 +40,14 @@ function SHOP:New(identifier, name, description)
 end
 
 --- Add an item to the shop
---- @param identifier string Item identifier
+--- @param identifier string|ITEM Item identifier
 --- @param buyPrice number|nil Buy price (nil = can't buy from shop)
 --- @param sellPrice number|nil Sell price (nil = can't sell to shop)
 --- @return Shop
 function SHOP:AddItem(identifier, buyPrice, sellPrice)
+  if type(identifier) == "table" and identifier.identifier then
+    identifier = identifier.identifier
+  end
   table.insert(self.items, {
     identifier = identifier,
     buyPrice = buyPrice,

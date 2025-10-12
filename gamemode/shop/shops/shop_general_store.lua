@@ -11,11 +11,12 @@ shop:SetTaxRate(0.05) -- 5% tax
 -- You can set buyPrice to nil to make it unsellable
 -- You can set sellPrice to nil to make it unbuyable from players
 
-shop:AddItem("item_stick", 50, 25)        -- Can buy for $50, sell for $25
-shop:AddItem("item_stempack", 100, 50)    -- Medical item
-shop:AddItem("item_pistol_ammo", 30, 15)  -- Ammo
-shop:AddItem("item_smg_ammo", 40, 20)
-shop:AddItem("item_rifle_ammo", 50, 25)
-shop:AddItem("item_357_ammo", 60, 30)
+shop:AddItem(ITEM_STICK, 50, 25)        -- Can buy for $50, sell for $25
+shop:AddItem(ITEM_STEMPACK, 100, 50)    -- Medical item
+shop:AddItem(ITEM_PISTOL_AMMO, 30, 15)  -- Ammo
+shop:AddItem(ITEM_SMG_AMMO, 40, 20)
+shop:AddItem(ITEM_RIFLE_AMMO, 50, 25)
+shop:AddItem(ITEM_357_AMMO, 60, 30)
+shop:AddItem(ITEM_AK47, 6000, 2000)
 
 print("[IonRP Shop] Loaded: General Store")

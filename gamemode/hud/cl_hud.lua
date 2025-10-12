@@ -148,39 +148,84 @@ function GM:HUDShouldDraw(name)
 end
 
 --[[
-  Draw information about the entity the player is looking at
+  Draw player names above their heads for all nearby players
 --]]
 function GM:HUDDrawTargetID()
-  local ply = LocalPlayer()
-  local trace = ply:GetEyeTrace()
+  local localPly = LocalPlayer()
+  if not IsValid(localPly) then return end
+  
+  local eyePos = localPly:EyePos()
 
-  if not IsValid(trace.Entity) then return end
-  if trace.Entity:IsPlayer() then
-    --- @type Player
-    local targetPly = trace.Entity
-    local pos = targetPly:EyePos()
+  for _, ply in ipairs(player.GetAll()) do
+    if ply == localPly or not ply:Alive() or ply:Crouching() then continue end
 
-    local screenPos = pos:ToScreen()
-    local x, y = screenPos.x, screenPos.y
-    
-    -- Get player info
-    local name = targetPly.GetRPName and targetPly:GetRPName() or targetPly:Nick()
-    local rankName = targetPly.GetRankName and targetPly:GetRankName() or ""
-    local rankColor = targetPly.GetRankColor and targetPly:GetRankColor() or Color(200, 200, 200)
-    local health = targetPly:Health()
-    
-    -- Draw rank (if not User)
-    local yOffset = y
-    if rankName ~= "" and rankName ~= "User" then
-      draw.SimpleText(rankName, "DermaDefault", x, yOffset, rankColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-      yOffset = yOffset + 15
+    local distance = ply:GetPos():Distance(eyePos)
+
+    if distance < 250 then
+      local isHandcuffed = ply.IsHandcuffed and ply:IsHandcuffed() or false
+      local pos = ply:GetPos() + Vector(0, 0, 75) -- Adjust the Z value to change the height of the text
+      -- +10 in the direction the player is looking
+      pos = pos + ply:GetAimVector() * 10
+      local screenPos = pos:ToScreen()
+      local playerName = ply.GetRPName and ply:GetRPName() or ply:Nick()
+      local wantedLevel = ply.GetWantedLevel and ply:GetWantedLevel() or 0
+
+      local traceData = {
+        start = eyePos,
+        endpos = pos,
+        filter = {localPly, ply}
+      }
+
+      local trace = util.TraceLine(traceData)
+
+      local alpha = 255 * (1 - distance / 250)
+      if not trace.HitWorld then
+        surface.SetFont("DermaLarge")
+        local w, h = surface.GetTextSize(playerName)
+
+        surface.SetTextColor(255, 255, 255, alpha)
+        surface.SetTextPos(screenPos.x - w / 2, screenPos.y - h / 2)
+        surface.DrawText(playerName)
+
+        -- Draw organization if set (TODO: make orgs work)
+        local org = ply:GetNWString("organization", "")
+        if org and org ~= "" then
+          surface.SetFont("DermaDefault")
+
+          local w, h = surface.GetTextSize(org)
+
+          surface.SetTextColor(0, 84, 201, alpha)
+          surface.SetTextPos(screenPos.x - w / 2, screenPos.y - h / 2 + 30)
+          surface.DrawText(org)
+        end
+      end
+
+      -- Draw arrested status or wanted level
+      if isHandcuffed then
+        -- Draw "Arrested" over the name
+        surface.SetFont("DermaLarge")
+        local w, h = surface.GetTextSize("Arrested")
+
+        surface.SetTextColor(255, 0, 0, alpha)
+        surface.SetTextPos(screenPos.x - w / 2, screenPos.y - h / 2 - 30)
+        surface.DrawText("Arrested")
+      elseif wantedLevel > 0 then
+        -- Draw wanted level in stars
+        local starSize = 32
+        local spacing = 4
+        local x = screenPos.x - ((wantedLevel / 2) * (starSize + spacing / 2)) - spacing
+        local y = screenPos.y - 50
+
+        surface.SetDrawColor(255, 255, 255, alpha)
+        for i = 1, wantedLevel do
+          local starIcon = Material("icon16/star.png")
+          surface.SetMaterial(starIcon)
+          surface.DrawTexturedRect(x, y, starSize, starSize)
+
+          x = x + starSize + spacing
+        end
+      end
     end
-
-    -- Draw player name
-    draw.SimpleText(name, "DermaDefault", x, yOffset, Color(255, 255, 255), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-
-    -- Draw player health
-    draw.SimpleText("Health: " .. health, "DermaDefault", x, yOffset + 15, Color(255, 0, 0), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
 end
 

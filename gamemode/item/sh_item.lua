@@ -96,7 +96,8 @@ if SERVER then
 
     if self.type == "weapon" and self.weaponClass then
       self:_SV_EquipAsWeapon();
-      return false -- Don't consume the item, it's now equipped
+      -- return false -- Don't consume the item, it's now equipped
+      return true -- For now, we consume it until a better equipment system is in place
     end
 
     print("Using misc item: " .. self.name .. " - Not implemented.")
