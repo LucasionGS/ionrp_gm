@@ -23,6 +23,8 @@ AddCSLuaFile("scoreboard/cl_scoreboard.lua")
 AddCSLuaFile("developer/cl_model_explorer.lua")
 -- Items
 AddCSLuaFile("item/sh_item.lua")
+-- Recipes
+AddCSLuaFile("item/sh_recipe.lua")
 -- Jobs
 AddCSLuaFile("job/sh_job.lua")
 -- Vehicles
@@ -76,6 +78,9 @@ include("commands/sv_drug_commands.lua")
 
 -- Items
 include("item/sh_item.lua")
+
+-- Recipes
+include("item/sh_recipe.lua")
 
 -- Jobs
 include("job/sh_job.lua")

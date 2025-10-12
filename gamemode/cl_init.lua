@@ -31,6 +31,8 @@ include("scoreboard/cl_scoreboard.lua")
 include("developer/cl_model_explorer.lua")
 -- Items
 include("item/sh_item.lua")
+-- Reciples
+include("item/sh_recipe.lua")
 -- Jobs
 include("job/sh_job.lua")
 -- Vehicles
