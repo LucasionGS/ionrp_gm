@@ -569,6 +569,50 @@ function IonRP.Properties:SV_PurchaseProperty(ply, propertyId, callback)
     ply:Nick(), property.name, property.id, IonRP.Util:FormatMoney(property.price)))
 end
 
+--- Sell a property back to the bank for 25% of the purchase price
+--- @param ply Player The player selling the property
+--- @param propertyId number The property ID to sell
+--- @param callback function|nil Callback function(success, message)
+function IonRP.Properties:SV_SellProperty(ply, propertyId, callback)
+  if not IsValid(ply) then
+    if callback then callback(false, "Invalid player") end
+    return
+  end
+  
+  -- Get property
+  --- @type Property|nil
+  local property = self.List[propertyId]
+  if not property then
+    if callback then callback(false, "Property not found") end
+    return
+  end
+  
+  -- Check if player owns this property
+  if not property.owner or property.owner ~= ply then
+    if callback then callback(false, "You do not own this property") end
+    return
+  end
+  
+  -- Calculate sell price (25% of original price)
+  local sellPrice = math.floor(property.price * 0.25)
+  
+  -- Add money to player's bank
+  local currentBank = ply:GetBank()
+  ply:SetBank(currentBank + sellPrice)
+  
+  -- Remove owner
+  property:SetOwner(nil)
+  
+  -- Success callback
+  if callback then
+    callback(true, string.format("Sold %s for %s (25%% of purchase price)", 
+      property.name, IonRP.Util:FormatMoney(sellPrice)))
+  end
+  
+  print(string.format("[IonRP Properties] %s sold property '%s' (ID: %d) for %s", 
+    ply:Nick(), property.name, property.id, IonRP.Util:FormatMoney(sellPrice)))
+end
+
 --- Hook: Initialize on map load
 hook.Add("InitPostEntity", "IonRP_Properties_LoadMap", function()
   timer.Simple(1, function()

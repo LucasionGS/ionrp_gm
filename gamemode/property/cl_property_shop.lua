@@ -459,7 +459,9 @@ function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
     buyBtn.PulseDirection = 1
 
     local isOwned = property.owner and IsValid(property.owner)
+    local isOwnedByPlayer = isOwned and property.owner == ply
     local canAfford = ply:GetBank() >= property.price and not isOwned
+    local canSell = isOwnedByPlayer
 
     buyBtn.Paint = function(self, w, h)
       local isHovered = self:IsHovered()
@@ -474,10 +476,23 @@ function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
         self.PulseDirection = 1
       end
 
-      local col = canAfford and cfg.Colors.ButtonBuy or Color(70, 70, 80, 220)
-      local hoverCol = canAfford and cfg.Colors.ButtonBuyHover or Color(80, 80, 90, 240)
+      -- Determine button colors based on action
+      local col, hoverCol
+      if canSell then
+        -- Sell button colors (red/orange)
+        col = Color(220, 80, 80, 240)
+        hoverCol = Color(240, 100, 100, 255)
+      elseif canAfford then
+        -- Buy button colors (green)
+        col = cfg.Colors.ButtonBuy
+        hoverCol = cfg.Colors.ButtonBuyHover
+      else
+        -- Disabled colors (gray)
+        col = Color(70, 70, 80, 220)
+        hoverCol = Color(80, 80, 90, 240)
+      end
 
-      if isHovered and canAfford then
+      if isHovered and (canAfford or canSell) then
         col = hoverCol
       end
 
@@ -487,10 +502,10 @@ function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
       -- Button background
       draw.RoundedBox(10, 0, 0, w, h, col)
 
-      -- Pulse glow effect for affordable items
-      if canAfford then
-        surface.SetDrawColor(cfg.Colors.ButtonBuy.r, cfg.Colors.ButtonBuy.g, cfg.Colors.ButtonBuy.b,
-          self.PulseAlpha * 0.5)
+      -- Pulse glow effect for actionable buttons
+      if canAfford or canSell then
+        local glowColor = canSell and Color(220, 80, 80) or cfg.Colors.ButtonBuy
+        surface.SetDrawColor(glowColor.r, glowColor.g, glowColor.b, self.PulseAlpha * 0.5)
         surface.DrawOutlinedRect(0, 0, w, h, 2)
 
         -- Inner highlight
@@ -498,31 +513,48 @@ function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
         surface.DrawRect(5, 5, w - 10, 2)
       end
 
+      -- Button text
       local text = "PURCHASE PROPERTY"
-      if isOwned then
-        text = "ALREADY OWNED"
+      if canSell then
+        text = "SELL PROPERTY"
+      elseif isOwned then
+        text = "OWNED BY ANOTHER"
       elseif not canAfford then
         text = "INSUFFICIENT FUNDS"
       end
 
-      local textCol = canAfford and Color(255, 255, 255) or Color(180, 180, 190)
+      local textCol = (canAfford or canSell) and Color(255, 255, 255) or Color(180, 180, 190)
 
       -- Text shadow
-      if canAfford then
+      if canAfford or canSell then
         draw.SimpleText(text, "DermaDefaultBold", w / 2 + 1, h / 2 - 9, Color(0, 0, 0, 150), TEXT_ALIGN_CENTER,
           TEXT_ALIGN_CENTER)
       end
       draw.SimpleText(text, "DermaDefaultBold", w / 2, h / 2 - 10, textCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-      -- Price
-      local priceCol = canAfford and Color(230, 255, 230) or Color(160, 160, 170)
-      draw.SimpleText(IonRP.Util:FormatMoney(property.price), "DermaDefault", w / 2, h / 2 + 10, priceCol,
+      -- Price display
+      local priceText
+      if canSell then
+        local sellPrice = math.floor(property.price * 0.25)
+        priceText = "Sell for " .. IonRP.Util:FormatMoney(sellPrice) .. " (25%)"
+      else
+        priceText = IonRP.Util:FormatMoney(property.price)
+      end
+      
+      local priceCol = (canAfford or canSell) and Color(230, 255, 230) or Color(160, 160, 170)
+      draw.SimpleText(priceText, "DermaDefault", w / 2, h / 2 + 10, priceCol,
         TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     buyBtn.DoClick = function()
+      if canSell then
+        -- Show sell confirmation
+        self:ShowSellConfirmation(property)
+        return
+      end
+      
       if isOwned then
-        chat.AddText(Color(255, 100, 100), "[IonRP] ", Color(255, 255, 255), "This property is already owned!")
+        chat.AddText(Color(255, 100, 100), "[IonRP] ", Color(255, 255, 255), "This property is owned by another player!")
         surface.PlaySound("buttons/button10.wav")
         return
       end
@@ -533,7 +565,7 @@ function IonRP.PropertyShop.UI:PopulatePropertyList(parent, properties)
         return
       end
 
-      -- Show confirmation dialog
+      -- Show purchase confirmation dialog
       self:ShowPurchaseConfirmation(property)
     end
   end
@@ -686,6 +718,153 @@ function IonRP.PropertyShop.UI:ShowPurchaseConfirmation(property)
 
   confirmBtn.DoClick = function()
     net.Start("IonRP_PropertyShop_Purchase")
+    net.WriteInt(property.id, 32)
+    net.SendToServer()
+    surface.PlaySound("buttons/button15.wav")
+    dialog:Close()
+    self:Close()
+  end
+end
+
+--- Show sell confirmation dialog
+--- @param property Property The property to sell
+function IonRP.PropertyShop.UI:ShowSellConfirmation(property)
+  local cfg = self.Config
+  local sellPrice = math.floor(property.price * 0.25)
+
+  local dialog = vgui.Create("DFrame")
+  dialog:SetSize(450, 250)
+  dialog:Center()
+  dialog:SetTitle("")
+  dialog:SetDraggable(false)
+  dialog:ShowCloseButton(false)
+  dialog:MakePopup()
+
+  dialog.Paint = function(self, w, h)
+    -- Shadow
+    for i = 1, 4 do
+      local alpha = 50 - (i * 10)
+      draw.RoundedBox(10, -i, -i, w + (i * 2), h + (i * 2), Color(0, 0, 0, alpha))
+    end
+
+    -- Background
+    draw.RoundedBox(10, 0, 0, w, h, cfg.Colors.Background)
+
+    -- Gradient overlay (red-tinted for sell)
+    local headerCol = Color(80, 30, 30, 255)
+    surface.SetDrawColor(headerCol)
+    surface.DrawRect(0, 0, w, 60)
+
+    -- Border glow (red for sell)
+    surface.SetDrawColor(220, 80, 80)
+    surface.DrawOutlinedRect(0, 0, w, h, 2)
+
+    surface.SetDrawColor(220, 80, 80, 40)
+    surface.DrawOutlinedRect(1, 1, w - 2, h - 2, 1)
+  end
+
+  -- Title
+  local title = vgui.Create("DLabel", dialog)
+  title:SetPos(16, 16)
+  title:SetText("Confirm Sale")
+  title:SetFont("DermaLarge")
+  title:SetTextColor(cfg.Colors.Text)
+  title:SizeToContents()
+
+  -- Message
+  local message = vgui.Create("DLabel", dialog)
+  message:SetPos(16, 55)
+  message:SetWide(418)
+  message:SetText(string.format("Are you sure you want to sell %s for %s?",
+    property.name, IonRP.Util:FormatMoney(sellPrice)))
+  message:SetFont("DermaDefault")
+  message:SetTextColor(cfg.Colors.TextDim)
+  message:SetWrap(true)
+  message:SetAutoStretchVertical(true)
+
+  -- Warning
+  local warning = vgui.Create("DLabel", dialog)
+  warning:SetPos(16, 110)
+  warning:SetWide(418)
+  warning:SetText(string.format(
+    "You will receive 25%% of the original purchase price (%s). This action cannot be undone.",
+    IonRP.Util:FormatMoney(sellPrice)))
+  warning:SetFont("DermaDefault")
+  warning:SetTextColor(Color(255, 200, 100))
+  warning:SetWrap(true)
+  warning:SetAutoStretchVertical(true)
+
+  -- Buttons
+  local cancelBtn = vgui.Create("DButton", dialog)
+  cancelBtn:SetPos(16, 185)
+  cancelBtn:SetSize(200, 45)
+  cancelBtn:SetText("")
+
+  cancelBtn.Paint = function(self, w, h)
+    local isHovered = self:IsHovered()
+    local col = Color(60, 60, 70, 230)
+    if isHovered then
+      col = Color(80, 80, 90, 250)
+    end
+
+    -- Shadow
+    draw.RoundedBox(8, 1, 1, w, h, Color(0, 0, 0, 120))
+
+    -- Background
+    draw.RoundedBox(8, 0, 0, w, h, col)
+
+    -- Border
+    surface.SetDrawColor(100, 100, 110, isHovered and 200 or 120)
+    surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+    -- Text
+    draw.SimpleText("CANCEL", "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 100), TEXT_ALIGN_CENTER,
+      TEXT_ALIGN_CENTER)
+    draw.SimpleText("CANCEL", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+
+  cancelBtn.DoClick = function()
+    surface.PlaySound("buttons/button15.wav")
+    dialog:Close()
+  end
+
+  local confirmBtn = vgui.Create("DButton", dialog)
+  confirmBtn:SetPos(234, 185)
+  confirmBtn:SetSize(200, 45)
+  confirmBtn:SetText("")
+
+  confirmBtn.Paint = function(self, w, h)
+    local isHovered = self:IsHovered()
+    local col = Color(220, 80, 80, 240)
+    if isHovered then
+      col = Color(240, 100, 100, 255)
+    end
+
+    -- Shadow
+    draw.RoundedBox(8, 1, 1, w, h, Color(0, 0, 0, 120))
+
+    -- Background
+    draw.RoundedBox(8, 0, 0, w, h, col)
+
+    -- Glow effect
+    surface.SetDrawColor(220, 80, 80, isHovered and 150 or 80)
+    surface.DrawOutlinedRect(0, 0, w, h, 2)
+
+    -- Inner highlight
+    if isHovered then
+      surface.SetDrawColor(255, 255, 255, 30)
+      surface.DrawRect(5, 5, w - 10, 2)
+    end
+
+    -- Text with shadow
+    draw.SimpleText("✓ CONFIRM SALE", "DermaDefaultBold", w / 2 + 1, h / 2 + 1, Color(0, 0, 0, 150),
+      TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("✓ CONFIRM SALE", "DermaDefaultBold", w / 2, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER,
+      TEXT_ALIGN_CENTER)
+  end
+
+  confirmBtn.DoClick = function()
+    net.Start("IonRP_PropertyShop_Sell")
     net.WriteInt(property.id, 32)
     net.SendToServer()
     surface.PlaySound("buttons/button15.wav")

@@ -8,6 +8,7 @@ IonRP.PropertyShop = IonRP.PropertyShop or {}
 -- Network strings
 util.AddNetworkString("IonRP_PropertyShop_Open")
 util.AddNetworkString("IonRP_PropertyShop_Purchase")
+util.AddNetworkString("IonRP_PropertyShop_Sell")
 
 --- Open the property shop for a player
 --- @param ply Player The player to open the shop for
@@ -34,6 +35,26 @@ net.Receive("IonRP_PropertyShop_Purchase", function(len, ply)
         ply:Nick(), propertyId))
     else
       ply:ChatPrint(string.format("[IonRP] Purchase failed: %s", message))
+    end
+  end)
+end)
+
+-- Handle property sale
+net.Receive("IonRP_PropertyShop_Sell", function(len, ply)
+  if not IsValid(ply) then return end
+
+  local propertyId = net.ReadInt(32)
+
+  IonRP.Properties:SV_SellProperty(ply, propertyId, function(success, message)
+    if success then
+      ply:ChatPrint(string.format("[IonRP] %s", message))
+      ply:ChatPrint("[IonRP] Property sold successfully!")
+      
+      -- Log the sale
+      print(string.format("[IonRP Property Shop] %s sold property ID %d", 
+        ply:Nick(), propertyId))
+    else
+      ply:ChatPrint(string.format("[IonRP] Sale failed: %s", message))
     end
   end)
 end)

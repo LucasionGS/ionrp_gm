@@ -120,7 +120,7 @@ local function Action(swep, lock)
   --- Check if it's a door
   local entClass = ent:GetClass()
   if entClass == "prop_door_rotating" or entClass == "func_door" or entClass == "func_door_rotating" then
-    if distance > 125 then return end
+    if distance > 150 then return end
     
     --- Find property
     local property, doorObj = FindPropertyByDoor(ent)

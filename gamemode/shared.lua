@@ -81,7 +81,6 @@ function IonRP.Util:HexToColor(hex)
   return Color(r, g, b)
 end
 
-
 ---@class Player
 local plyMeta = FindMetaTable("Player")
 --- Get cash is in the player's wallet
@@ -143,4 +142,43 @@ if SERVER then
   function plyMeta:GetLastName()
     return self:GetNWString("IonRP_LastName", "Unknown")
   end
+
+  util.AddNetworkString("Player_Send_Notification")
+  --- Send a notification to a player
+  --- @param text string The notification text
+  --- @param duration number|nil The duration in seconds
+  --- @param type number|nil The notification type (NOTIFY_GENERIC, NOTIFY_ERROR, etc.)
+  function plyMeta:Notify(text, duration, type)
+    net.Start("Player_Send_Notification")
+      net.WriteString(text)
+      net.WriteFloat(duration or 3)
+      net.WriteInt(type or 0, 32)
+    net.Send(self)
+  end
+else
+  function plyMeta:Notify(text, duration, type)
+    notification.AddLegacy(text, type or 0, duration or 3)
+    if type == NOTIFY_ERROR then
+      surface.PlaySound("buttons/button10.wav")
+    else
+      surface.PlaySound("buttons/lightswitch2.wav")
+    end
+  end
+
+  net.Receive("Player_Send_Notification", function()
+    local text = net.ReadString()
+    local duration = net.ReadFloat()
+    local type = net.ReadInt(32)
+
+    local ply = LocalPlayer()
+
+    if not IsValid(ply) then
+      ErrorNoHalt("Invalid player.")
+      return
+    end
+
+    if not ply.Notify then return end
+
+    ply:Notify(text, duration, type)
+  end)
 end

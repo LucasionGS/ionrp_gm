@@ -189,7 +189,8 @@ if SERVER then
       if not salary then continue end
 
       ply:AddBank(salary)
-      ply:ChatPrint("You have received your salary: " .. IonRP.Util:FormatMoney(salary))
+      ply:Notify("You have received your salary: " .. IonRP.Util:FormatMoney(salary))
+      
     end
   end)
 
