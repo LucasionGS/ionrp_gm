@@ -25,6 +25,11 @@ AddCSLuaFile("developer/cl_model_explorer.lua")
 AddCSLuaFile("item/sh_item.lua")
 -- Recipes
 AddCSLuaFile("item/sh_recipe.lua")
+-- Environment System
+AddCSLuaFile("environment/sh_environment.lua")
+-- Crafting System
+AddCSLuaFile("crafting/sh_crafting.lua")
+AddCSLuaFile("crafting/cl_crafting.lua")
 -- Jobs
 AddCSLuaFile("job/sh_job.lua")
 -- Vehicles
@@ -81,6 +86,13 @@ include("item/sh_item.lua")
 
 -- Recipes
 include("item/sh_recipe.lua")
+
+-- Environment System
+include("environment/sh_environment.lua")
+
+-- Crafting System
+include("crafting/sh_crafting.lua")
+include("crafting/sv_crafting.lua")
 
 -- Jobs
 include("job/sh_job.lua")

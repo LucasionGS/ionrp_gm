@@ -33,6 +33,11 @@ include("developer/cl_model_explorer.lua")
 include("item/sh_item.lua")
 -- Reciples
 include("item/sh_recipe.lua")
+-- Environment System
+include("environment/sh_environment.lua")
+-- Crafting System
+include("crafting/sh_crafting.lua")
+include("crafting/cl_crafting.lua")
 -- Jobs
 include("job/sh_job.lua")
 -- Vehicles
