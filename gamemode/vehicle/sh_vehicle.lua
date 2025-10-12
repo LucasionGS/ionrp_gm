@@ -421,14 +421,14 @@ if SERVER then
   function VEHICLE:SV_Lock()
     if not self.entity or not IsValid(self.entity) then return end
     self.entity:Fire("lock", "", 0)
-    self.entity:EmitSound("doors/door_locked2.wav", 60, 100)
+    self.entity:EmitSound("doors/door_latch1.wav", 60, 100)
     self.entity:SetNWBool("lockedState", true)
   end
 
   function VEHICLE:SV_Unlock()
     if not self.entity or not IsValid(self.entity) then return end
     self.entity:Fire("unlock", "", 0)
-    self.entity:EmitSound("doors/door_locked1.wav", 60, 100)
+    self.entity:EmitSound("doors/door_latch3.wav", 60, 100)
     self.entity:SetNWBool("lockedState", false)
   end
 

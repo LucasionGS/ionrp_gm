@@ -205,7 +205,7 @@ local function Action(swep, lock)
     
     --- Check if player owns the vehicle
     if vehicleData.owner ~= ply then
-      -- ply:ChatPrint("[IonRP] You don't own this vehicle")
+      ply:ChatPrint("[IonRP] You don't own this vehicle")
       ent:EmitSound("doors/door_locked2.wav")
       return
     end
