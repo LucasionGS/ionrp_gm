@@ -52,6 +52,11 @@ function IonRP.Database:InitializeTables()
     IonRP.Licenses:InitializeTables()
   end
 
+  -- Initialize Buddy tables if available
+  if IonRP.Buddy and IonRP.Buddy.InitializeTables then
+    IonRP.Buddy:InitializeTables()
+  end
+
   -- Create characters table
   local query = self:query([[
         CREATE TABLE IF NOT EXISTS ionrp_characters (

@@ -120,6 +120,12 @@ AddCSLuaFile("license/cl_license.lua")
 include("license/sh_license.lua")
 include("license/sv_license.lua")
 
+-- Buddy System
+AddCSLuaFile("buddy/sh_buddy.lua")
+AddCSLuaFile("buddy/cl_buddy.lua")
+include("buddy/sh_buddy.lua")
+include("buddy/sv_buddy.lua")
+
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")
 

@@ -180,6 +180,25 @@ if SERVER then
     return LICENSE:IsValid(self.IonRP_Licenses[licenseIdentifier])
   end
 
+  --- Check if another player is this player's buddy
+  --- @param targetPly Player The player to check
+  --- @return boolean # True if they are buddies
+  function plyMeta:IsBuddy(targetPly)
+    if not IsValid(targetPly) then return false end
+    if self == targetPly then return false end
+    
+    if not self.IonRP_Buddies then return false end
+    
+    local targetSteamID = targetPly:SteamID64()
+    return self.IonRP_Buddies[targetSteamID] ~= nil
+  end
+
+  --- Get all buddy steam IDs for this player
+  --- @return table<string, boolean> # Table of steam IDs
+  function plyMeta:GetBuddies()
+    return self.IonRP_Buddies or {}
+  end
+
   util.AddNetworkString("Player_Send_Notification")
   --- Send a notification to a player
   --- @param text string The notification text

@@ -56,19 +56,17 @@ local function CanAccessPropertyDoor(ply, property)
     return true
   end
   
+  --- Check if owner is buddy/friend
+  if IsValid(property.owner) and property.owner:IsBuddy(ply) then
+    return true
+  end
+  
   --- TODO: Check if property has job restrictions (future feature)
   --- if property.jobs then
   ---   for _, jobId in ipairs(property.jobs) do
   ---     if ply:GetJob() == jobId then
   ---       return true
   ---     end
-  ---   end
-  --- end
-  
-  --- TODO: Check if owner is buddy/friend (future feature)
-  --- if IsValid(property.owner) and property.owner.IsBuddy then
-  ---   if property.owner:IsBuddy(ply) then
-  ---     return true
   ---   end
   --- end
   
@@ -203,9 +201,14 @@ local function Action(swep, lock)
     local vehicleData = IonRP.Vehicles.Active[ent:EntIndex()]
     if not vehicleData then return end
     
-    --- Check if player owns the vehicle
-    if vehicleData.owner ~= ply then
-      ply:ChatPrint("[IonRP] You don't own this vehicle")
+    --- Check if player owns the vehicle or is a buddy of the owner
+    local canAccess = vehicleData.owner == ply
+    if not canAccess and IsValid(vehicleData.owner) then
+      canAccess = vehicleData.owner:IsBuddy(ply)
+    end
+    
+    if not canAccess then
+      -- ply:ChatPrint("[IonRP] You don't have access to this vehicle")
       ent:EmitSound("doors/door_locked2.wav")
       return
     end

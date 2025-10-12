@@ -59,5 +59,8 @@ include("garage/cl_garage_vehicles.lua")
 -- License System
 include("license/sh_license.lua")
 include("license/cl_license.lua")
+-- Buddy System
+include("buddy/sh_buddy.lua")
+include("buddy/cl_buddy.lua")
 -- IonSys (Admin Panel)
 include("ionsys/cl_ionsys.lua")
