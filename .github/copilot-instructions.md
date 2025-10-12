@@ -1,11 +1,11 @@
 # IonRP Gamemode - AI Coding Instructions
 
 ## Project Overview
-Garry's Mod roleplay gamemode built on GLua with MySQL persistence, modular architecture, and comprehensive type safety via LuaLS annotations.
+Garry's Mod roleplay gamemode built on GLua (Lua 5.1) with MySQL persistence, modular architecture, and comprehensive type safety via LuaLS annotations. Features inventory, vehicle garage, property ownership, license/permit system, drug production, buddy permissions, NPC interactions, and admin tools.
 
 ## Architecture Pattern: Realm-Based Module System
 
-### File Organization
+### File Organization & Loading Order
 ```
 gamemode/
 ├── init.lua          # SERVER: AddCSLuaFile + include server modules
@@ -17,15 +17,24 @@ gamemode/
     └── sh_feature.lua    # Shared types, data structures, utility
 ```
 
-**Critical**: Files run in different realms. Use `SERVER` and `CLIENT` guards for realm-specific code in shared files. Server must `AddCSLuaFile()` for client files, then `include()` for server files.
+**Critical**: GLua has **three execution realms** - files run on different contexts:
+- `init.lua` (SERVER): Runs only on server, must `AddCSLuaFile()` for client-side files
+- `cl_init.lua` (CLIENT): Runs only on client, receives files via `AddCSLuaFile()`
+- `shared.lua` (SHARED): Runs on both, use `if SERVER then` / `if CLIENT then` guards
 
-**Example from init.lua**:
+**Loading pattern from init.lua**:
 ```lua
 AddCSLuaFile("inventory/sh_inventory.lua")  -- Send to client
 AddCSLuaFile("inventory/cl_inventory.lua")  -- Send to client
 include("inventory/sh_inventory.lua")       -- Run on server
 include("inventory/sv_inventory.lua")       -- Run on server
 ```
+
+**New features require**: 
+1. Add `AddCSLuaFile()` calls to `init.lua` for shared/client files
+2. Add `include()` calls to `init.lua` for server files  
+3. Add `include()` calls to `cl_init.lua` for client files
+4. Add `include()` calls to `shared.lua` if truly shared
 
 ## Type System: LuaLS Annotations
 
@@ -191,30 +200,48 @@ end
 
 ## Development Workflow
 
-### Running the Server
-Docker-based setup (see `docker-compose.yml`):
+### Running the Server (Docker)
+Full Docker setup with MariaDB and GMod server (see `docker-compose.yml`):
 ```bash
-docker-compose up -d    # Start MariaDB + Garry's Mod server
-docker-compose logs -f  # View logs
+docker compose up -d              # Start both services in background
+docker compose attach gmod-server # Attach to view server console
+docker compose logs -f            # View logs from all services
+docker compose restart gmod-server # Restart after gamemode changes
 ```
+
+**Environment variables** (`.env` or `docker-compose.yml`):
+- `STEAM_TOKEN` - Required for server browser listing (get from steamcommunity.com/dev/apikey)
+- `GMOD_MAP` - Current: `rp_riverden_v1a` (default spawn map)
+- `GMOD_HOSTNAME` - Server name in browser
 
 ### Database Access
+MySQL credentials in `gamemode/database/credentials.lua` (gitignored):
 ```bash
 docker exec -it ionrp-mariadb mysql -u ionrp -p ionrp
-# Password: ionrp (from credentials.lua)
+# Password: ionrp (default)
 ```
 
+**Schema management**: All tables created via `IonRP.Database:InitializeTables()` in `sv_schema.lua`
+
 ### Testing Changes
-- Edit Lua files (auto-loaded via `include()` chain)
-- Reload gamemode: `changelevel <current_map>` in server console
-- For inventory/UI: Test with `/giveitem` admin command
-- Check console for `[IonRP]` prefixed error messages
+1. **Edit Lua files** - Hot-reload via `include()` chain (some changes require restart)
+2. **Reload gamemode**: `changelevel rp_riverden_v1a` in server console (full restart)
+3. **Test commands**: Use `/giveitem`, `/setrank`, `/tp` (requires admin rank)
+4. **Check inventory**: Press `F1` (default keybind) to open inventory UI
+5. **Admin panel**: Press `F4` to open IonSys admin tools
 
 ### Debugging
-- Use `print("[Feature] Debug message")` for server logs
-- Client logs: `F8` console in GMod client
-- MySQL errors logged with query SQL for debugging
-- Network traffic: `net_graph 1` in client console
+- **Server logs**: `print("[Feature] Message")` - visible in docker attach console
+- **Client logs**: `F8` console in GMod client, look for Lua errors
+- **Database errors**: Logged with full SQL query when `PreparedQuery()` fails
+- **Network debugging**: `net_graph 1` in client console shows packet traffic
+- **Entity inspector**: Developer mode enabled - use `cl_model_explorer.lua` for 3D model testing
+
+### Common Issues
+- **Realm mismatch**: Calling server function on client crashes - check `if SERVER then` guards
+- **Missing AddCSLuaFile**: Client can't access file - add to `init.lua`
+- **Database connection**: Requires MySQLOO binary (`gmsv_mysqloo_linux.dll` in `garrysmod/lua/bin/`)
+- **Inventory not syncing**: Check network string registration and `net.Receive()` handlers
 
 ## Common Patterns
 
@@ -239,21 +266,64 @@ end)
 
 **Grid-based positioning**: Inventory uses `"x_y"` string keys for slots, e.g., `slots["5_3"]`.
 
+**Hook overrides** (gamemode files):
+```lua
+function GM:PlayerLoadout(ply)
+  -- Custom loadout logic
+  return true  -- Prevent default weapon loadout
+end
+```
+
+**Entity ownership**: Properties, vehicles, NPCs track owner via `entity.owner` (Player object or SteamID64).
+
+## System Integration Patterns
+
+### Adding a New Feature Module
+1. **Create files**: `sh_feature.lua`, `sv_feature.lua`, `cl_feature.lua` in `gamemode/feature/`
+2. **Register in init.lua**:
+   ```lua
+   AddCSLuaFile("feature/sh_feature.lua")
+   AddCSLuaFile("feature/cl_feature.lua")
+   include("feature/sh_feature.lua")
+   include("feature/sv_feature.lua")
+   ```
+3. **Register in cl_init.lua**:
+   ```lua
+   include("feature/cl_feature.lua")
+   ```
+4. **Create namespace**: `IonRP.Feature = IonRP.Feature or {}`
+5. **Add database tables**: Create `InitializeTables()` function, call from `sv_schema.lua`
+6. **Add commands**: Create `sv_feature_commands.lua`, include in `init.lua`
+
+### Custom Entities (SENT)
+- Base entity: `entities/entities/ionrp_drug_base/` (shared.lua, init.lua, cl_init.lua)
+- Set `ENT.Type = "anim"`, `ENT.Base = "base_gmodentity"`
+- Use `ENT.Spawnable = false` for base classes
+
+### Custom Weapons (SWEP)
+- Single-file: `entities/weapons/weapon_ionrp_keys.lua` with `AddCSLuaFile()` at top
+- Set `SWEP.Spawnable = true` for player access
+- Use `if SERVER then` / `if CLIENT then` for realm-specific code
+- Example: `weapon_ionrp_keys.lua` - interacts with property system via netmessages
+
 ## Important Notes
 
-- **No README.md files in features** - Use inline comments for documentation
+- **No README.md in features** - Exception: `shop/README.md` for complex system documentation
 - **Flexible rank IDs**: `SetPlayerRank()` accepts both `2` and `"Admin"` (case-insensitive)
 - **Item stacking**: Respects `stackSize` limit, splits stacks if quantity exceeds
 - **Weight validation**: Check `inventory:CanFitItem()` before adding items
-- **Immunity system**: Prevent lower ranks from affecting higher ranks
-- **MySQLOO library**: `gmsv_mysqloo_linux.dll` in `lua/bin/` (required for database)
+- **Immunity system**: Prevent lower ranks from affecting higher ranks via `actorRank > targetRank`
+- **MySQLOO library**: `gmsv_mysqloo_linux.dll` in `lua/bin/` (included in Docker image)
+- **Entity validity**: Always check `IsValid(entity)` before accessing entity methods
+- **Player disconnection**: Clean up timers with player-specific IDs to prevent leaks
 
 ## File Naming Conventions
-- `sh_<feature>.lua` - Shared code
+- `sh_<feature>.lua` - Shared code (runs on both realms)
 - `sv_<feature>.lua` - Server-only code
 - `cl_<feature>.lua` - Client-only code
-- `sh_<feature>_types.lua` - Shared type definitions
+- `sh_<feature>_types.lua` - Shared type definitions (LuaLS annotations)
 - `sv_<feature>_commands.lua` - Server commands for feature
-- `item_<name>.lua` - Item definitions
+- `item_<name>.lua` - Item definitions (in `gamemode/item/<category>/`)
+- `<entity>_<name>.lua` - Job, NPC, license, drug, vehicle definitions
 
 When adding new features, follow this modular structure and ensure proper realm separation, type annotations, and integration into `init.lua`/`cl_init.lua`.
