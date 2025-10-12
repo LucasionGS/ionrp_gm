@@ -17,6 +17,7 @@ if SERVER then
   function NPC_GARAGE_ATTENDANT:OnUse(ply, npcInstance)
     -- Send vehicle data to client
     IonRP.Garage:SendOwnedVehiclesToClient(ply)
+    IonRP.Garage:SendNearbyVehiclesToClient(ply)
     
     -- Open the garage menu after a brief delay to ensure data is synced
     timer.Simple(0.1, function()

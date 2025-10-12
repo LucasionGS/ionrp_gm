@@ -22,6 +22,9 @@ local Colors = {
 --- Stored vehicle data from server
 IonRP.Garage.PlayerVehicles = IonRP.Garage.PlayerVehicles or {}
 
+--- Stored nearby vehicles data from server
+IonRP.Garage.NearbyVehicles = IonRP.Garage.NearbyVehicles or {}
+
 --- Currently open menu frame
 IonRP.Garage.MenuFrame = nil
 
@@ -52,7 +55,7 @@ function IonRP.Garage:OpenGarageMenu()
     draw.RoundedBoxEx(8, 0, 0, w, 60, Colors.Header, true, true, false, false)
     
     -- Title
-    draw.SimpleText("🚗 My Garage", "DermaLarge", 20, 20, Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    draw.SimpleText("Your Garage", "DermaLarge", 20, 20, Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     
     -- Vehicle count
     local vehicleCount = #IonRP.Garage.PlayerVehicles
@@ -102,6 +105,47 @@ function IonRP.Garage:OpenGarageMenu()
   container:SetSpaceY(15)
   container:SetBorder(0)
   container:Dock(FILL)
+  
+  -- Show nearby vehicles section if any
+  if #self.NearbyVehicles > 0 then
+    local nearbyHeader = vgui.Create("DPanel", scroll)
+    nearbyHeader:Dock(TOP)
+    nearbyHeader:SetTall(40)
+    nearbyHeader:DockMargin(0, 0, 0, 10)
+    
+    nearbyHeader.Paint = function(self, w, h)
+      draw.RoundedBox(6, 0, 0, w, h, Colors.Header)
+      draw.SimpleText("Nearby Vehicles (Within 1000 units)", "DermaDefaultBold", 15, h / 2, 
+        Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+      draw.SimpleText("Click to return to garage", "DermaDefault", w - 15, h / 2, 
+        Colors.TextMuted, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    end
+    
+    -- Create cards for nearby vehicles
+    for _, vehicleData in ipairs(self.NearbyVehicles) do
+      self:CreateNearbyVehicleCard(container, vehicleData, frameW - 60)
+    end
+    
+    -- Spacer
+    local spacer = vgui.Create("DPanel", scroll)
+    spacer:Dock(TOP)
+    spacer:SetTall(20)
+    spacer.Paint = function() end
+  end
+  
+  -- Section header for all vehicles
+  if #self.PlayerVehicles > 0 then
+    local allVehiclesHeader = vgui.Create("DPanel", scroll)
+    allVehiclesHeader:Dock(TOP)
+    allVehiclesHeader:SetTall(40)
+    allVehiclesHeader:DockMargin(0, 0, 0, 10)
+    
+    allVehiclesHeader.Paint = function(self, w, h)
+      draw.RoundedBox(6, 0, 0, w, h, Colors.Header)
+      draw.SimpleText("All Your Vehicles", "DermaDefaultBold", 15, h / 2, 
+        Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+  end
   
   -- Check if player has vehicles
   if #self.PlayerVehicles == 0 then
@@ -230,6 +274,98 @@ function IonRP.Garage:CreateVehicleCard(parent, vehicleData, maxWidth)
   end
 end
 
+--- Create a nearby vehicle card with despawn option
+--- @param parent Panel Parent panel
+--- @param vehicleData table Vehicle data
+--- @param maxWidth number Maximum card width
+function IonRP.Garage:CreateNearbyVehicleCard(parent, vehicleData, maxWidth)
+  local cardW = math.min(350, maxWidth)
+  local cardH = 220
+  
+  local card = vgui.Create("DPanel", parent)
+  card:SetSize(cardW, cardH)
+  
+  local isHovered = false
+  
+  card.Paint = function(self, w, h)
+    local bgColor = isHovered and Colors.CardHover or Colors.Card
+    draw.RoundedBox(8, 0, 0, w, h, bgColor)
+    
+    -- Distance badge
+    draw.RoundedBox(4, w - 110, 10, 100, 25, Colors.Accent)
+    draw.SimpleText(vehicleData.distance .. " units", "DermaDefaultBold", w - 60, 22, Colors.TextDark, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+  
+  card.OnCursorEntered = function()
+    isHovered = true
+  end
+  
+  card.OnCursorExited = function()
+    isHovered = false
+  end
+  
+  -- Vehicle model preview
+  local modelPanel = vgui.Create("DModelPanel", card)
+  modelPanel:SetPos(10, 10)
+  modelPanel:SetSize(cardW - 20, 120)
+  modelPanel:SetModel(vehicleData.model)
+  modelPanel:SetFOV(50)
+  modelPanel:SetCamPos(Vector(100, 100, 50))
+  modelPanel:SetLookAt(Vector(0, 0, 0))
+  
+  function modelPanel:LayoutEntity(ent)
+    ent:SetAngles(Angle(0, RealTime() * 20, 0))
+  end
+  
+  modelPanel.Paint = function(self, w, h)
+    draw.RoundedBox(6, 0, 0, w, h, Color(20, 20, 25, 200))
+  end
+  
+  -- Vehicle name
+  local nameLabel = vgui.Create("DLabel", card)
+  nameLabel:SetPos(15, 140)
+  nameLabel:SetSize(cardW - 30, 20)
+  nameLabel:SetFont("DermaDefaultBold")
+  nameLabel:SetTextColor(Colors.Text)
+  nameLabel:SetText(vehicleData.name)
+  
+  -- Status text
+  local statusLabel = vgui.Create("DLabel", card)
+  statusLabel:SetPos(15, 160)
+  statusLabel:SetSize(cardW - 30, 16)
+  statusLabel:SetFont("DermaDefault")
+  statusLabel:SetTextColor(Colors.Success)
+  statusLabel:SetText("Currently spawned nearby")
+  
+  -- Despawn button
+  local despawnBtn = vgui.Create("DButton", card)
+  despawnBtn:SetPos(15, cardH - 40)
+  despawnBtn:SetSize(cardW - 30, 30)
+  despawnBtn:SetText("")
+  
+  despawnBtn.Paint = function(self, w, h)
+    local btnColor = self:IsHovered() and Color(240, 100, 100, 255) or Color(220, 80, 80, 240)
+    
+    draw.RoundedBox(6, 0, 0, w, h, btnColor)
+    
+    draw.SimpleText("Return to Garage", "DermaDefaultBold", w / 2, h / 2, Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+  
+  despawnBtn.DoClick = function()
+    -- Send despawn request to server
+    net.Start("IonRP_Garage_DespawnVehicle")
+    net.WriteUInt(vehicleData.entIndex, 16)
+    net.SendToServer()
+    
+    -- Close menu
+    if IsValid(IonRP.Garage.MenuFrame) then
+      IonRP.Garage.MenuFrame:Close()
+    end
+    
+    chat.AddText(Colors.Accent, "[Garage] ", Colors.Text, "Returning " .. vehicleData.name .. " to garage...")
+  end
+end
+
 --[[
     Network Receivers
 ]]--
@@ -240,6 +376,14 @@ net.Receive("IonRP_Garage_SyncVehicles", function()
   IonRP.Garage.PlayerVehicles = vehicleData
   
   print(string.format("[IonRP Garage] Received %d vehicle(s) from server", #vehicleData))
+end)
+
+--- Receive nearby vehicles data from server
+net.Receive("IonRP_Garage_SyncNearbyVehicles", function()
+  local nearbyData = net.ReadTable()
+  IonRP.Garage.NearbyVehicles = nearbyData
+  
+  print(string.format("[IonRP Garage] Found %d nearby vehicle(s)", #nearbyData))
 end)
 
 --- Open the garage menu
