@@ -62,5 +62,12 @@ include("license/cl_license.lua")
 -- Buddy System
 include("buddy/sh_buddy.lua")
 include("buddy/cl_buddy.lua")
+-- Drug System
+include("drug/sh_drug.lua")
+include("drug/cl_drug.lua")
+-- Load drug definitions
+for _, drugFile in ipairs(file.Find("ionrp/gamemode/drug/drugs/*.lua", "LUA")) do
+  include("drug/drugs/" .. drugFile)
+end
 -- IonSys (Admin Panel)
 include("ionsys/cl_ionsys.lua")

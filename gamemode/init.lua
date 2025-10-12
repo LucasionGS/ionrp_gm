@@ -72,6 +72,7 @@ include("commands/sv_inventory_commands.lua")
 include("commands/sv_shop_commands.lua")
 include("commands/sv_garage_commands.lua")
 include("commands/sv_admin_commands.lua")
+include("commands/sv_drug_commands.lua")
 
 -- Items
 include("item/sh_item.lua")
@@ -126,6 +127,22 @@ AddCSLuaFile("buddy/sh_buddy.lua")
 AddCSLuaFile("buddy/cl_buddy.lua")
 include("buddy/sh_buddy.lua")
 include("buddy/sv_buddy.lua")
+
+-- Drug System
+AddCSLuaFile("drug/sh_drug.lua")
+AddCSLuaFile("drug/cl_drug.lua")
+include("drug/sh_drug.lua")
+include("drug/sv_drug.lua")
+
+-- Load drug definitions
+print("┏━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━•")
+print("│ [IonRP Drugs] │ Loading Drug Definitions")
+for _, drugFile in ipairs(file.Find("ionrp/gamemode/drug/drugs/*.lua", "LUA")) do
+  AddCSLuaFile("drug/drugs/" .. drugFile)
+  include("drug/drugs/" .. drugFile)
+  print("│ [IonRP Drugs] │ Loaded: " .. drugFile)
+end
+print("└───────────────┴────────────────────────────────────────────────────────────────•")
 
 -- IonSys (Admin Panel)
 include("ionsys/sv_ionsys.lua")

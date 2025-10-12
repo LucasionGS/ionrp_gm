@@ -163,4 +163,22 @@ for _, misc in ipairs(file.Find("ionrp/gamemode/item/misc/*.lua", "LUA")) do
     AddCSLuaFile("misc/" .. misc)
   end
 end
+
+-- Import material items
+print("│ [IonRP Items] │ Loading material items...")
+for _, material in ipairs(file.Find("ionrp/gamemode/item/material/*.lua", "LUA")) do
+  include("material/" .. material)
+  if SERVER then
+    AddCSLuaFile("material/" .. material)
+  end
+end
+
+-- Import drug items
+print("│ [IonRP Items] │ Loading drug items...")
+for _, drug in ipairs(file.Find("ionrp/gamemode/item/drug/*.lua", "LUA")) do
+  include("drug/" .. drug)
+  if SERVER then
+    AddCSLuaFile("drug/" .. drug)
+  end
+end
 print("└───────────────┴────────────────────────────────────────────────────────────────•")

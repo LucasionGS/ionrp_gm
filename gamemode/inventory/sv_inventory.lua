@@ -283,11 +283,9 @@ function IonRP.Inventory:Save(ply, callback)
   )
 end
 
---[[
-    Get a player's inventory (creates if doesn't exist)
-    @param ply Player
-    @return Inventory|nil
-]] --
+--- Get a player's inventory (creates if doesn't exist)
+--- @param ply Player
+--- @return Inventory|nil
 function IonRP.Inventory:Get(ply)
   if not IsValid(ply) then return nil end
   return ply.IonRP_Inventory
