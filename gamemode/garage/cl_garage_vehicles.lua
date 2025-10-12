@@ -207,20 +207,22 @@ function IonRP.Garage:CreateVehicleCard(parent, vehicleData, maxWidth)
   modelPanel:SetPos(10, 10)
   modelPanel:SetSize(cardW - 20, 120)
   modelPanel:SetModel(vehicleData.model)
-  modelPanel:SetFOV(50)
-  modelPanel:SetCamPos(Vector(100, 100, 50))
-  modelPanel:SetLookAt(Vector(0, 0, 0))
+  modelPanel:SetFOV(70)
+  modelPanel:SetCamPos(Vector(250, 250, 100))
+  modelPanel:SetLookAt(Vector(0, 0, 30))
   
-  function modelPanel:LayoutEntity(ent)
-    ent:SetAngles(Angle(0, RealTime() * 20, 0))
-    
+  local ent = modelPanel:GetEntity()
+
+  if IsValid(ent) then
     -- Apply upgrades if available
+    PrintTable(vehicleData)
     if vehicleData.upgrades then
       -- Apply color if set
       if vehicleData.upgrades.color then
         local col = IonRP.Util:HexToColor(vehicleData.upgrades.color)
+        print(col)
         if col then
-          ent:SetColor(col)
+          modelPanel:SetColor(col)
         end
       end
       
@@ -231,8 +233,8 @@ function IonRP.Garage:CreateVehicleCard(parent, vehicleData, maxWidth)
     end
   end
   
-  modelPanel.Paint = function(self, w, h)
-    draw.RoundedBox(6, 0, 0, w, h, Color(20, 20, 25, 200))
+  function modelPanel:LayoutEntity(ent)
+    ent:SetAngles(Angle(0, RealTime() * 20, 0))
   end
   
   -- Vehicle name
@@ -325,20 +327,22 @@ function IonRP.Garage:CreateNearbyVehicleCard(parent, vehicleData, maxWidth)
   modelPanel:SetPos(10, 10)
   modelPanel:SetSize(cardW - 20, 120)
   modelPanel:SetModel(vehicleData.model)
-  modelPanel:SetFOV(50)
-  modelPanel:SetCamPos(Vector(100, 100, 50))
-  modelPanel:SetLookAt(Vector(0, 0, 0))
+  modelPanel:SetFOV(70)
+  modelPanel:SetCamPos(Vector(250, 250, 100))
+  modelPanel:SetLookAt(Vector(0, 0, 30))
   
-  function modelPanel:LayoutEntity(ent)
-    ent:SetAngles(Angle(0, RealTime() * 20, 0))
-    
+  local ent = modelPanel:GetEntity()
+
+  if IsValid(ent) then
     -- Apply upgrades if available
+    PrintTable(vehicleData)
     if vehicleData.upgrades then
       -- Apply color if set
       if vehicleData.upgrades.color then
         local col = IonRP.Util:HexToColor(vehicleData.upgrades.color)
+        print(col)
         if col then
-          ent:SetColor(col)
+          modelPanel:SetColor(col)
         end
       end
       
@@ -349,8 +353,8 @@ function IonRP.Garage:CreateNearbyVehicleCard(parent, vehicleData, maxWidth)
     end
   end
   
-  modelPanel.Paint = function(self, w, h)
-    draw.RoundedBox(6, 0, 0, w, h, Color(20, 20, 25, 200))
+  function modelPanel:LayoutEntity(ent)
+    ent:SetAngles(Angle(0, RealTime() * 20, 0))
   end
   
   -- Vehicle name

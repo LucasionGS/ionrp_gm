@@ -193,8 +193,6 @@ function IonRP.Garage:SendNearbyVehiclesToClient(ply)
     end
   end
 
-  PrintTable(nearbyVehicles)
-
   net.Start("IonRP_Garage_SyncNearbyVehicles")
     net.WriteTable(nearbyVehicles)
   net.Send(ply)

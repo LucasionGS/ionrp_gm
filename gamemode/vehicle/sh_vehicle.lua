@@ -293,8 +293,6 @@ if SERVER then
   --- @param keyPath string The dot-separated key path (e.g. "engine.horsepower")
   --- @return number|string|nil
   function GetKeyValueTable(tbl, keyPath)
-    -- PrintTable(tbl)
-    -- print(keyPath)
     local keys = string.Explode(".", keyPath)
     local current = tbl
     for i = 1, #keys do
@@ -302,8 +300,6 @@ if SERVER then
       local foundLayer = false
       for _, entry in ipairs(current) do
         if entry["Key"] == key then
-          -- print("Found:", entry["Key"], " " .. tostring(i) .. " out of " .. tostring(#keys))
-          -- PrintTable(entry["Value"])
           current = entry["Value"]
 
           -- if type(current) ~= "table" then
@@ -316,7 +312,6 @@ if SERVER then
       end
       if not foundLayer then
         print("Key not found:", key)
-        -- PrintTable(current)
         return nil
       end
     end
