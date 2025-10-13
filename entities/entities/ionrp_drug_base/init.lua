@@ -26,19 +26,23 @@ end
 
 --- Cleanup on removal
 function ENT:OnRemove()
-  -- Stop growth timer
-  timer.Remove("IonRP_Drug_Growth_" .. self:EntIndex())
+  -- Call drug-specific cleanup
+  local drug = IonRP.Drug:GetFromEntity(self)
+  if drug then
+    drug:SV_OnRemove(self)
+  end
   
   -- Remove from active list
   IonRP.Drug:RemoveActive(self)
-  
-  -- Remove plant entity
-  if IsValid(self.plant) then
-    self.plant:Remove()
-  end
 end
 
 --- Think loop for custom behavior
 function ENT:Think()
-  -- Can be overridden in drug definitions
+  local drug = IonRP.Drug:GetFromEntity(self)
+  if drug then
+    drug:SV_Think(self)
+  end
+  
+  self:NextThink(CurTime() + 0.1)
+  return true
 end

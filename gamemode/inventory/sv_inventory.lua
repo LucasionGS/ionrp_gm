@@ -169,7 +169,7 @@ function IonRP.Inventory:Load(_ply, inventoryID, callback)
       )
       inv.owner = ply
       inv.id = tonumber(invMeta.id)
-
+      
       -- Load inventory items
       IonRP.Database:PreparedQuery(
         "SELECT * FROM ionrp_inventory_items WHERE inventory_id = ?",
@@ -425,11 +425,11 @@ net.Receive("IonRP_UseItem", function(len, ply)
 end)
 
 -- Player disconnects - save inventory
-hook.Add("PlayerDisconnected", "IonRP_SaveInventory", function(ply)
-  if ply.IonRP_Inventory then
-    IonRP.Inventory:Save(ply)
-  end
-end)
+-- hook.Add("PlayerDisconnected", "IonRP_SaveInventory", function(ply)
+--   if ply.IonRP_Inventory then
+--     IonRP.Inventory:Save(ply)
+--   end
+-- end)
 
 -- Autosave inventories every 5 minutes
 timer.Create("IonRP_AutoSaveInventories", 300, 0, function()
@@ -458,7 +458,7 @@ end
 
 --- Give an item to the player
 --- @param itemIdentifier string
---- @param quantity number
+--- @param quantity number|nil
 --- @return boolean, string|nil
 function playerMeta:GiveItem(itemIdentifier, quantity)
   local inv = self:GetInventory()
@@ -486,8 +486,9 @@ end
 --- Remove an item from the player's inventory
 --- @param itemIdentifier string
 --- @param quantity number
+--- @param noSaveOrSync boolean|nil If true, won't save to database or sync client inventory immediately
 --- @return boolean, string|nil
-function playerMeta:TakeItem(itemIdentifier, quantity)
+function playerMeta:TakeItem(itemIdentifier, quantity, noSaveOrSync)
   local inv = self:GetInventory()
   if not inv then return false, "No inventory" end
 
@@ -502,14 +503,15 @@ function playerMeta:TakeItem(itemIdentifier, quantity)
       if success then
         quantity = quantity - removed
 
-        IonRP.Inventory:SendToClient(self)
-
-        -- Save to database
-        timer.Simple(0.5, function()
-          if IsValid(self) then
-            IonRP.Inventory:Save(self)
-          end
-        end)
+        if noSaveOrSync ~= true then
+          IonRP.Inventory:SendToClient(self)
+          -- Save to database
+          timer.Simple(0.5, function()
+            if IsValid(self) then
+              IonRP.Inventory:Save(self)
+            end
+          end)
+        end
 
         if quantity <= 0 then
           return true, nil
@@ -524,6 +526,22 @@ function playerMeta:TakeItem(itemIdentifier, quantity)
 
   return true, nil
 end
+
+--- Remove multiple items from the player's inventory
+--- @param items {itemIdentifier: string, quantity:number}[]
+--- @return boolean, string|nil
+function playerMeta:TakeItems(items)
+  local i = 1
+  for _, entry in ipairs(items) do
+    local success, err = self:TakeItem(entry.itemIdentifier, entry.quantity, #items > i)
+    if not success then
+      return false, err
+    end
+    i = i + 1
+  end
+  return true, nil
+end
+
 
 --- Check if player has an item
 --- @param itemIdentifier string

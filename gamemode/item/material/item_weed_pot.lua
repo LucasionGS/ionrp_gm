@@ -4,7 +4,7 @@ ITEM_WEED_POT = ITEM:New("item_weed_pot", "Weed Pot")
 ITEM_WEED_POT.description = "A ceramic pot used for planting weed seeds. Place it down and add a seed to start growing."
 ITEM_WEED_POT.model = "models/props_c17/pottery06a.mdl"
 ITEM_WEED_POT.weight = 2.0
-ITEM_WEED_POT.size = { 2, 2 }
+-- ITEM_WEED_POT.size = { 2, 2 }
 ITEM_WEED_POT.stackSize = 10
 ITEM_WEED_POT.type = "material"
 ITEM_WEED_POT.price = 50
@@ -46,7 +46,7 @@ function ITEM_WEED_POT:SV_Use(ply)
   spawnAng.roll = 0
   
   -- Spawn the drug entity
-  local drugEnt = IonRP.Drug:Spawn("drug_weed", spawnPos, spawnAng, true)
+  local drugEnt = IonRP.Drug:Spawn("drug_weed", spawnPos, spawnAng)
   
   if IsValid(drugEnt) then
     -- Remove the seed from inventory

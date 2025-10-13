@@ -78,9 +78,10 @@ function RECIPE:SV_Craft(ply)
     ply:TakeItem(ingredient, amount)
   end
 
-  if self.result and self:SV_OnCraft(ply) then
+  if self:SV_OnCraft(ply) and self.result then
     ply:GiveItem(self.result, self.resultAmount)
   end
+  
   return true
 end
 

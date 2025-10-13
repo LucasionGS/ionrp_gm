@@ -9,16 +9,13 @@ IonRP.Drug.Active = IonRP.Drug.Active or {}
 --- @param drugID string The drug type ID
 --- @param pos Vector Spawn position
 --- @param ang Angle|nil Spawn angle
---- @param autoGrow boolean|nil Whether to auto-start growth (default: true)
 --- @return Entity|nil # The spawned drug entity
-function IonRP.Drug:Spawn(drugID, pos, ang, autoGrow)
+function IonRP.Drug:Spawn(drugID, pos, ang)
   local drug = IonRP.Drug.List[drugID]
   if not drug then
     print("[IonRP Drug] ERROR: Unknown drug ID: " .. drugID)
     return nil
   end
-  
-  if autoGrow == nil then autoGrow = true end
   
   -- Create entity
   local ent = ents.Create("ionrp_drug_base")
@@ -32,13 +29,8 @@ function IonRP.Drug:Spawn(drugID, pos, ang, autoGrow)
   ent:SetNWString("IonRP_DrugID", drugID)
   ent:Spawn()
   
-  -- Initialize drug-specific logic
+  -- Initialize drug-specific logic (handles all setup, timers, etc.)
   drug:SV_Initialize(ent)
-  
-  -- Start growth if enabled
-  if autoGrow then
-    drug:SV_StartGrowth(ent)
-  end
   
   -- Track active drug
   IonRP.Drug.Active[ent:EntIndex()] = {
