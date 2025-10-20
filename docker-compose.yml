@@ -1,10 +1,12 @@
-version: '3.8'
-
 services:
   gmod-server:
     build: .
     container_name: ionrp-server
     restart: unless-stopped
+    
+    env_file:
+      - .env.default
+      - .env
     
     # Port mappings
     ports:
@@ -12,16 +14,13 @@ services:
       - "27015:27015/tcp"  # RCON port
     
     # Environment variables
-    environment:
-      - GMOD_PORT=27015
-      - GMOD_MAXPLAYERS=32
-      # - GMOD_MAP=rp_evocity_v33x
-      - GMOD_MAP=rp_riverden_v1a
-      - GMOD_GAMEMODE=ionrp
-      - GMOD_HOSTNAME=IonRP Development Server
-      # Get your Steam Web API key from: https://steamcommunity.com/dev/apikey
-      # This is required for your server to appear in the server browser
-      - GMOD_STEAMTOKEN=${STEAM_TOKEN:-}
+    # environment:
+    #   - GMOD_HOSTNAME=${SERVER_HOSTNAME}
+    #   - GMOD_GAMEMODE=${SERVER_GAMEMODE}
+    #   - GMOD_PORT=${SERVER_PORT}
+    #   - GMOD_MAXPLAYERS=${SERVER_MAXPLAYERS}
+    #   - GMOD_MAP=${SERVER_MAP}
+    #   - GMOD_STEAMTOKEN=${STEAM_TOKEN:-}
     
     # Bind mounts
     volumes:
@@ -68,13 +67,17 @@ services:
     image: mariadb:11.2
     container_name: ionrp-mariadb
     restart: unless-stopped
+
+    env_file:
+      - .env.default
+      - .env
     
     # Environment variables for database setup
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-ionrp_root_password_change_me}
-      - MYSQL_DATABASE=ionrp
-      - MYSQL_USER=ionrp
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-ionrp}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS:-ionrp_root_password_change_me}
+      - MYSQL_DATABASE=${DB_NAME:-ionrp}
+      - MYSQL_USER=${DB_USER:-ionrp}
+      - MYSQL_PASSWORD=${DB_PASS:-ionrp}
       - MARIADB_AUTO_UPGRADE=1
     
     # Persist database data
@@ -99,17 +102,21 @@ services:
     container_name: ionrp-phpmyadmin
     restart: unless-stopped
     
+    env_file:
+      - .env.default
+      - .env
+    
     # Port mapping - access at http://localhost:27880
     ports:
       - "27880:80"
     
     # Environment variables
     environment:
-      - PMA_HOST=mariadb
-      - PMA_PORT=3306
-      - PMA_USER=ionrp
-      - PMA_PASSWORD=${MYSQL_PASSWORD:-ionrp}
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-ionrp_root_password_change_me}
+      - PMA_HOST=${DB_HOST:-mariadb}
+      - PMA_PORT=${DB_PORT:-3306}
+      - PMA_USER=${DB_USER:-ionrp}
+      - PMA_PASSWORD=${DB_PASSWORD:-ionrp}
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS:-ionrp_root_password_change_me}
       - UPLOAD_LIMIT=300M
     
     # Connect to internal network

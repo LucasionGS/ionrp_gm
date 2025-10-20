@@ -14,22 +14,22 @@ end
     It will be excluded from your the repository if using https://github.com/LucasionGS/ionrp
     Copy this code into the file and fill in with your credentials:
     ------------------------------------------------------------
-    MYSQL_HOSTNAME = "mariadb"
-    MYSQL_USERNAME = "ionrp"
-    MYSQL_PASSWORD = "ionrp"
-    MYSQL_DATABASE = "ionrp"
-    MYSQL_SOCKET = "/var/run/mysqld/mysqld.sock" -- Used for UNIX sockets
-    MYSQL_PORT = 3306
+    DB_HOST = "mariadb"
+    DB_PORT = 3306
+    DB_NAME = "ionrp"
+    DB_USER = "ionrp"
+    DB_PASSWORD = "ionrp"
+    DB_SOCKET = "/var/run/mysqld/mysqld.sock" -- Used for UNIX sockets
     ------------------------------------------------------------
 ]] --
 
 
-local hostname = MYSQL_HOSTNAME or "mariadb"
-local username = MYSQL_USERNAME or "ionrp"
-local password = MYSQL_PASSWORD or "ionrp"
-local database = MYSQL_DATABASE or "ionrp"
-local socket   = MYSQL_SOCKET or "/var/run/mysqld/mysqld.sock"
-local port     = MYSQL_PORT or 3306
+local hostname = DB_HOST or "mariadb"
+local port     = DB_PORT or 3306
+local database = DB_NAME or "ionrp"
+local username = DB_USER or "ionrp"
+local password = DB_PASSWORD or "ionrp"
+local socket   = DB_SOCKET or "/var/run/mysqld/mysqld.sock"
 --- @type Database
 IonRP.Database = mysqloo.connect(hostname, username, password, database, port, socket)
 

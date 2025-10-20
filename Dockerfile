@@ -61,6 +61,14 @@ cd /home/steam/gmodserver\n\
     && chmod +x /home/steam/start.sh \
     && chown steam:steam /home/steam/start.sh
 
+# Generate the credentials file for the gamemode to utilize ENV variables
+# RUN mkdir -p /home/steam/gmodserver/garrysmod/cfg && echo 'DB_HOST=${DB_HOST}\n\
+# DB_PORT=${DB_PORT}\n\
+# DB_NAME=${DB_NAME}\n\
+# DB_USER=${DB_USER}\n\
+# DB_PASSWORD=${DB_PASSWORD}' > /home/steam/gmodserver/garrysmod/cfg/server_globals.cfg \
+#     && chown steam:steam /home/steam/gmodserver/garrysmod/cfg/server_globals.cfg
+
 RUN mkdir -p \
     /home/steam/gmodserver/garrysmod/cache \
     /home/steam/gmodserver/garrysmod/steamapps/workshop \
