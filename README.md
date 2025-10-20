@@ -1,6 +1,6 @@
 # IonRP - Garry's Mod Roleplay Gamemode
 
-A custom roleplay gamemode for Garry's Mod built from scratch, based on ideas and concepts from PERP.
+A custom roleplay gamemode for Garry's Mod built from scratch, highly inspired by ideas and concepts from PERP, and other gamemodes/games.
 
 The gamemode itself is called IonRP. AtomRP will remain as the community and server name. IonRP can be thought of as the backend of AtomRP.
 
