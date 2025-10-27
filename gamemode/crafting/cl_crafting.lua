@@ -377,7 +377,7 @@ end
 -- Key binding - F2 to open crafting menu
 hook.Add("PlayerButtonDown", "IonRP_Crafting_OpenMenu", function(ply, button)
   if button == KEY_F2 then
-    RunConsoleCommand("ionrp_cmd", "craft")
+    IonRP.CraftingUI:Open()
   end
 end)
 
