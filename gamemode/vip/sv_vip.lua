@@ -157,23 +157,30 @@ function IonRP.VIP:SetPlayerVIP(ply, vipRankId, admin, expiresAt, reason)
     return false, "Invalid VIP rank ID"
   end
 
-  -- Format expires_at for SQL
-  local expiresSQL = "NULL"
-  if expiresAt then
-    expiresSQL = "'" .. expiresAt .. "'"
-  end
-
   -- Remove VIP if rank is 0
   if vipRankId == 0 then
     return self:RemovePlayerVIP(ply, admin, reason)
   end
 
-  -- Update or insert VIP
+  -- Update or insert VIP (handle expires_at properly)
+  local query
+  local params
+  
+  if expiresAt then
+    query = [[INSERT INTO ionrp_player_vip (steam_id, vip_rank_id, granted_by, expires_at)
+          VALUES (?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE vip_rank_id = ?, granted_by = ?, expires_at = ?, updated_at = CURRENT_TIMESTAMP]]
+    params = { steamID, vipRankId, adminSteamID, expiresAt, vipRankId, adminSteamID, expiresAt }
+  else
+    query = [[INSERT INTO ionrp_player_vip (steam_id, vip_rank_id, granted_by, expires_at)
+          VALUES (?, ?, ?, NULL)
+          ON DUPLICATE KEY UPDATE vip_rank_id = ?, granted_by = ?, expires_at = NULL, updated_at = CURRENT_TIMESTAMP]]
+    params = { steamID, vipRankId, adminSteamID, vipRankId, adminSteamID }
+  end
+
   IonRP.Database:PreparedQuery(
-    [[INSERT INTO ionrp_player_vip (steam_id, vip_rank_id, granted_by, expires_at)
-          VALUES (?, ?, ?, ]] .. expiresSQL .. [[)
-          ON DUPLICATE KEY UPDATE vip_rank_id = ?, granted_by = ?, expires_at = ]] .. expiresSQL .. [[, updated_at = CURRENT_TIMESTAMP]],
-    { steamID, vipRankId, adminSteamID, vipRankId, adminSteamID },
+    query,
+    params,
     function(data)
       -- Update player's networked VIP
       ply:SetNWInt("IonRP_VIP", vipRankId)
@@ -296,14 +303,20 @@ end
 --- @param expiresAt string|nil ISO datetime when VIP expires
 --- @param reason string|nil Reason for the change
 function IonRP.VIP:LogVIPChange(steamID, oldVIP, newVIP, changedBy, expiresAt, reason)
-  local expiresSQL = "NULL"
+  local query
+  local params
+  
   if expiresAt then
-    expiresSQL = "'" .. expiresAt .. "'"
+    query = "INSERT INTO ionrp_vip_logs (steam_id, old_vip_rank, new_vip_rank, changed_by, expires_at, reason) VALUES (?, ?, ?, ?, ?, ?)"
+    params = { steamID, oldVIP, newVIP, changedBy, expiresAt, reason or "No reason provided" }
+  else
+    query = "INSERT INTO ionrp_vip_logs (steam_id, old_vip_rank, new_vip_rank, changed_by, expires_at, reason) VALUES (?, ?, ?, ?, NULL, ?)"
+    params = { steamID, oldVIP, newVIP, changedBy, reason or "No reason provided" }
   end
   
   IonRP.Database:PreparedQuery(
-    "INSERT INTO ionrp_vip_logs (steam_id, old_vip_rank, new_vip_rank, changed_by, expires_at, reason) VALUES (?, ?, ?, ?, " .. expiresSQL .. ", ?)",
-    { steamID, oldVIP, newVIP, changedBy, reason or "No reason provided" },
+    query,
+    params,
     function(data)
       -- Success
     end,
