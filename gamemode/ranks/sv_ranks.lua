@@ -65,6 +65,7 @@ IonRP.Ranks.Permissions = {
 
   -- Administrative
   ["manage_ranks"] = { minRank = RANK_LEAD_ADMIN, description = "Manage player ranks" },
+  ["manage_vip"] = { minRank = RANK_LEAD_ADMIN, description = "Manage player VIP ranks" },
   ["manage_jobs"] = { minRank = RANK_SUPERADMIN, description = "Manage jobs" },
   ["manage_props"] = { minRank = RANK_ADMIN, description = "Remove/manage props" },
   ["seejoinleave"] = { minRank = RANK_MODERATOR, description = "See join/leave messages" },
