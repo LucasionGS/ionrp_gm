@@ -55,6 +55,10 @@ AddCSLuaFile("garage/cl_garage.lua")
 AddCSLuaFile("ionsys/sh_ionsys.lua")
 AddCSLuaFile("ionsys/cl_ionsys.lua")
 
+-- VIP System
+AddCSLuaFile("vip/sh_vip_types.lua")
+AddCSLuaFile("vip/cl_vip.lua")
+
 -- Load shared code
 include("shared.lua")
 
@@ -64,17 +68,20 @@ include("commands/sh_commands.lua")
 -- Load database
 include("database/Database.lua")
 include("ranks/sv_ranks_schema.lua")
+include("vip/sv_vip_schema.lua")
 include("database/sv_schema.lua")
 
 -- Load server modules
 include("interface/sv_dialog.lua")
 include("interface/sv_bank.lua")
 include("ranks/sv_ranks.lua")
+include("vip/sv_vip.lua")
 include("character/sv_character.lua")
 include("developer/sv_model_explorer.lua")
 
 -- Load commands
 include("commands/sv_rank_commands.lua")
+include("commands/sv_vip_commands.lua")
 include("commands/sv_inventory_commands.lua")
 include("commands/sv_shop_commands.lua")
 include("commands/sv_garage_commands.lua")

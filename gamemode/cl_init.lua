@@ -69,6 +69,9 @@ include("license/cl_license.lua")
 -- Buddy System
 include("buddy/sh_buddy.lua")
 include("buddy/cl_buddy.lua")
+-- VIP System
+include("vip/sh_vip_types.lua")
+include("vip/cl_vip.lua")
 -- Drug System
 include("drug/sh_drug.lua")
 include("drug/cl_drug.lua")

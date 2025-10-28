@@ -57,6 +57,11 @@ function IonRP.Database:InitializeTables()
     IonRP.Buddy:InitializeTables()
   end
 
+  -- Initialize VIP tables if available
+  if IonRP.VIP and IonRP.VIP.InitializeTables then
+    IonRP.VIP:InitializeTables()
+  end
+
   -- Create characters table
   local query = self:query([[
         CREATE TABLE IF NOT EXISTS ionrp_characters (
