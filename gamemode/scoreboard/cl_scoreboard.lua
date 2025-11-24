@@ -141,10 +141,13 @@ function IonRP.Scoreboard:Open()
     draw.SimpleText("PLAYER", "DermaDefaultBold", x, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Rank
-    draw.SimpleText("RANK", "DermaDefaultBold", w - 280, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText("RANK", "DermaDefaultBold", w - 350, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+    -- VIP
+    draw.SimpleText("VIP", "DermaDefaultBold", w - 240, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Job (for RP)
-    draw.SimpleText("JOB", "DermaDefaultBold", w - 180, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText("JOB", "DermaDefaultBold", w - 140, h / 2, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Ping
     draw.SimpleText("PING", "DermaDefaultBold", w - 70, h / 2, cfg.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
@@ -277,10 +280,21 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
 
     -- Rank badge (colored for staff)
     local displayRankColor = isStaff and rankColor or cfg.Colors.TextDim
-    draw.SimpleText(rankName, "DermaDefault", w - 280, h / 2, displayRankColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(rankName, "DermaDefault", w - 350, h / 2, displayRankColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+    -- VIP status
+    local vipRank = (ply.GetVIPRank and ply:GetVIPRank()) or 0
+    if vipRank > 0 then
+      local vipData = ply.GetVIPRankData and ply:GetVIPRankData()
+      if vipData then
+        draw.SimpleText(vipData.name, "DermaDefault", w - 240, h / 2, vipData.color, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+      end
+    else
+      draw.SimpleText("-", "DermaDefault", w - 240, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
 
     -- Job name
-    draw.SimpleText(jobName, "DermaDefault", w - 180, h / 2, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(jobName, "DermaDefault", w - 140, h / 2, cfg.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Ping with better visual feedback
     local pingColor = cfg.Colors.TextDim
@@ -368,6 +382,12 @@ function IonRP.Scoreboard:CreatePlayerRow(parent, ply, index)
     menu:AddOption("Copy SteamID", function()
       SetClipboardText(self.Player:SteamID())
       chat.AddText(Color(46, 204, 113), "[IonRP] ", Color(255, 255, 255), "Copied SteamID to clipboard")
+    end):SetIcon("icon16/page_copy.png")
+    
+    -- Copy SteamID64
+    menu:AddOption("Copy SteamID64", function()
+      SetClipboardText(self.Player:SteamID64())
+      chat.AddText(Color(46, 204, 113), "[IonRP] ", Color(255, 255, 255), "Copied SteamID64 to clipboard")
     end):SetIcon("icon16/page_copy.png")
 
     -- Admin options (if player is staff)

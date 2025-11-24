@@ -3,6 +3,9 @@
     Client-side VIP display and data handling
 ]]--
 
+include("sh_vip_types.lua")
+include("sh_vip.lua")
+
 IonRP.VIP = IonRP.VIP or {}
 IonRP.VIP.Ranks = IonRP.VIP.Ranks or {}
 
@@ -29,13 +32,6 @@ net.Receive("IonRP_SendVIPData", function()
       purchasable = purchasable
     })
   end
-  
-  -- Receive player's current VIP
-  local currentVIP = net.ReadUInt(8)
-  local expiresAt = net.ReadString()
-  
-  LocalPlayer():SetNWInt("IonRP_VIP", currentVIP)
-  LocalPlayer():SetNWString("IonRP_VIP_Expires", expiresAt)
   
   print("[IonRP VIP] Received VIP data from server")
 end)

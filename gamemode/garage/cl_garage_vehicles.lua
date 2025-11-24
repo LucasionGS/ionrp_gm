@@ -196,7 +196,6 @@ function IonRP.Garage:CreateVehicleCard(parent, vehicleData, maxWidth)
 
   if IsValid(ent) then
     -- Apply upgrades if available
-    PrintTable(vehicleData)
     if vehicleData.upgrades then
       -- Apply color if set
       if vehicleData.upgrades.color then
@@ -316,7 +315,6 @@ function IonRP.Garage:CreateNearbyVehicleCard(parent, vehicleData, maxWidth)
 
   if IsValid(ent) then
     -- Apply upgrades if available
-    PrintTable(vehicleData)
     if vehicleData.upgrades then
       -- Apply color if set
       if vehicleData.upgrades.color then

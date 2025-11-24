@@ -57,6 +57,7 @@ AddCSLuaFile("ionsys/cl_ionsys.lua")
 
 -- VIP System
 AddCSLuaFile("vip/sh_vip_types.lua")
+AddCSLuaFile("vip/sh_vip.lua")
 AddCSLuaFile("vip/cl_vip.lua")
 
 -- Load shared code
