@@ -52,7 +52,7 @@ function IonRP.Character:Load(ply)
 
       -- Load inventory
       if IonRP.Inventory then
-        IonRP.Inventory:GetOrCreate(ply, function(inv)
+        IonRP.Inventory:Load(ply, function(inv)
           if inv then
             print(string.format("[IonRP] Loaded inventory for %s", ply:Nick()))
           else

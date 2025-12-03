@@ -1,899 +1,677 @@
 --[[
-    IonRP Inventory System
-    Client-side inventory UI with drag-and-drop functionality
-]] --
+    IonRP Inventory System - Client
+    Modern UI with drag & drop, tooltips, and realistic design
+]]--
 
 include("sh_inventory.lua")
 
 IonRP.InventoryUI = IonRP.InventoryUI or {}
 
--- Config
-IonRP.InventoryUI.Config = {
-  SlotSize = 64,
-  SlotPadding = 4,
-  HeaderHeight = 60,
-  FooterHeight = 40,
-  Padding = 12,
-
+-- Configuration
+local Config = {
+  SlotSize = 100,
+  SlotGap = 3,
+  TabHeight = 50,
+  EquipmentWidth = 320,
+  Padding = 15,
+  
   Colors = {
-    Background = Color(25, 25, 35, 250),
-    Header = Color(45, 35, 60, 255),
-    SlotBackground = Color(35, 35, 45, 200),
-    SlotHover = Color(55, 50, 70, 230),
-    SlotOccupied = Color(45, 45, 55, 220),
-
-    SlotInvalid = Color(80, 30, 30, 100),
-    SlotValid = Color(30, 80, 50, 100),
-
-    Divider = Color(100, 80, 120, 100),
-    Text = Color(255, 255, 255, 255),
-    TextDim = Color(200, 200, 210, 255),
-    TextMuted = Color(160, 160, 175, 255),
-    Accent = Color(120, 100, 255, 255),
-    AccentCyan = Color(100, 200, 255, 255),
-    Border = Color(60, 50, 80, 200),
+    Background = Color(10, 10, 12, 250),
+    TabBar = Color(15, 15, 18, 255),
+    TabActive = Color(25, 28, 32, 255),
+    TabInactive = Color(15, 15, 18, 200),
+    SlotEmpty = Color(18, 18, 22, 200),
+    SlotHover = Color(35, 38, 42, 220),
+    SlotOccupied = Color(22, 24, 28, 240),
+    SlotValid = Color(40, 60, 40, 180),
+    SlotInvalid = Color(60, 30, 30, 180),
+    Border = Color(40, 42, 46, 255),
+    BorderDark = Color(8, 8, 10, 255),
+    Text = Color(200, 205, 210, 255),
+    TextDim = Color(140, 145, 150, 255),
+    TextBright = Color(255, 255, 255, 255),
+    Accent = Color(80, 140, 200, 255),
+    WeightGood = Color(80, 160, 100, 255),
+    WeightWarn = Color(220, 160, 80, 255),
+    WeightBad = Color(200, 80, 80, 255),
   }
 }
 
--- Local inventory data
-IonRP.InventoryUI.CurrentInventory = nil
-IonRP.InventoryUI.DraggedItem = nil
-IonRP.InventoryUI.DraggedFrom = nil
-IonRP.InventoryUI.DraggedQuantity = nil -- How many items are being dragged
-IonRP.InventoryUI.MouseDownPos = nil    -- Track mouse position when pressed
-IonRP.InventoryUI.MouseDownTime = nil   -- Track when mouse was pressed
-IonRP.InventoryUI.MouseDownButton = nil -- Track which button was pressed
-IonRP.InventoryUI.MouseDownSlot = nil   -- Track which slot was pressed
+-- State
+local State = {
+  inventory = nil,
+  frame = nil,
+  draggedItem = nil,
+  dragStartX = nil,
+  dragStartY = nil,
+  dragQuantity = nil,
+  mouseDownSlot = nil,
+  tooltipItem = nil,
+  tooltipPos = {x = 0, y = 0}
+}
 
---[[
-    Receive inventory sync from server
-]] --
-net.Receive("IonRP_SyncInventory", function()
-  local invData = net.ReadTable()
-
-  print("[IonRP Inventory] Received inventory sync from server")
-  print(string.format("[IonRP Inventory] Size: %dx%d, Max Weight: %.1f, Items: %d",
-    invData.width, invData.height, invData.maxWeight, #invData.items))
-
-  -- Reconstruct inventory on client
-  local inv = INVENTORY:New(invData.width, invData.height, invData.maxWeight)
-
-  for _, itemData in ipairs(invData.items) do
-    local itemDef = IonRP.Items.List[itemData.identifier]
-    if itemDef then
-      inv:AddItem(itemDef, itemData.quantity, itemData.x, itemData.y)
-    else
-      print("[IonRP Inventory] Warning: Unknown item on client: " .. itemData.identifier)
+--- Receive inventory sync
+net.Receive("IonRP_Inventory_Sync", function()
+  local data = net.ReadTable()
+  
+  -- Reconstruct inventory
+  local inv = IonRP.Inventory.New(data.width, data.height, data.maxWeight)
+  
+  for _, itemData in ipairs(data.items) do
+    local item = IonRP.Items.List[itemData.identifier]
+    if item then
+      inv:AddItem(item, itemData.quantity, itemData.x, itemData.y)
     end
   end
-
-  IonRP.InventoryUI.CurrentInventory = inv
   
-  -- Store on player for shop access
-  local ply = LocalPlayer()
-  if IsValid(ply) then
-    ply.IonRP_ClientInventory = inv
-  end
+  State.inventory = inv
+  LocalPlayer().IonRP_ClientInventory = inv
   
-  print("[IonRP Inventory] Client inventory updated successfully")
-
-  -- Refresh UI if open
-  if IsValid(IonRP.InventoryUI.Frame) then
-    IonRP.InventoryUI:RefreshGrid()
+  -- Refresh UI if open - recreate grid to show changes
+  if IsValid(State.frame) and IsValid(State.gridContainer) then
+    IonRP.InventoryUI:CreateGrid(State.gridContainer)
   end
 end)
 
---[[
-    Open inventory UI (called when server sends fresh data)
-]] --
-net.Receive("IonRP_OpenInventory", function()
-  -- Wait a tiny bit for the sync data to arrive first
-  timer.Simple(0.1, function()
+--- Open inventory UI
+net.Receive("IonRP_Inventory_Open", function()
+  timer.Simple(0.05, function()
     IonRP.InventoryUI:Open()
   end)
 end)
 
---[[
-    Close inventory UI
-]] --
-net.Receive("IonRP_CloseInventory", function()
-  IonRP.InventoryUI:Close()
-end)
-
---[[
-    Open the inventory UI
-]] --
+--- Open inventory
 function IonRP.InventoryUI:Open()
-  if not self.CurrentInventory then
-    chat.AddText(Color(255, 100, 100), "[Inventory] ", Color(255, 255, 255), "No inventory data loaded")
+  if not State.inventory then
+    chat.AddText(Color(255, 100, 100), "[Inventory] ", Color(255, 255, 255), "Loading...")
     return
   end
-
-  -- If already open, close and reopen with fresh data
-  if IsValid(self.Frame) then
-    print("[IonRP Inventory] Refreshing open inventory UI")
-    self.Frame:Remove()
+  
+  if IsValid(State.frame) then
+    State.frame:Remove()
   end
-
-  local cfg = self.Config
-  local inv = self.CurrentInventory
-
-  local frameWidth = (inv.width * (cfg.SlotSize + cfg.SlotPadding)) + (cfg.Padding * 2) + cfg.SlotPadding
-  local frameHeight = (inv.height * (cfg.SlotSize + cfg.SlotPadding)) + cfg.HeaderHeight + cfg.FooterHeight * 2 +
-      (cfg.Padding * 2) + cfg.SlotPadding
-
+  
+  local inv = State.inventory
+  
+  -- Calculate dimensions
+  local gridWidth = inv.width * (Config.SlotSize + Config.SlotGap) + Config.SlotGap
+  local gridHeight = inv.height * (Config.SlotSize + Config.SlotGap) + Config.SlotGap
+  local frameW = gridWidth + Config.EquipmentWidth + Config.Padding * 3
+  local frameH = gridHeight + Config.TabHeight + Config.Padding * 2 + 30 -- 30 for instruction text
+  
   -- Main frame
-  --- @class DFrame
   local frame = vgui.Create("DFrame")
-  frame:SetSize(frameWidth, frameHeight)
+  frame:SetSize(frameW, frameH)
   frame:Center()
   frame:SetTitle("")
   frame:SetDraggable(true)
   frame:ShowCloseButton(false)
   frame:MakePopup()
-  frame:SetAlpha(0)
-  frame:AlphaTo(255, 0.2, 0)
-  self.Frame = frame
-
-  -- Check if Q key is still held down (since MakePopup captures input)
-  frame.Think = function(self)
-    if not input.IsKeyDown(KEY_Q) then
-      -- IonRP.InventoryUI:Close()
-    end
-  end
-
-  -- Custom paint
+  State.frame = frame
+  
   frame.Paint = function(self, w, h)
-    -- Shadow
-    draw.RoundedBox(8, 3, 3, w, h, Color(0, 0, 0, 150))
-
-    -- Main background
-    draw.RoundedBox(8, 0, 0, w, h, cfg.Colors.Background)
-
-    -- Accent border (cyan)
-    surface.SetDrawColor(cfg.Colors.AccentCyan)
+    -- Dark background
+    draw.RoundedBox(0, 0, 0, w, h, Config.Colors.Background)
+    
+    -- Outer border
+    surface.SetDrawColor(Config.Colors.BorderDark)
     surface.DrawOutlinedRect(0, 0, w, h, 2)
-
-    -- Top accent line
-    draw.RoundedBox(0, 0, 0, w, 3, cfg.Colors.AccentCyan)
+    
+    -- Inner border accent
+    surface.SetDrawColor(Config.Colors.Border)
+    surface.DrawOutlinedRect(2, 2, w - 4, h - 4, 1)
   end
+  
+  -- Tab bar
+  self:CreateTabBar(frame, frameW)
+  
+  -- Content container
+  local content = vgui.Create("DPanel", frame)
+  content:SetPos(0, Config.TabHeight)
+  content:SetSize(frameW, frameH - Config.TabHeight)
+  content.Paint = function() end
+  
+  -- Inventory grid (left side)
+  local gridContainer = vgui.Create("DPanel", content)
+  gridContainer:SetPos(Config.Padding, Config.Padding)
+  gridContainer:SetSize(gridWidth, gridHeight)
+  gridContainer.Paint = function(self, w, h)
+    -- Instruction text at top
+    draw.SimpleText("Scroll over an item to see it's description.", "DermaDefault", w / 2, -25, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+  end
+  
+  State.gridContainer = gridContainer -- Store reference
+  self:CreateGrid(gridContainer)
+  
+  -- Equipment panel (right side)
+  self:CreateEquipmentPanel(content, gridWidth + Config.Padding * 2, Config.Padding, Config.EquipmentWidth, gridHeight)
+  
+  -- Bottom instruction
+  local instrY = Config.TabHeight + gridHeight + Config.Padding * 2 + 10
+  frame.PaintOver = function(self, w, h)
+    draw.SimpleText("Left Click: Use | Drag: Move | Right Drag: Move 1", "DermaDefault", w / 2, h - 15, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+end
 
-  -- Header
-  local header = vgui.Create("DPanel", frame)
+--- Create tab bar
+function IonRP.InventoryUI:CreateTabBar(parent, width)
+  local tabBar = vgui.Create("DPanel", parent)
+  tabBar:SetPos(0, 0)
+  tabBar:SetSize(width, Config.TabHeight)
+  
+  tabBar.Paint = function(self, w, h)
+    draw.RoundedBox(0, 0, 0, w, h, Config.Colors.TabBar)
+    
+    -- Bottom border
+    surface.SetDrawColor(Config.Colors.BorderDark)
+    surface.DrawLine(0, h - 1, w, h - 1)
+  end
+  
+  local tabs = {"Inventory", "Mixtures", "Soda", "Genetics"}
+  local tabWidth = 120
+  local tabX = 10
+  
+  for i, tabName in ipairs(tabs) do
+    local tab = vgui.Create("DButton", tabBar)
+    tab:SetPos(tabX, 5)
+    tab:SetSize(tabWidth, Config.TabHeight - 10)
+    tab:SetText("")
+    
+    local isActive = (i == 1) -- First tab is active
+    
+    tab.Paint = function(self, w, h)
+      local bgColor = isActive and Config.Colors.TabActive or Config.Colors.TabInactive
+      
+      if self:IsHovered() and not isActive then
+        bgColor = Color(20, 22, 26, 220)
+      end
+      
+      draw.RoundedBoxEx(4, 0, 0, w, h + 4, bgColor, true, true, false, false)
+      
+      -- Border
+      surface.SetDrawColor(Config.Colors.Border)
+      surface.DrawLine(0, 0, w, 0) -- Top
+      surface.DrawLine(0, 0, 0, h) -- Left
+      surface.DrawLine(w - 1, 0, w - 1, h) -- Right
+      
+      -- Text
+      local textColor = isActive and Config.Colors.TextBright or Config.Colors.TextDim
+      draw.SimpleText(tabName, "DermaDefault", w / 2, h / 2, textColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    
+    tab.DoClick = function()
+      -- Only Inventory tab is functional for now
+      if i ~= 1 then
+        chat.AddText(Color(255, 200, 100), "[Inventory] ", Color(255, 255, 255), tabName .. " coming soon!")
+      end
+    end
+    
+    tabX = tabX + tabWidth + 5
+  end
+end
+
+--- Create equipment panel
+function IonRP.InventoryUI:CreateEquipmentPanel(parent, x, y, w, h)
+  local panel = vgui.Create("DPanel", parent)
+  panel:SetPos(x, y)
+  panel:SetSize(w, h)
+  
+  panel.Paint = function(self, pw, ph)
+    -- Background
+    draw.RoundedBox(0, 0, 0, pw, ph, Color(12, 12, 15, 240))
+    
+    -- Border
+    surface.SetDrawColor(Config.Colors.BorderDark)
+    surface.DrawOutlinedRect(0, 0, pw, ph, 1)
+    
+    -- Weapon slots section
+    local weaponY = 10
+    local slotH = 120
+    
+    -- MAIN weapon slot
+    draw.SimpleText("MAIN", "DermaDefaultBold", pw / 2, weaponY, Config.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    
+    local mainSlotY = weaponY + 25
+    draw.RoundedBox(4, 10, mainSlotY, pw - 20, slotH, Config.Colors.SlotEmpty)
+    surface.SetDrawColor(Config.Colors.Border)
+    surface.DrawOutlinedRect(10, mainSlotY, pw - 20, slotH, 1)
+    
+    -- Weapon silhouette placeholder
+    draw.SimpleText("No weapon", "DermaDefault", pw / 2, mainSlotY + slotH / 2, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    
+    -- SIDEARM weapon slot
+    local sidearmY = mainSlotY + slotH + 30
+    draw.SimpleText("SIDEARM", "DermaDefaultBold", pw / 2, sidearmY, Config.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    
+    local sidearmSlotY = sidearmY + 25
+    draw.RoundedBox(4, 10, sidearmSlotY, pw - 20, slotH, Config.Colors.SlotEmpty)
+    surface.SetDrawColor(Config.Colors.Border)
+    surface.DrawOutlinedRect(10, sidearmSlotY, pw - 20, slotH, 1)
+    
+    -- Weapon silhouette placeholder
+    draw.SimpleText("No weapon", "DermaDefault", pw / 2, sidearmSlotY + slotH / 2, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    
+    -- Weight info at bottom
+    if State.inventory then
+      local weight = State.inventory:GetWeight()
+      local maxWeight = State.inventory.maxWeight
+      local weightText = string.format("%.1f / %.1f KG", weight, maxWeight)
+      
+      local weightColor = Config.Colors.WeightGood
+      if weight > maxWeight * 0.9 then
+        weightColor = Config.Colors.WeightBad
+      elseif weight > maxWeight * 0.7 then
+        weightColor = Config.Colors.WeightWarn
+      end
+      
+      local weightY = ph - 60
+      draw.SimpleText("WEIGHT", "DermaDefault", pw / 2, weightY, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      draw.SimpleText(weightText, "DermaDefaultBold", pw / 2, weightY + 18, weightColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      
+      -- Weight bar
+      local barW = pw - 40
+      local barH = 6
+      local barX = 20
+      local barY = weightY + 40
+      
+      draw.RoundedBox(2, barX, barY, barW, barH, Color(15, 15, 18, 255))
+      
+      local fillW = math.Clamp(barW * (weight / maxWeight), 0, barW)
+      draw.RoundedBox(2, barX, barY, fillW, barH, weightColor)
+    end
+  end
+end
+
+--- Create header (deprecated - using tab bar now)
+function IonRP.InventoryUI:CreateHeader(parent, width)
+  local header = vgui.Create("DPanel", parent)
   header:Dock(TOP)
-  header:SetTall(cfg.HeaderHeight)
-  header:DockMargin(0, 0, 0, 0)
-
+  header:SetTall(Config.HeaderHeight)
+  header:DockMargin(0, 0, 0, Config.Padding)
+  
   header.Paint = function(self, w, h)
-    draw.RoundedBoxEx(8, 0, 0, w, h, cfg.Colors.Header, true, true, false, false)
-
+    draw.RoundedBox(0, 0, 0, w, h, Config.Colors.Header)
+    
+    -- Bottom border
+    surface.SetDrawColor(Config.Colors.Border)
+    surface.DrawLine(0, h - 1, w, h - 1)
+    
     -- Title
-    draw.SimpleText("INVENTORY", "DermaLarge", cfg.Padding, 10, cfg.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-
-    -- Weight display (use CurrentInventory reference to get live updates)
-    local currentInv = IonRP.InventoryUI.CurrentInventory
-    if not currentInv then return end
-
-    local currentWeight = currentInv:GetTotalWeight()
-    local maxWeight = currentInv.maxWeight
-    local weightText = string.format("Weight: %.1f / %.1f KG", currentWeight, maxWeight)
-    local weightColor = cfg.Colors.TextDim
-
-    if currentWeight > maxWeight * 0.9 then
-      weightColor = Color(255, 100, 100)
-    elseif currentWeight > maxWeight * 0.7 then
-      weightColor = Color(255, 200, 100)
+    draw.SimpleText("INVENTORY", "DermaLarge", Config.Padding, 15, Config.Colors.TextBright, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+    
+    -- Weight
+    if State.inventory then
+      local weight = State.inventory:GetWeight()
+      local maxWeight = State.inventory.maxWeight
+      local weightText = string.format("%.1f / %.1f KG", weight, maxWeight)
+      
+      local weightColor = Config.Colors.WeightGood
+      if weight > maxWeight * 0.9 then
+        weightColor = Config.Colors.WeightBad
+      elseif weight > maxWeight * 0.7 then
+        weightColor = Config.Colors.WeightWarn
+      end
+      
+      draw.SimpleText(weightText, "DermaDefault", Config.Padding, 50, weightColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+      
+      -- Weight bar
+      local barW = 200
+      local barH = 6
+      local barX = Config.Padding
+      local barY = 68
+      
+      draw.RoundedBox(2, barX, barY, barW, barH, Color(20, 20, 25, 255))
+      
+      local fillW = math.Clamp(barW * (weight / maxWeight), 0, barW)
+      draw.RoundedBox(2, barX, barY, fillW, barH, weightColor)
     end
-
-    draw.SimpleText(weightText, "DermaDefault", cfg.Padding, 36, weightColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-
-    -- Weight bar
-    local barX = cfg.Padding
-    local barY = 52
-    local barW = 200
-    local barH = 4
-
-    draw.RoundedBox(2, barX, barY, barW, barH, Color(20, 20, 30, 200))
-
-    local fillW = math.min(barW * (currentWeight / maxWeight), barW)
-    local barColor = cfg.Colors.AccentCyan
-
-    if currentWeight > maxWeight * 0.9 then
-      barColor = Color(255, 100, 100)
-    elseif currentWeight > maxWeight * 0.7 then
-      barColor = Color(255, 200, 100)
-    end
-
-    draw.RoundedBox(2, barX, barY, fillW, barH, barColor)
   end
-
+  
   -- Close button
   local closeBtn = vgui.Create("DButton", header)
-  closeBtn:SetPos(frameWidth - 40, 10)
-  closeBtn:SetSize(30, 30)
+  closeBtn:SetPos(width - Config.Padding - 35, 15)
+  closeBtn:SetSize(35, 35)
   closeBtn:SetText("")
-
+  
   closeBtn.Paint = function(self, w, h)
-    local col = cfg.Colors.Border
-    if self:IsHovered() then
-      col = Color(255, 100, 100)
-    end
-
+    local col = self:IsHovered() and Color(255, 100, 100) or Config.Colors.Border
     draw.RoundedBox(4, 0, 0, w, h, col)
-
-    -- X
-    surface.SetDrawColor(255, 255, 255)
-    surface.DrawLine(8, 8, w - 8, h - 8)
-    surface.DrawLine(w - 8, 8, 8, h - 8)
+    
+    surface.SetDrawColor(Config.Colors.TextBright)
+    surface.DrawLine(10, 10, w - 10, h - 10)
+    surface.DrawLine(w - 10, 10, 10, h - 10)
   end
-
+  
   closeBtn.DoClick = function()
     IonRP.InventoryUI:Close()
   end
-
-  -- Grid container
-  local gridContainer = vgui.Create("DPanel", frame)
-  gridContainer:Dock(FILL)
-  gridContainer:DockMargin(cfg.Padding, cfg.Padding, cfg.Padding, cfg.Padding)
-
-  gridContainer.Paint = function(self, w, h)
-    -- Grid background
-  end
-
-  -- Create grid panel
-  --- @class DPanel
-  self.GridPanel = vgui.Create("DPanel", gridContainer)
-  self.GridPanel:SetSize(
-    inv.width * (cfg.SlotSize + cfg.SlotPadding) + cfg.SlotPadding,
-    inv.height * (cfg.SlotSize + cfg.SlotPadding) + cfg.SlotPadding
-  )
-  self.GridPanel.Paint = function(self, w, h) end
-
-  -- Think hook to detect drag start
-  self.GridPanel.Think = function(self)
-    -- Check if mouse is down and hasn't started dragging yet
-    if IonRP.InventoryUI.MouseDownPos and not IonRP.InventoryUI.DraggedItem then
-      local mx, my = input.GetCursorPos()
-      local downPos = IonRP.InventoryUI.MouseDownPos
-
-      -- Calculate distance moved
-      local dx = mx - downPos.x
-      local dy = my - downPos.y
-      local distance = math.sqrt(dx * dx + dy * dy)
-
-      -- Start drag if moved more than 5 pixels
-      if distance > 5 then
-        local downSlot = IonRP.InventoryUI.MouseDownSlot
-        local downButton = IonRP.InventoryUI.MouseDownButton
-
-        if downSlot and downSlot.item then
-          if downButton == MOUSE_LEFT then
-            -- Left click = drag full stack
-            IonRP.InventoryUI.DraggedItem = downSlot.item
-            IonRP.InventoryUI.DraggedFrom = { x = downSlot.x, y = downSlot.y }
-            IonRP.InventoryUI.DraggedQuantity = downSlot.quantity
-          elseif downButton == MOUSE_RIGHT then
-            -- Right click = drag single item (or all if only 1)
-            IonRP.InventoryUI.DraggedItem = downSlot.item
-            IonRP.InventoryUI.DraggedFrom = { x = downSlot.x, y = downSlot.y }
-            IonRP.InventoryUI.DraggedQuantity = math.min(1, downSlot.quantity)
-          end
-
-          -- Clear mouse down state once drag starts
-          IonRP.InventoryUI.MouseDownPos = nil
-          IonRP.InventoryUI.MouseDownTime = nil
-          IonRP.InventoryUI.MouseDownButton = nil
-          IonRP.InventoryUI.MouseDownSlot = nil
-        end
-      end
-    end
-  end
-
-  -- Create grid slots
-  self:CreateGrid()
-
-  -- Footer
-  local footer = vgui.Create("DPanel", frame)
-  footer:Dock(BOTTOM)
-  footer:SetTall(cfg.FooterHeight)
-  footer:DockMargin(0, 0, 0, 0)
-
-  footer.Paint = function(self, w, h)
-    draw.RoundedBoxEx(8, 0, 0, w, h, cfg.Colors.Header, false, false, true, true)
-
-    -- Instructions
-    draw.SimpleText("Click: Use Item | Drag: Move Item (Left=All, Right=1)", "DermaDefault",
-      w / 2, h / 2, cfg.Colors.TextMuted, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-  end
-
-  -- Handle ESC key
-  -- frame.OnKeyCodePressed = function(self, key)
-  --   if key == KEY_ESCAPE then
-  --     IonRP.InventoryUI:Close()
-  --   end
-  -- end
 end
 
---[[
-    Create the inventory grid
-]] --
-function IonRP.InventoryUI:CreateGrid()
-  if not IsValid(self.GridPanel) or not self.CurrentInventory then return end
-
-  local cfg = self.Config
-  local inv = self.CurrentInventory
-
-  -- Clean up old model panels
-  if self.GridSlots then
-    for y = 0, inv.height - 1 do
-      if self.GridSlots[y] then
-        for x = 0, inv.width - 1 do
-          local slot = self.GridSlots[y][x]
-          if IsValid(slot) and istable(slot) then
-            -- Remove any model panels attached to this slot
-            for k, v in pairs(slot) do
-              if type(k) == "string" and string.StartsWith(k, "model_") and IsValid(v) then
-                v:Remove()
-              end
-            end
-          end
-        end
-      end
-    end
+--- Create grid
+function IonRP.InventoryUI:CreateGrid(parent)
+  if not State.inventory then return end
+  
+  local inv = State.inventory
+  local gridW = inv.width * (Config.SlotSize + Config.SlotGap) + Config.SlotGap
+  local gridH = inv.height * (Config.SlotSize + Config.SlotGap) + Config.SlotGap
+  
+  -- Clear ALL children from parent to ensure clean slate
+  if IsValid(parent) then
+    parent:Clear()
   end
-
-  self.GridPanel:Clear()
-  self.GridSlots = {}
-
-  -- Create all grid slots
+  
+  local grid = vgui.Create("DPanel", parent)
+  grid:SetSize(gridW, gridH)
+  grid:Center()
+  grid.Paint = function() end
+  
+  -- Create slot grid
+  grid.slots = {}
   for y = 0, inv.height - 1 do
-    self.GridSlots[y] = {}
-
+    grid.slots[y] = {}
     for x = 0, inv.width - 1 do
-      --- @class DPanel
-      local slot = vgui.Create("DPanel", self.GridPanel)
-      slot:SetPos(
-        cfg.SlotPadding + (x * (cfg.SlotSize + cfg.SlotPadding)),
-        cfg.SlotPadding + (y * (cfg.SlotSize + cfg.SlotPadding))
-      )
-      slot:SetSize(cfg.SlotSize, cfg.SlotSize)
-      slot:SetPaintedManually(false)
-      slot:SetDrawOnTop(true) -- Draw items on top of other slots
-      slot.GridX = x
-      slot.GridY = y
-
-      slot.Paint = function(self, w, h)
-        -- Always use the current inventory reference for real-time updates
-        local currentInv = IonRP.InventoryUI.CurrentInventory
-        if not currentInv then return end
-
-        local invSlot = currentInv:GetSlot(x, y)
-        --- @type Color|nil
-        local bgColor = cfg.Colors.SlotBackground
-        -- local bgColor = nil
-
-        -- Check if this is the origin of an item
-        local isOrigin = invSlot and invSlot.x == x and invSlot.y == y
-
-        if invSlot and invSlot.item then
-          -- bgColor = cfg.Colors.SlotOccupied
-          bgColor = nil
-        end
-
-        if self:IsHovered() and not (invSlot and invSlot.item) then
-          bgColor = cfg.Colors.SlotHover
-        end
-
-        -- Check if dragging over this slot
-        if IonRP.InventoryUI.DraggedItem and IonRP.InventoryUI.DraggedFrom then
-          -- Pass the origin position so we can ignore slots occupied by the item we're moving
-          local canFit, _ = currentInv:CanFitItem(
-            IonRP.InventoryUI.DraggedItem,
-            x, y,
-            false,
-            { x = IonRP.InventoryUI.DraggedFrom.x, y = IonRP.InventoryUI.DraggedFrom.y }
-          )
-          if canFit then
-            bgColor = cfg.Colors.SlotValid
-          else
-            bgColor = cfg.Colors.SlotInvalid
-          end
-        end
-
-        if bgColor then
-          draw.RoundedBox(4, 0, 0, w, h, bgColor)
-        end
-
-        -- Border
-        surface.SetDrawColor(cfg.Colors.Border)
-        surface.DrawOutlinedRect(0, 0, w, h, 1)
-
-        -- Items are now rendered by the overlay panel (self.ItemOverlay) to ensure proper layering
-      end
-
-      -- Mouse interaction
-      slot.OnMousePressed = function(self, mouse)
-        -- Always use the current inventory reference for real-time updates
-        local currentInv = IonRP.InventoryUI.CurrentInventory
-        if not currentInv then return end
-
-        local invSlot = currentInv:GetSlot(x, y)
-
-        if not invSlot or not invSlot.item then return end
-
-        -- Allow interaction from ANY cell the item occupies (not just origin)
-        -- Get the origin position of the item
-        local originX, originY = invSlot.x, invSlot.y
-
-        -- Check if already dragging - if so, don't start a new drag
-        if IonRP.InventoryUI.DraggedItem then
-          return -- Let OnMouseReleased handle the drop
-        end
-
-        -- Track mouse down state (don't start drag yet, wait for movement)
-        -- Use the ORIGIN position for all operations, not the clicked cell
-        local mx, my = input.GetCursorPos()
-        IonRP.InventoryUI.MouseDownPos = { x = mx, y = my }
-        IonRP.InventoryUI.MouseDownTime = SysTime()
-        IonRP.InventoryUI.MouseDownButton = mouse
-        IonRP.InventoryUI.MouseDownSlot = { x = originX, y = originY, quantity = invSlot.quantity, item = invSlot.item }
-      end
-
-      slot.OnMouseReleased = function(self, mouse)
-        -- Handle drop if we're actually dragging
-        if IonRP.InventoryUI.DraggedItem then
-          local fromPos = IonRP.InventoryUI.DraggedFrom
-          if fromPos then
-            -- Send move request to server with quantity
-            net.Start("IonRP_MoveItem")
-            net.WriteUInt(fromPos.x, 8)
-            net.WriteUInt(fromPos.y, 8)
-            net.WriteUInt(x, 8)
-            net.WriteUInt(y, 8)
-            net.WriteUInt(IonRP.InventoryUI.DraggedQuantity or 0, 16)
-            net.SendToServer()
-          end
-
-          -- Clear drag state
-          IonRP.InventoryUI.DraggedItem = nil
-          IonRP.InventoryUI.DraggedFrom = nil
-          IonRP.InventoryUI.DraggedQuantity = nil
-        elseif IonRP.InventoryUI.MouseDownSlot then
-          -- Mouse was pressed but never moved = click action
-          local downSlot = IonRP.InventoryUI.MouseDownSlot
-          local downButton = IonRP.InventoryUI.MouseDownButton
-
-          -- Get the current slot (might be any cell of a multi-cell item)
-          local currentInv = IonRP.InventoryUI.CurrentInventory
-          local invSlot = currentInv and currentInv:GetSlot(x, y)
-          local originX, originY = invSlot and invSlot.x or x, invSlot and invSlot.y or y
-
-          -- Check if we released on the same ITEM (any cell) we pressed on
-          if downSlot.x == originX and downSlot.y == originY and downButton == mouse then
-            if mouse == MOUSE_LEFT then
-              -- Left click = use item (use the origin position)
-              net.Start("IonRP_UseItem")
-              net.WriteUInt(downSlot.x, 8)
-              net.WriteUInt(downSlot.y, 8)
-              net.SendToServer()
-            elseif mouse == MOUSE_RIGHT then
-              -- Right click on single item or stack = drop a single item from the stack
-              -- TODO: implement this
-            end
-          end
-        end
-
-        -- Clear mouse down state
-        IonRP.InventoryUI.MouseDownPos = nil
-        IonRP.InventoryUI.MouseDownTime = nil
-        IonRP.InventoryUI.MouseDownButton = nil
-        IonRP.InventoryUI.MouseDownSlot = nil
-      end
-
-      self.GridSlots[y][x] = slot
+      local slot = self:CreateSlot(grid, x, y)
+      grid.slots[y][x] = slot
     end
   end
-
-  -- Store model panels for cleanup
-  self.ModelPanels = self.ModelPanels or {}
-
-  -- Helper function to render an item
-  local function RenderItem(item, invSlot, slotX, slotY, alpha)
-    alpha = alpha or 255
-    local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-    local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-
-    -- Item background with gradient effect
-    draw.RoundedBox(4, slotX + 2, slotY + 2, itemW - 4, itemH - 4, ColorAlpha(Color(50, 50, 60, 240), alpha))
-
-    -- Subtle inner highlight
-    surface.SetDrawColor(ColorAlpha(Color(70, 70, 80, 200), alpha))
-    surface.DrawOutlinedRect(slotX + 2, slotY + 2, itemW - 4, itemH - 4, 1)
-
-    -- Item name
-    local name = item.name
-    local maxNameChars = math.max(8, item.size[1] * 5)
-    if #name > maxNameChars then
-      name = string.sub(name, 1, maxNameChars - 2) .. ".."
+  
+  -- Overlay for items and drag preview
+  local overlay = vgui.Create("DPanel", grid)
+  overlay:SetSize(gridW, gridH)
+  overlay:SetMouseInputEnabled(false)
+  
+  overlay.Paint = function(self, w, h)
+    -- Draw items
+    for _, invItem in ipairs(inv:GetItems()) do
+      self:DrawItem(invItem, false)
     end
-
-    surface.SetFont("DermaDefault")
-    local nameW, nameH = surface.GetTextSize(name)
-    draw.RoundedBox(2, slotX + (itemW / 2) - (nameW / 2) - 4, slotY + 4, nameW + 8, 16,
-      ColorAlpha(Color(0, 0, 0, 200), alpha))
-    draw.SimpleText(name, "DermaDefault", slotX + itemW / 2, slotY + 6, ColorAlpha(cfg.Colors.Text, alpha),
-      TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-
-    -- Quantity badge
-    if invSlot and item.stackSize > 1 and invSlot.quantity > 1 then
-      local qtyText = "x" .. invSlot.quantity
+    
+    -- Draw dragged item
+    if State.draggedItem then
+      local mx, my = self:CursorPos()
+      self:DrawDraggedItem(State.draggedItem, mx, my)
+    end
+  end
+  
+  overlay.DrawItem = function(self, invItem, ghost)
+    local item = invItem.item
+    if not item or not item.size then return end
+    
+    local x = Config.SlotGap + invItem.x * (Config.SlotSize + Config.SlotGap)
+    local y = Config.SlotGap + invItem.y * (Config.SlotSize + Config.SlotGap)
+    local w = item.size[1] * (Config.SlotSize + Config.SlotGap) - Config.SlotGap
+    local h = item.size[2] * (Config.SlotSize + Config.SlotGap) - Config.SlotGap
+    
+    local alpha = ghost and 120 or 255
+    
+    -- Slightly darker background for occupied slots
+    draw.RoundedBox(2, x, y, w, h, ColorAlpha(Config.Colors.SlotOccupied, alpha))
+    
+    -- Darker inner border
+    surface.SetDrawColor(ColorAlpha(Config.Colors.BorderDark, alpha))
+    surface.DrawOutlinedRect(x, y, w, h, 1)
+    
+    -- Light outer border
+    surface.SetDrawColor(ColorAlpha(Config.Colors.Border, alpha))
+    surface.DrawOutlinedRect(x + 1, y + 1, w - 2, h - 2, 1)
+    
+    -- Model preview placeholder (dark area in center)
+    local iconPad = 8
+    local iconW = w - iconPad * 2
+    local iconH = h - iconPad * 2
+    if iconH > 20 then
+      draw.RoundedBox(2, x + iconPad, y + iconPad, iconW, iconH, ColorAlpha(Color(12, 12, 15), alpha))
+    end
+    
+    -- Quantity badge (top-left corner like reference image)
+    if invItem.quantity > 1 then
+      local qtyText = tostring(invItem.quantity)
       surface.SetFont("DermaDefaultBold")
-      local qtyW = surface.GetTextSize(qtyText)
-      draw.RoundedBox(3, slotX + itemW - qtyW - 12, slotY + itemH - 20, qtyW + 8, 16,
-        ColorAlpha(cfg.Colors.AccentCyan, alpha))
-      draw.SimpleText(qtyText, "DermaDefaultBold", slotX + itemW - 6, slotY + itemH - 6,
-        ColorAlpha(Color(255, 255, 255, 255), alpha), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
-    end
-
-    -- Weight display
-    if item.size[2] >= 2 or item.size[1] >= 2 then
-      local weight = invSlot and (item.weight * invSlot.quantity) or item.weight
-      local weightText = string.format("%.1fkg", weight)
-      surface.SetFont("DermaDefault")
-      local weightW = surface.GetTextSize(weightText)
-      draw.RoundedBox(2, slotX + 4, slotY + itemH - 18, weightW + 6, 14, ColorAlpha(Color(0, 0, 0, 180), alpha))
-      draw.SimpleText(weightText, "DermaDefault", slotX + 7, slotY + itemH - 16, ColorAlpha(cfg.Colors.TextMuted, alpha),
-        TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-    end
-
-    -- Item type indicator
-    local typeColor = Color(120, 120, 120)
-    if item.type == "weapon" then
-      typeColor = Color(255, 100, 100, 200)
-    elseif item.type == "consumable" then
-      typeColor = Color(100, 255, 100, 200)
-    elseif item.type == "misc" then
-      typeColor = Color(100, 150, 255, 200)
-    end
-    draw.RoundedBox(0, slotX + 2, slotY + itemH - 3, itemW - 4, 2, ColorAlpha(typeColor, alpha))
-  end
-
-  -- Create item overlay panel that renders on top of all slots
-  -- Created AFTER slots so it renders on top
-  local itemOverlay = vgui.Create("DPanel", self.GridPanel)
-  itemOverlay:SetPos(0, 0)
-  itemOverlay:SetSize(self.GridPanel:GetSize())
-  itemOverlay:SetMouseInputEnabled(false) -- Allow clicks to pass through to slots
-  itemOverlay:SetKeyboardInputEnabled(false)
-
-  -- Clean up old model panels
-  for _, mdl in pairs(self.ModelPanels or {}) do
-    if IsValid(mdl) then
-      mdl:Remove()
+      local tw, th = surface.GetTextSize(qtyText)
+      
+      -- Small dark background
+      draw.RoundedBox(0, x + 2, y + 2, tw + 6, th + 4, ColorAlpha(Color(0, 0, 0, 200), alpha))
+      draw.SimpleText(qtyText, "DermaDefaultBold", x + 5, y + 4, ColorAlpha(Config.Colors.TextBright, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     end
   end
-  self.ModelPanels = {}
-
-  -- Create model panels for each item
-  for iy = 0, inv.height - 1 do
-    for ix = 0, inv.width - 1 do
-      local invSlot = inv:GetSlot(ix, iy)
-      local isOrigin = invSlot and invSlot.x == ix and invSlot.y == iy
-
-      if isOrigin and invSlot and invSlot.item then
-        --- @type ITEM
-        local item = invSlot.item
-
-        -- Calculate position and size
-        local slotX = cfg.SlotPadding + (ix * (cfg.SlotSize + cfg.SlotPadding))
-        local slotY = cfg.SlotPadding + (iy * (cfg.SlotSize + cfg.SlotPadding))
-        local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-        local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-
-        -- Create model panel if item has a model
-        if item.model then
-          --- @class DModelPanel
-          local modelPanel = vgui.Create("DModelPanel", itemOverlay)
-          modelPanel:SetPos(slotX + 2, slotY + 2)
-          modelPanel:SetSize(itemW - 4, itemH - 4)
-          modelPanel:SetModel(item.model)
-          modelPanel:SetMouseInputEnabled(false)
-          modelPanel:SetKeyboardInputEnabled(false)
-          modelPanel:SetFOV(50) -- Slightly wider FOV to reduce zoom
-
-          -- Store reference with position for later management
-          modelPanel.ItemX = ix
-          modelPanel.ItemY = iy
-          modelPanel.Item = item
-
-          -- Auto-fit the model in the view with better padding
-          local ent = modelPanel:GetEntity()
-          if IsValid(ent) then
-            local mins, maxs = ent:GetRenderBounds()
-            local size = maxs - mins
-            local radius = math.max(size.x, size.y, size.z)
-            local offset = size / 2 + mins
-
-            -- Increase distance multiplier to zoom out more and add padding
-            -- Use larger multipliers to ensure model doesn't hit corners
-            local distanceMultiplier = 1.2 -- Increased from 0.75 to give more space
-            modelPanel:SetCamPos(Vector(radius * distanceMultiplier, radius * distanceMultiplier, radius * 0.8))
-            modelPanel:SetLookAt(offset)
-          end
-
-          -- Store panel for management
-          table.insert(self.ModelPanels, modelPanel)
-        end
-      end
-    end
+  
+  overlay.DrawDraggedItem = function(self, invItem, mx, my)
+    local item = invItem.item
+    if not item or not item.size then return end
+    
+    local w = item.size[1] * (Config.SlotSize + Config.SlotGap) - Config.SlotGap
+    local h = item.size[2] * (Config.SlotSize + Config.SlotGap) - Config.SlotGap
+    
+    self:DrawItem({
+      item = item,
+      quantity = State.dragQuantity or invItem.quantity,
+      x = (mx - w / 2 - Config.SlotGap) / (Config.SlotSize + Config.SlotGap),
+      y = (my - h / 2 - Config.SlotGap) / (Config.SlotSize + Config.SlotGap)
+    }, true)
   end
-
-  -- Simple paint for item backgrounds only
-  itemOverlay.Paint = function(pnl, w, h)
-    local currentInv = IonRP.InventoryUI.CurrentInventory
-    if not currentInv then return end
-
-    -- Only render backgrounds and borders here
-    for iy = 0, inv.height - 1 do
-      for ix = 0, inv.width - 1 do
-        local invSlot = currentInv:GetSlot(ix, iy)
-        local isOrigin = invSlot and invSlot.x == ix and invSlot.y == iy
-
-        if isOrigin and invSlot and invSlot.item then
-          --- @type ITEM
-          local item = invSlot.item
-          local slotX = cfg.SlotPadding + (ix * (cfg.SlotSize + cfg.SlotPadding))
-          local slotY = cfg.SlotPadding + (iy * (cfg.SlotSize + cfg.SlotPadding))
-          local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-          local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-
-          local isDragged = IonRP.InventoryUI.DraggedItem == item and
-              IonRP.InventoryUI.DraggedFrom and
-              IonRP.InventoryUI.DraggedFrom.x == ix and
-              IonRP.InventoryUI.DraggedFrom.y == iy
-
-          if isDragged then
-            -- Hide model panel for dragged items
-            for _, mdl in pairs(IonRP.InventoryUI.ModelPanels or {}) do
-              if IsValid(mdl) and mdl.ItemX == ix and mdl.ItemY == iy then
-                mdl:SetVisible(false)
-              end
-            end
-          else
-            -- Show model panel
-            for _, mdl in pairs(IonRP.InventoryUI.ModelPanels or {}) do
-              if IsValid(mdl) and mdl.ItemX == ix and mdl.ItemY == iy then
-                mdl:SetVisible(true)
-              end
-            end
-
-            -- Draw item background and border only (no text)
-            local alpha = 255
-            draw.RoundedBox(4, slotX + 2, slotY + 2, itemW - 4, itemH - 4, ColorAlpha(Color(50, 50, 60, 240), alpha))
-            surface.SetDrawColor(ColorAlpha(Color(70, 70, 80, 200), alpha))
-            surface.DrawOutlinedRect(slotX + 2, slotY + 2, itemW - 4, itemH - 4, 1)
-
-            -- Item type indicator at bottom
-            local typeColor = Color(120, 120, 120)
-            if item.type == "weapon" then
-              typeColor = Color(255, 100, 100, 200)
-            elseif item.type == "consumable" then
-              typeColor = Color(100, 255, 100, 200)
-            elseif item.type == "misc" then
-              typeColor = Color(100, 150, 255, 200)
-            end
-            draw.RoundedBox(0, slotX + 2, slotY + itemH - 3, itemW - 4, 2, ColorAlpha(typeColor, alpha))
-          end
-        end
-      end
-    end
-  end
-  self.ItemOverlay = itemOverlay
-
-  -- Create text overlay panel on top of everything (models and backgrounds)
-  local textOverlay = vgui.Create("DPanel", self.GridPanel)
-  textOverlay:SetPos(0, 0)
-  textOverlay:SetSize(self.GridPanel:GetSize())
-  textOverlay:SetMouseInputEnabled(false)
-  textOverlay:SetKeyboardInputEnabled(false)
-
-  textOverlay.Paint = function(pnl, w, h)
-    local currentInv = IonRP.InventoryUI.CurrentInventory
-    if not currentInv then return end
-
-    -- Render text labels on top of models
-    for iy = 0, inv.height - 1 do
-      for ix = 0, inv.width - 1 do
-        local invSlot = currentInv:GetSlot(ix, iy)
-        local isOrigin = invSlot and invSlot.x == ix and invSlot.y == iy
-
-        if isOrigin and invSlot and invSlot.item then
-          --- @type ITEM
-          local item = invSlot.item
-          local slotX = cfg.SlotPadding + (ix * (cfg.SlotSize + cfg.SlotPadding))
-          local slotY = cfg.SlotPadding + (iy * (cfg.SlotSize + cfg.SlotPadding))
-          local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-          local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-
-          local isDragged = IonRP.InventoryUI.DraggedItem == item and
-              IonRP.InventoryUI.DraggedFrom and
-              IonRP.InventoryUI.DraggedFrom.x == ix and
-              IonRP.InventoryUI.DraggedFrom.y == iy
-
-          if isDragged then
-            -- If doing a partial drag, show remaining quantity
-            if IonRP.InventoryUI.DraggedQuantity and IonRP.InventoryUI.DraggedQuantity < invSlot.quantity then
-              local alpha = 128
-              -- Draw dimmed text for remaining items
-              local name = item.name
-              local maxNameChars = math.max(8, item.size[1] * 5)
-              if #name > maxNameChars then
-                name = string.sub(name, 1, maxNameChars - 2) .. ".."
-              end
-
-              surface.SetFont("DermaDefault")
-              local nameW, nameH = surface.GetTextSize(name)
-              draw.RoundedBox(2, slotX + (itemW / 2) - (nameW / 2) - 4, slotY + 4, nameW + 8, 16,
-                ColorAlpha(Color(0, 0, 0, 200), alpha))
-              draw.SimpleText(name, "DermaDefault", slotX + itemW / 2, slotY + 6, ColorAlpha(cfg.Colors.Text, alpha),
-                TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-
-              -- Show remaining quantity
-              local remainingQty = invSlot.quantity - IonRP.InventoryUI.DraggedQuantity
-              if item.stackSize > 1 and remainingQty > 1 then
-                local qtyText = "x" .. remainingQty
-                surface.SetFont("DermaDefaultBold")
-                local qtyW = surface.GetTextSize(qtyText)
-                draw.RoundedBox(3, slotX + itemW - qtyW - 12, slotY + itemH - 20, qtyW + 8, 16,
-                  ColorAlpha(cfg.Colors.AccentCyan, alpha))
-                draw.SimpleText(qtyText, "DermaDefaultBold", slotX + itemW - 6, slotY + itemH - 6,
-                  ColorAlpha(Color(255, 255, 255, 255), alpha), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
-              end
-            end
-          else
-            -- Normal text rendering
-            local alpha = 255
-
-            -- Item name with background
-            local name = item.name
-            local maxNameChars = math.max(8, item.size[1] * 5)
-            if #name > maxNameChars then
-              name = string.sub(name, 1, maxNameChars - 2) .. ".."
-            end
-
-            surface.SetFont("DermaDefault")
-            local nameW, nameH = surface.GetTextSize(name)
-            draw.RoundedBox(2, slotX + (itemW / 2) - (nameW / 2) - 4, slotY + 4, nameW + 8, 16,
-              ColorAlpha(Color(0, 0, 0, 200), alpha))
-            draw.SimpleText(name, "DermaDefault", slotX + itemW / 2, slotY + 6, ColorAlpha(cfg.Colors.Text, alpha),
-              TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-
-            -- Quantity badge
-            if item.stackSize > 1 and invSlot.quantity > 1 then
-              local qtyText = "x" .. invSlot.quantity
-              surface.SetFont("DermaDefaultBold")
-              local qtyW = surface.GetTextSize(qtyText)
-              draw.RoundedBox(3, slotX + itemW - qtyW - 12, slotY + itemH - 20, qtyW + 8, 16,
-                ColorAlpha(cfg.Colors.AccentCyan, alpha))
-              draw.SimpleText(qtyText, "DermaDefaultBold", slotX + itemW - 6, slotY + itemH - 6,
-                ColorAlpha(Color(255, 255, 255, 255), alpha), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
-            end
-
-            -- Weight display
-            if item.size[2] >= 2 or item.size[1] >= 2 then
-              local weight = item.weight * invSlot.quantity
-              local weightText = string.format("%.1fkg", weight)
-              surface.SetFont("DermaDefault")
-              local weightW = surface.GetTextSize(weightText)
-              draw.RoundedBox(2, slotX + 4, slotY + itemH - 18, weightW + 6, 14, ColorAlpha(Color(0, 0, 0, 180), alpha))
-              draw.SimpleText(weightText, "DermaDefault", slotX + 7, slotY + itemH - 16,
-                ColorAlpha(cfg.Colors.TextMuted, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            end
-          end
-        end
-      end
-    end
-
-    -- Render dragged item at cursor position (ghost)
-    if IonRP.InventoryUI.DraggedItem then
-      local mx, my = pnl:CursorPos()
-      --- @type ITEM
-      local item = IonRP.InventoryUI.DraggedItem
-      local itemW = item.size[1] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-      local itemH = item.size[2] * (cfg.SlotSize + cfg.SlotPadding) - cfg.SlotPadding
-
-      local ghostX = mx - (itemW / 2)
-      local ghostY = my - (itemH / 2)
-
-      local draggedSlot = {
-        item = item,
-        quantity = IonRP.InventoryUI.DraggedQuantity or 1,
-        x = 0,
-        y = 0
-      }
-
-      -- Render ghost with transparency
-      RenderItem(item, draggedSlot, ghostX, ghostY, 180)
-    end
-  end
-  self.TextOverlay = textOverlay
+  
+  grid.overlay = overlay
+  State.gridPanel = grid
 end
 
---[[
-    Refresh the grid (re-render items)
-]] --
+--- Create slot
+function IonRP.InventoryUI:CreateSlot(parent, x, y)
+  local slot = vgui.Create("DPanel", parent)
+  slot:SetPos(
+    Config.SlotGap + x * (Config.SlotSize + Config.SlotGap),
+    Config.SlotGap + y * (Config.SlotSize + Config.SlotGap)
+  )
+  slot:SetSize(Config.SlotSize, Config.SlotSize)
+  slot.gridX = x
+  slot.gridY = y
+  
+  slot.Paint = function(self, w, h)
+    local inv = State.inventory
+    if not inv then return end
+    
+    local invItem = inv:GetItemAt(x, y)
+    local isOrigin = invItem and invItem.x == x and invItem.y == y
+    
+    -- Background - very dark slot
+    local bgColor = Config.Colors.SlotEmpty
+    
+    if self:IsHovered() then
+      bgColor = Config.Colors.SlotHover
+      
+      -- Show tooltip
+      if isOrigin then
+        State.tooltipItem = invItem
+        State.tooltipPos.x, State.tooltipPos.y = gui.MouseX(), gui.MouseY()
+      end
+    end
+    
+    -- Drag preview
+    if State.draggedItem and not (invItem and invItem == State.draggedItem) then
+      local canPlace = inv:IsAreaFree(x, y, State.draggedItem.item.size[1], State.draggedItem.item.size[2], State.draggedItem)
+      if canPlace then
+        bgColor = Config.Colors.SlotValid
+      else
+        bgColor = Config.Colors.SlotInvalid
+      end
+    end
+    
+    draw.RoundedBox(0, 0, 0, w, h, bgColor)
+    
+    -- Darker border
+    surface.SetDrawColor(Config.Colors.BorderDark)
+    surface.DrawOutlinedRect(0, 0, w, h, 1)
+  end
+  
+  slot.OnMousePressed = function(self, mouse)
+    local inv = State.inventory
+    if not inv then return end
+    
+    local invItem = inv:GetItemAt(x, y)
+    if not invItem then return end
+    
+    State.mouseDownSlot = {x = x, y = y, item = invItem, button = mouse}
+  end
+  
+  slot.OnMouseReleased = function(self, mouse)
+    local inv = State.inventory
+    if not inv then return end
+    
+    if State.draggedItem then
+      -- Drop item
+      net.Start("IonRP_Inventory_Move")
+      net.WriteUInt(State.dragStartX, 8)
+      net.WriteUInt(State.dragStartY, 8)
+      net.WriteUInt(x, 8)
+      net.WriteUInt(y, 8)
+      net.WriteUInt(State.dragQuantity or 0, 16)
+      net.SendToServer()
+      
+      State.draggedItem = nil
+      State.dragStartX = nil
+      State.dragStartY = nil
+      State.dragQuantity = nil
+    elseif State.mouseDownSlot and State.mouseDownSlot.x == x and State.mouseDownSlot.y == y then
+      -- Click to use
+      if mouse == MOUSE_LEFT then
+        local invItem = inv:GetItemAt(x, y)
+        if invItem then
+          net.Start("IonRP_Inventory_Use")
+          net.WriteUInt(x, 8)
+          net.WriteUInt(y, 8)
+          net.SendToServer()
+        end
+      end
+    end
+    
+    State.mouseDownSlot = nil
+  end
+  
+  slot.Think = function(self)
+    if State.mouseDownSlot and State.mouseDownSlot.x == x and State.mouseDownSlot.y == y then
+      local mx, my = input.GetCursorPos()
+      local sx, sy = self:LocalToScreen(0, 0)
+      local dist = math.sqrt((mx - sx)^2 + (my - sy)^2)
+      
+      if dist > 10 and not State.draggedItem then
+        -- Start drag
+        State.draggedItem = State.mouseDownSlot.item
+        State.dragStartX = x
+        State.dragStartY = y
+        
+        if State.mouseDownSlot.button == MOUSE_RIGHT then
+          State.dragQuantity = 1
+        end
+      end
+    end
+    
+    -- Clear tooltip if not hovering
+    if not self:IsHovered() and State.tooltipItem then
+      local anyHovered = false
+      if IsValid(State.gridPanel) then
+        for _, row in pairs(State.gridPanel.slots or {}) do
+          for _, slot in pairs(row) do
+            if IsValid(slot) and slot:IsHovered() then
+              anyHovered = true
+              break
+            end
+          end
+        end
+      end
+      
+      if not anyHovered then
+        State.tooltipItem = nil
+      end
+    end
+  end
+  
+  return slot
+end
+
+--- Refresh grid
 function IonRP.InventoryUI:RefreshGrid()
-  if not IsValid(self.GridPanel) then return end
-
-  -- Recreate the entire grid to update item positions and models
-  self:CreateGrid()
+  if not State.inventory or not IsValid(State.frame) then return end
+  
+  -- Force full repaint of overlay to show updated items
+  if IsValid(State.gridPanel) and State.gridPanel.overlay then
+    State.gridPanel.overlay:InvalidateLayout(true)
+    State.gridPanel.overlay:InvalidateParent(true)
+  end
 end
 
---[[
-    Close the inventory UI
-]] --
+--- Close inventory
 function IonRP.InventoryUI:Close()
-  -- Clean up all model panels before closing
-  if self.ModelPanels then
-    for _, mdl in pairs(self.ModelPanels) do
-      if IsValid(mdl) then
-        mdl:Remove()
-      end
-    end
-    self.ModelPanels = {}
+  if IsValid(State.frame) then
+    State.frame:Remove()
+    State.frame = nil
   end
-
-  if self.GridSlots then
-    for _, row in pairs(self.GridSlots) do
-      for _, slot in pairs(row) do
-        if IsValid(slot) and istable(slot) then
-          for k, v in pairs(slot) do
-            if type(k) == "string" and string.StartsWith(k, "model_") and IsValid(v) then
-              v:Remove()
-            end
-          end
-        end
-      end
-    end
-  end
-
-  if IsValid(self.Frame) then
-    self.Frame:AlphaTo(0, 0.2, 0, function()
-      if IsValid(self.Frame) then
-        self.Frame:Remove()
-      end
-    end)
-  end
-
-  -- Clear drag state
-  self.DraggedItem = nil
-  self.DraggedFrom = nil
+  
+  State.draggedItem = nil
+  State.mouseDownSlot = nil
+  State.tooltipItem = nil
 end
 
--- Command to open inventory - requests fresh data from server
-concommand.Add("ionrp_inventory", function(ply)
-  -- Request server to send fresh inventory data and open
-  net.Start("IonRP_RequestOpenInventory")
-  net.SendToServer()
-
-  print("[IonRP Inventory] Requesting inventory from server...")
+--- Draw tooltip
+hook.Add("HUDPaint", "IonRP_Inventory_Tooltip", function()
+  if not State.tooltipItem then return end
+  
+  local item = State.tooltipItem.item
+  if not item then return end
+  
+  local x, y = State.tooltipPos.x + 15, State.tooltipPos.y + 15
+  local w, h = 280, 80
+  
+  -- Adjust if off screen
+  if x + w > ScrW() then x = ScrW() - w - 5 end
+  if y + h > ScrH() then y = ScrH() - h - 5 end
+  
+  -- Dark background
+  draw.RoundedBox(4, x, y, w, h, Color(8, 8, 10, 250))
+  
+  -- Border
+  surface.SetDrawColor(Config.Colors.Border)
+  surface.DrawOutlinedRect(x, y, w, h, 2)
+  
+  -- Inner accent border
+  surface.SetDrawColor(Config.Colors.Accent)
+  surface.DrawOutlinedRect(x + 2, y + 2, w - 4, h - 4, 1)
+  
+  -- Title
+  draw.SimpleText(item.name, "DermaDefaultBold", x + 10, y + 10, Config.Colors.TextBright, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+  
+  -- Description
+  if item.description then
+    local desc = item.description
+    if #desc > 80 then desc = string.sub(desc, 1, 77) .. "..." end
+    draw.SimpleText(desc, "DermaDefault", x + 10, y + 30, Config.Colors.Text, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+  end
+  
+  -- Weight
+  local weight = (item.weight or 0) * State.tooltipItem.quantity
+  draw.SimpleText(string.format("Weight: %.2f KG", weight), "DermaDefault", x + 10, y + h - 20, Config.Colors.TextDim, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+  
+  -- Quantity
+  if State.tooltipItem.quantity > 1 then
+    draw.SimpleText(string.format("x%d", State.tooltipItem.quantity), "DermaDefaultBold", x + w - 10, y + 10, Config.Colors.Accent, TEXT_ALIGN_RIGHT, TEXT_ALIGN_TOP)
+  end
 end)
 
-local Q_held = false
-hook.Add("Think", "IonRP_InventoryKeyThink", function()
-  local ply = LocalPlayer()
-  if not IsValid(ply) then return end
+--- Key bind
+concommand.Add("ionrp_inventory", function()
+  net.Start("IonRP_Inventory_Open")
+  net.SendToServer()
+end)
+
+local keyHeld = false
+hook.Add("Think", "IonRP_Inventory_Key", function()
   if input.IsKeyDown(KEY_Q) then
-    if not Q_held and not gui.IsGameUIVisible() and not vgui.CursorVisible() then
-      Q_held = true
-      print("[IonRP Inventory] Q key pressed, opening inventory...", Q_held and " (held)" or "")
+    if not keyHeld and not vgui.CursorVisible() then
+      keyHeld = true
       RunConsoleCommand("ionrp_inventory")
     end
   else
-    if Q_held then
-      Q_held = false
+    if keyHeld then
+      keyHeld = false
       IonRP.InventoryUI:Close()
-      print("[IonRP Inventory] Q key released, closing inventory...", Q_held and " (held)" or "")
     end
   end
 end)

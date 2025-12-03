@@ -1,589 +1,320 @@
 --[[
-    IonRP Inventory System
-    Shared inventory logic and data structures
-]] --
+    IonRP Inventory System - Shared
+    Modern grid-based inventory with weight management
+]]--
 
 IonRP.Inventory = IonRP.Inventory or {}
 
---- @class InventorySlot
---- @field item ITEM|nil The item in this slot
---- @field quantity number The quantity of items in this slot
---- @field equippedSlot number|nil The weapon slot this item is equipped in (1 = primary, 2 = secondary), if applicable
---- @field x number The X position in the inventory grid
---- @field y number The Y position in the inventory grid
+--- @class InventoryItem
+--- @field item ITEM Item definition
+--- @field quantity number Stack quantity
+--- @field x number Grid X position
+--- @field y number Grid Y position
 
 --- @class Inventory
---- @field owner Player|nil The player who owns this inventory
---- @field width number The width of the inventory grid
---- @field height number The height of the inventory grid
---- @field slots table<string, InventorySlot> Table of slots indexed by "x_y"
---- @field maxWeight number Maximum weight capacity in KG (0 = unlimited)
---- @field id number|nil Database ID for this inventory
-INVENTORY = INVENTORY or {}
-INVENTORY.__index = INVENTORY
+--- @field width number Grid width
+--- @field height number Grid height
+--- @field maxWeight number Maximum weight in KG
+--- @field items table<number, InventoryItem> Array of items
+--- @field owner Player|nil Owner of inventory
+--- @field id number|nil Database ID
+local InventoryMeta = {}
+InventoryMeta.__index = InventoryMeta
 
---- Create a new inventory instance
---- @param width number Grid width
---- @param height number Grid height
---- @param maxWeight number|nil Maximum weight capacity (default: 50)
+--- Create new inventory
+--- @param width number
+--- @param height number
+--- @param maxWeight number
 --- @return Inventory
-function INVENTORY:New(width, height, maxWeight)
-  local inv = {}
-  setmetatable(inv, self)
-
+function IonRP.Inventory.New(width, height, maxWeight)
+  local inv = setmetatable({}, InventoryMeta)
   inv.width = width or 10
   inv.height = height or 10
   inv.maxWeight = maxWeight or 50
-  inv.slots = {}
+  inv.items = {}
   inv.owner = nil
   inv.id = nil
-
   return inv
 end
 
---- Get the total weight of all items in the inventory
---- @return number
-function INVENTORY:GetTotalWeight()
-  local totalWeight = 0
-  local processed = {}
-
-  for _, slot in pairs(self.slots) do
-    if slot.item then
-      local originKey = self:GetSlotKey(slot.x, slot.y)
-      
-      -- Only count items at their origin position to avoid counting multi-cell items multiple times
-      if not processed[originKey] then
-        processed[originKey] = true
-        totalWeight = totalWeight + (slot.item.weight * slot.quantity)
-      end
-    end
-  end
-
-  return totalWeight
-end
-
---- Check if a position is within grid bounds
+--- Check if position is valid
 --- @param x number
 --- @param y number
 --- @return boolean
-function INVENTORY:IsValidPosition(x, y)
+function InventoryMeta:IsValidPos(x, y)
   return x >= 0 and x < self.width and y >= 0 and y < self.height
 end
 
---- Get slot key from coordinates
+--- Get item at position
 --- @param x number
 --- @param y number
---- @return string
-function INVENTORY:GetSlotKey(x, y)
-  return x .. "_" .. y
-end
-
---- Get slot at position
---- @param x number
---- @param y number
---- @return InventorySlot|nil
-function INVENTORY:GetSlot(x, y)
-  return self.slots[self:GetSlotKey(x, y)]
-end
-
---- Check if an item can fit at the specified position
---- @param item ITEM
---- @param x number
---- @param y number
---- @param ignoreOccupied boolean|nil If true, ignore if slots are occupied (for moving items)
---- @param ignoreItemAt table|nil Table with {x=number, y=number} to ignore item at this origin position (for moving)
---- @return boolean, string|nil Returns true if can fit, or false with reason
-function INVENTORY:CanFitItem(item, x, y, ignoreOccupied, ignoreItemAt)
-  if not item then return false, "No item specified" end
-  if not item.size or #item.size ~= 2 then return false, "Invalid item size" end
-
-  local width, height = item.size[1], item.size[2]
-
-  -- Check if item fits within grid bounds
-  if not self:IsValidPosition(x, y) then
-    return false, "Position out of bounds"
-  end
-
-  if x + width > self.width or y + height > self.height then
-    return false, "Item too large for position"
-  end
-
-  -- Check if all required slots are empty or can stack
-  if not ignoreOccupied then
-    for ix = x, x + width - 1 do
-      for iy = y, y + height - 1 do
-        local slot = self:GetSlot(ix, iy)
-        if slot and slot.item then
-          -- If we have an ignoreItemAt position, check if this slot belongs to that item
-          if ignoreItemAt then
-            local ignoreSlot = self:GetSlot(ignoreItemAt.x, ignoreItemAt.y)
-            if ignoreSlot and ignoreSlot.item then
-              -- Check if this occupied slot is part of the item we're ignoring
-              local isPartOfIgnoredItem = false
-              if slot.x == ignoreSlot.x and slot.y == ignoreSlot.y then
-                -- This is the origin of the item we're moving, ignore it
-                isPartOfIgnoredItem = true
-              else
-                -- Check if this slot references the same item
-                if slot.item == ignoreSlot.item then
-                  isPartOfIgnoredItem = true
-                end
-              end
-              
-              if not isPartOfIgnoredItem then
-                -- Check if we can stack with this item
-                if slot.item.identifier == item.identifier and
-                  slot.quantity < item.stackSize then
-                    print("Part of ignored!")
-                  -- This is a stackable item, allow placement
-                  -- The stacking logic in MoveItem will handle the actual stacking
-                  -- Allow all cells of the item, not just origin
-                else
-                  return false, "Slot occupied"
-                end
-              end
-            else
-              return false, "Slot occupied"
-            end
-          else
-            -- Check if we can stack with this item (when no ignoreItemAt is specified)
-            if slot.item.identifier == item.identifier and
-               slot.quantity < item.stackSize then
-              -- This is a stackable item, allow placement
-              -- The stacking logic in AddItem/MoveItem will handle the actual stacking
-              -- Allow all cells of the item, not just origin
-            else
-              return false, "Slot occupied"
-            end
-          end
-        end
-      end
+--- @return InventoryItem|nil
+function InventoryMeta:GetItemAt(x, y)
+  for _, invItem in ipairs(self.items) do
+    local item = invItem.item
+    if not item or not item.size then continue end
+    
+    -- Check if position is within item bounds
+    if x >= invItem.x and x < invItem.x + item.size[1] and
+       y >= invItem.y and y < invItem.y + item.size[2] then
+      return invItem
     end
   end
-
-  return true, nil
+  return nil
 end
 
---- Find the first available position for an item
+--- Check if area is free (excluding specific item)
+--- @param x number
+--- @param y number
+--- @param width number
+--- @param height number
+--- @param excludeItem InventoryItem|nil
+--- @return boolean
+function InventoryMeta:IsAreaFree(x, y, width, height, excludeItem)
+  -- Check bounds
+  if not self:IsValidPos(x, y) then return false end
+  if not self:IsValidPos(x + width - 1, y + height - 1) then return false end
+  
+  -- Check for overlapping items
+  for _, invItem in ipairs(self.items) do
+    if invItem == excludeItem then continue end
+    if not invItem.item or not invItem.item.size then continue end
+    
+    local ix1, iy1 = invItem.x, invItem.y
+    local ix2, iy2 = ix1 + invItem.item.size[1], iy1 + invItem.item.size[2]
+    local x2, y2 = x + width, y + height
+    
+    -- Check overlap
+    if not (x2 <= ix1 or x >= ix2 or y2 <= iy1 or y >= iy2) then
+      return false
+    end
+  end
+  
+  return true
+end
+
+--- Find first free position for item
 --- @param item ITEM
---- @return number|nil, number|nil Returns x, y if found, or nil if no space
-function INVENTORY:FindAvailablePosition(item)
+--- @return number|nil, number|nil
+function InventoryMeta:FindFreePos(item)
+  if not item or not item.size then return nil, nil end
+  
   for y = 0, self.height - 1 do
     for x = 0, self.width - 1 do
-      local canFit, _ = self:CanFitItem(item, x, y, false)
-      if canFit then
+      if self:IsAreaFree(x, y, item.size[1], item.size[2], nil) then
         return x, y
       end
     end
   end
-
+  
   return nil, nil
 end
 
---- Check if adding an item would exceed weight limit
---- @param item ITEM
---- @param quantity number
---- @return boolean
-function INVENTORY:WouldExceedWeight(item, quantity)
-  if self.maxWeight == 0 then return false end -- Unlimited weight
-
-  local currentWeight = self:GetTotalWeight()
-  local addedWeight = item.weight * quantity
-
-  return (currentWeight + addedWeight) > self.maxWeight
-end
-
---- Find an existing stack that can accept more items
---- @param item ITEM
---- @return number|nil, number|nil, number|nil Returns x, y, currentQuantity if found
-function INVENTORY:FindStackableSlot(item)
-  if not item or item.stackSize <= 1 then return nil, nil, nil end
-
-  for key, slot in pairs(self.slots) do
-    if slot.item and slot.item.identifier == item.identifier then
-      if slot.quantity < item.stackSize then
-        return slot.x, slot.y, slot.quantity
-      end
-    end
-  end
-
-  return nil, nil, nil
-end
-
---- Check if a quantity of items can fit in the inventory
---- @param item ITEM The item to check
---- @param quantity number How many items to fit
---- @return boolean canFit Whether the items can fit
---- @return string|nil reason Reason if they can't fit
-function INVENTORY:CanFitQuantity(item, quantity)
-  if not item or quantity <= 0 then
-    return false, "Invalid item or quantity"
-  end
-  
-  -- Check weight limit
-  if self:WouldExceedWeight(item, quantity) then
-    return false, "Would exceed weight limit"
-  end
-  
-  local remainingQuantity = quantity
-  
-  -- Check existing stacks first
-  if item.stackSize > 1 then
-    for key, slot in pairs(self.slots) do
-      if slot.item and slot.item.identifier == item.identifier and slot.quantity < item.stackSize then
-        local canAdd = item.stackSize - slot.quantity
-        remainingQuantity = remainingQuantity - canAdd
-        if remainingQuantity <= 0 then
-          return true, nil
-        end
-      end
-    end
-  end
-  
-  -- Check how many new slots we need
-  local slotsNeeded = math.ceil(remainingQuantity / item.stackSize)
-  local itemWidth, itemHeight = item.size[1], item.size[2]
-  local availableSlots = 0
-  
-  -- Count available positions
-  for y = 0, self.height - 1 do
-    for x = 0, self.width - 1 do
-      local canFit, _ = self:CanFitItem(item, x, y, false)
-      if canFit then
-        availableSlots = availableSlots + 1
-        if availableSlots >= slotsNeeded then
-          return true, nil
-        end
-      end
-    end
-  end
-  
-  return false, string.format("Not enough space (need %d slots, have %d)", slotsNeeded, availableSlots)
-end
-
---- Add an item to the inventory
---- @param item ITEM
---- @param quantity number
---- @param x number|nil Optional position, will auto-find if nil
---- @param y number|nil Optional position, will auto-find if nil
---- @return boolean, string|nil Returns true on success, or false with reason
-function INVENTORY:AddItem(item, quantity, x, y)
-  quantity = quantity or 1
-
-  if quantity <= 0 then return false, "Invalid quantity" end
-
-  -- Check weight limit
-  if self:WouldExceedWeight(item, quantity) then
-    return false, "Would exceed weight limit"
-  end
-
-  local remainingQuantity = quantity
-
-  -- Try to stack with existing items first if no specific position was requested
-  if item.stackSize > 1 and not x and not y then
-    while remainingQuantity > 0 do
-      local sx, sy, currentQty = self:FindStackableSlot(item)
-
-      if not sx or not sy or not currentQty then break end -- No more stackable slots
-
-      local slot = self:GetSlot(sx, sy)
-      if not slot then break end
-
-      local canAdd = math.min(remainingQuantity, item.stackSize - currentQty)
-
-      slot.quantity = slot.quantity + canAdd
-      remainingQuantity = remainingQuantity - canAdd
-    end
-  end
-
-  -- Place remaining items in new slots
-  while remainingQuantity > 0 do
-    local posX, posY = x, y
-
-    -- Auto-find position if not specified
-    if not posX or not posY then
-      posX, posY = self:FindAvailablePosition(item)
-    end
-
-    if not posX or not posY then
-      return false, "No space in inventory"
-    end
-
-    local canFit, reason = self:CanFitItem(item, posX, posY, false)
-    if not canFit then
-      return false, reason
-    end
-
-    -- Calculate how many to add to this stack
-    local addQuantity = math.min(remainingQuantity, item.stackSize)
-
-    -- Occupy all grid cells for this item
-    local width, height = item.size[1], item.size[2]
-    for ix = posX, posX + width - 1 do
-      for iy = posY, posY + height - 1 do
-        local slotKey = self:GetSlotKey(ix, iy)
-        self.slots[slotKey] = {
-          item = item,
-          quantity = addQuantity,
-          x = posX, -- Store origin position
-          y = posY
-        }
-      end
-    end
-
-    remainingQuantity = remainingQuantity - addQuantity
-
-    -- Clear position for next iteration (force auto-find)
-    x, y = nil, nil
-  end
-
-  return true, nil
-end
-
---- Remove an item from the inventory
---- @param x number
---- @param y number
---- @param quantity number|nil Amount to remove (default: all)
---- @return boolean success
---- @return ITEM|nil item Returns the item removed
---- @return number quantity Returns the quantity removed
-function INVENTORY:RemoveItem(x, y, quantity)
-  local slot = self:GetSlot(x, y)
-
-  if not slot or not slot.item then
-    return false, nil, 0
-  end
-
-  local item = slot.item
-  if not item or not item.size or #item.size ~= 2 then
-    return false, nil, 0
-  end
-
-  local originX, originY = slot.x, slot.y
-  quantity = quantity or slot.quantity
-
-  if quantity <= 0 then return false, nil, 0 end
-  if quantity > slot.quantity then quantity = slot.quantity end
-
-  local newQuantity = slot.quantity - quantity
-
-  -- Update quantity for all cells occupied by this item
-  local width, height = item.size[1], item.size[2]
-  for ix = originX, originX + width - 1 do
-    for iy = originY, originY + height - 1 do
-      local cellSlot = self:GetSlot(ix, iy)
-      if cellSlot then
-        cellSlot.quantity = newQuantity
-      end
-    end
-  end
-
-  -- If slot is empty, clear all grid cells for this item
-  if newQuantity <= 0 then
-    for ix = originX, originX + width - 1 do
-      for iy = originY, originY + height - 1 do
-        self.slots[self:GetSlotKey(ix, iy)] = nil
-      end
-    end
-  end
-
-  return true, item, quantity
-end
-
---- Move an item from one position to another
---- @param fromX number
---- @param fromY number
---- @param toX number
---- @param toY number
---- @param quantity number|nil How many items to move (nil = all)
---- @return boolean, string|nil
-function INVENTORY:MoveItem(fromX, fromY, toX, toY, quantity)
-  local fromSlot = self:GetSlot(fromX, fromY)
-
-  if not fromSlot or not fromSlot.item then
-    return false, "No item at source position"
-  end
-
-  local item = fromSlot.item
-  quantity = quantity or fromSlot.quantity -- Default to moving all
-  quantity = math.min(quantity, fromSlot.quantity) -- Can't move more than we have
-  local originX, originY = fromSlot.x, fromSlot.y
-
-  -- Check if we're moving to the origin position (no-op)
-  -- Also check if trying to move partial quantity to same slot (can't split onto itself)
-  if toX == originX and toY == originY then
-    print(string.format("[MoveItem] No-op: trying to move to same origin (%d,%d)", toX, toY))
-    return true, nil -- No-op, item stays where it is
-  end
-
-  -- Check if destination can accept the item
-  local destSlot = self:GetSlot(toX, toY)
-
-  -- Try to stack with existing item (but not if it's the same item we're moving!)
-  if destSlot and destSlot.item and item and item.identifier and destSlot.item.identifier == item.identifier then
-    print(string.format("[MoveItem] Found same item type at destination (%d,%d)", toX, toY))
-    -- Check if the destination slot is part of the same item instance we're moving
-    local isSameItemInstance = false
-    if destSlot.x == originX and destSlot.y == originY then
-      -- Destination is the origin of the item we're moving
-      isSameItemInstance = true
-    end
-
-    if not isSameItemInstance then
-      -- Only try to stack if it's a different item instance
-      print(string.format("[MoveItem] Different item instance, attempting to stack %d items", quantity))
-      if item.stackSize and destSlot.quantity and destSlot.quantity < item.stackSize then
-        local canAdd = math.min(quantity, item.stackSize - destSlot.quantity)
-        local destOriginX, destOriginY = destSlot.x, destSlot.y
-
-        print(string.format("[MoveItem] Stacking: Adding %d to destination's %d items", canAdd, destSlot.quantity))
-
-        -- Simple approach: Update destination quantity first
-        local newDestQuantity = destSlot.quantity + canAdd
-        
-        -- Update ALL cells of the destination item
-        local destItemSize = destSlot.item.size
-        for ix = destOriginX, destOriginX + destItemSize[1] - 1 do
-          for iy = destOriginY, destOriginY + destItemSize[2] - 1 do
-            local cellSlot = self:GetSlot(ix, iy)
-            if cellSlot then
-              cellSlot.quantity = newDestQuantity
-            end
-          end
-        end
-
-        print(string.format("[MoveItem] Destination updated to %d items", newDestQuantity))
-
-        -- Now remove from source
-        self:RemoveItem(originX, originY, canAdd)
-
-        print(string.format("[MoveItem] Removed %d items from source", canAdd))
-
-        return true, nil
-      else
-        return false, "Destination stack is full"
-      end
-    else
-      print("[MoveItem] Same item instance detected, treating as move operation")
-    end
-    -- If it's the same item instance, fall through to the move logic below
-  end
-
-  print(string.format("[MoveItem] Proceeding with move operation: %d items from (%d,%d) to (%d,%d)", 
-    quantity, originX, originY, toX, toY))
-
-  -- Check if we can fit at new position
-  if not item then
-    return false, "Invalid item"
-  end
-
-  -- Pass the origin position so we can ignore slots occupied by the item we're moving
-  local canFit, reason = self:CanFitItem(item, toX, toY, false, {x = originX, y = originY})
-
-  if not canFit then
-    return false, reason
-  end
-
-  -- Remove from old position
-  local success, removedItem, removedQty = self:RemoveItem(originX, originY, quantity)
-
-  if not success or not removedItem then
-    return false, "Failed to remove item"
-  end
-
-  -- Add to new position
-  local addSuccess, addReason = self:AddItem(removedItem, removedQty, toX, toY)
-
-  if not addSuccess then
-    -- Rollback: add back to original position
-    self:AddItem(removedItem, removedQty, originX, originY)
-    return false, addReason
-  end
-
-  return true, nil
-end
-
---- Get all items in the inventory as a flat list
---- @return table<number, {item: ITEM, quantity: number, x: number, y: number}>
-function INVENTORY:GetAllItems()
-  local items = {}
-  local processed = {}
-
-  for key, slot in pairs(self.slots) do
-    if slot.item then
-      local originKey = self:GetSlotKey(slot.x, slot.y)
-
-      -- Only add origin slots to avoid duplicates
-      if not processed[originKey] then
-        processed[originKey] = true
-        table.insert(items, {
-          item = slot.item,
-          quantity = slot.quantity,
-          x = slot.x,
-          y = slot.y
-        })
-      end
-    end
-  end
-
-  return items
-end
-
---- Clear the entire inventory
-function INVENTORY:Clear()
-  self.slots = {}
-end
-
---- Count total quantity of an item by identifier
---- @param item ITEM The item definition
---- @return number Total quantity of the item in inventory
-function INVENTORY:CountItem(item)
+--- Get total weight
+--- @return number
+function InventoryMeta:GetWeight()
   local total = 0
-  local items = self:GetAllItems()
-  
-  for _, entry in ipairs(items) do
-    if entry.item.identifier == item.identifier then
-      total = total + entry.quantity
+  for _, invItem in ipairs(self.items) do
+    if invItem.item then
+      total = total + (invItem.item.weight or 0) * invItem.quantity
     end
   end
-  
   return total
 end
 
---- Remove items by identifier (removes from multiple stacks if needed)
---- @param item ITEM The item definition
---- @param quantity number Quantity to remove
---- @return number Quantity actually removed
-function INVENTORY:RemoveItemByIdentifier(item, quantity)
-  local remaining = quantity
-  local items = self:GetAllItems()
+--- Check if item can be added
+--- @param item ITEM
+--- @param quantity number
+--- @param x number|nil
+--- @param y number|nil
+--- @return boolean, string|nil
+function InventoryMeta:CanAdd(item, quantity, x, y)
+  if not item then return false, "Invalid item" end
+  if quantity <= 0 then return false, "Invalid quantity" end
   
-  -- Sort by quantity (remove from smallest stacks first)
-  table.sort(items, function(a, b) return a.quantity < b.quantity end)
+  -- Check weight
+  local newWeight = self:GetWeight() + (item.weight or 0) * quantity
+  if self.maxWeight > 0 and newWeight > self.maxWeight then
+    return false, "Too heavy"
+  end
   
-  for _, entry in ipairs(items) do
-    if entry.item.identifier == item.identifier and remaining > 0 then
-      local toRemove = math.min(remaining, entry.quantity)
-      self:RemoveItem(entry.x, entry.y, toRemove)
-      remaining = remaining - toRemove
+  -- If position specified, check it
+  if x and y then
+    if not item.size then return false, "Item has no size" end
+    if not self:IsAreaFree(x, y, item.size[1], item.size[2], nil) then
+      return false, "Space occupied"
+    end
+    return true
+  end
+  
+  -- Try to stack with existing
+  if item.stackSize and item.stackSize > 1 then
+    for _, invItem in ipairs(self.items) do
+      if invItem.item.identifier == item.identifier and invItem.quantity < item.stackSize then
+        return true -- Can stack
+      end
     end
   end
   
-  return quantity - remaining
-end
-
---- Debug: Print inventory contents
-function INVENTORY:Debug()
-  print("=== Inventory Debug ===")
-  print(string.format("Size: %dx%d, Weight: %.2f/%.2f KG",
-    self.width, self.height, self:GetTotalWeight(), self.maxWeight))
-
-  local items = self:GetAllItems()
-  print("Items:")
-  for _, entry in ipairs(items) do
-    print(string.format("  [%d,%d] %s x%d (%.2f KG)",
-      entry.x, entry.y, entry.item.name, entry.quantity,
-      entry.item.weight * entry.quantity))
+  -- Check if we can find space
+  local px, py = self:FindFreePos(item)
+  if not px then
+    return false, "No space"
   end
-  print("=====================")
+  
+  return true
 end
+
+--- Add item to inventory
+--- @param item ITEM
+--- @param quantity number
+--- @param x number|nil
+--- @param y number|nil
+--- @return boolean, string|nil
+function InventoryMeta:AddItem(item, quantity, x, y)
+  quantity = quantity or 1
+  
+  local canAdd, err = self:CanAdd(item, quantity, x, y)
+  if not canAdd then return false, err end
+  
+  -- Try stacking first if no position specified
+  if not x and not y and item.stackSize and item.stackSize > 1 then
+    for _, invItem in ipairs(self.items) do
+      if invItem.item.identifier == item.identifier and invItem.quantity < item.stackSize then
+        local addQty = math.min(quantity, item.stackSize - invItem.quantity)
+        invItem.quantity = invItem.quantity + addQty
+        quantity = quantity - addQty
+        
+        if quantity <= 0 then return true end
+      end
+    end
+  end
+  
+  -- Place new stacks
+  while quantity > 0 do
+    local px, py = x, y
+    if not px then
+      px, py = self:FindFreePos(item)
+      if not px then return false, "No space" end
+    end
+    
+    local stackQty = math.min(quantity, item.stackSize or 1)
+    
+    table.insert(self.items, {
+      item = item,
+      quantity = stackQty,
+      x = px,
+      y = py
+    })
+    
+    quantity = quantity - stackQty
+    x, y = nil, nil -- Force search for next stack
+  end
+  
+  return true
+end
+
+--- Remove item
+--- @param invItem InventoryItem
+--- @param quantity number
+--- @return boolean, number
+function InventoryMeta:RemoveItem(invItem, quantity)
+  if not invItem then return false, 0 end
+  
+  quantity = math.min(quantity or invItem.quantity, invItem.quantity)
+  invItem.quantity = invItem.quantity - quantity
+  
+  if invItem.quantity <= 0 then
+    for i, item in ipairs(self.items) do
+      if item == invItem then
+        table.remove(self.items, i)
+        break
+      end
+    end
+  end
+  
+  return true, quantity
+end
+
+--- Move item to new position
+--- @param invItem InventoryItem
+--- @param toX number
+--- @param toY number
+--- @param quantity number|nil
+--- @return boolean, string|nil
+function InventoryMeta:MoveItem(invItem, toX, toY, quantity)
+  if not invItem or not invItem.item then return false, "Invalid item" end
+  
+  quantity = quantity or invItem.quantity
+  quantity = math.min(quantity, invItem.quantity)
+  
+  -- Check if moving to same position
+  if invItem.x == toX and invItem.y == toY then
+    return true
+  end
+  
+  -- Check if target has same item (for stacking)
+  local targetItem = self:GetItemAt(toX, toY)
+  if targetItem and targetItem ~= invItem then
+    if targetItem.item.identifier == invItem.item.identifier then
+      local stackSize = invItem.item.stackSize or 1
+      if targetItem.quantity < stackSize then
+        -- Stack items
+        local addQty = math.min(quantity, stackSize - targetItem.quantity)
+        targetItem.quantity = targetItem.quantity + addQty
+        self:RemoveItem(invItem, addQty)
+        return true
+      end
+    end
+    return false, "Space occupied"
+  end
+  
+  -- Check if area is free
+  if not self:IsAreaFree(toX, toY, invItem.item.size[1], invItem.item.size[2], invItem) then
+    return false, "Space occupied"
+  end
+  
+  -- Split or move
+  if quantity < invItem.quantity then
+    -- Split stack
+    table.insert(self.items, {
+      item = invItem.item,
+      quantity = quantity,
+      x = toX,
+      y = toY
+    })
+    invItem.quantity = invItem.quantity - quantity
+  else
+    -- Move entire stack
+    invItem.x = toX
+    invItem.y = toY
+  end
+  
+  return true
+end
+
+--- Get all items
+--- @return InventoryItem[]
+function InventoryMeta:GetItems()
+  return self.items
+end
+
+--- Count item by identifier
+--- @param identifier string
+--- @return number
+function InventoryMeta:CountItem(identifier)
+  local total = 0
+  for _, invItem in ipairs(self.items) do
+    if invItem.item.identifier == identifier then
+      total = total + invItem.quantity
+    end
+  end
+  return total
+end
+
+--- Clear inventory
+function InventoryMeta:Clear()
+  self.items = {}
+end
+
+print("[IonRP Inventory] Shared inventory system loaded")
