@@ -14,6 +14,7 @@ util.AddNetworkString("IonRP_Inventory_Sync")
 util.AddNetworkString("IonRP_Inventory_Move")
 util.AddNetworkString("IonRP_Inventory_Use")
 util.AddNetworkString("IonRP_Inventory_Drop")
+util.AddNetworkString("IonRP_Inventory_Craft")
 
 --- Initialize database tables
 function IonRP.Inventory:InitializeTables()
@@ -286,6 +287,31 @@ net.Receive("IonRP_Inventory_Use", function(len, ply)
         IonRP.Inventory:Save(ply)
       end
     end)
+  end
+end)
+
+net.Receive("IonRP_Inventory_Craft", function(len, ply)
+  local recipeId = net.ReadString()
+  
+  local recipe = IonRP.Recipes and IonRP.Recipes.List and IonRP.Recipes.List[recipeId]
+  if not recipe then
+    ply:ChatPrint("Invalid recipe!")
+    return
+  end
+  
+  local success, err = recipe:SV_Craft(ply)
+  
+  if success then
+    ply:ChatPrint("Crafted " .. recipe.name .. "!")
+    IonRP.Inventory:SendToClient(ply)
+    
+    timer.Simple(0.5, function()
+      if IsValid(ply) then
+        IonRP.Inventory:Save(ply)
+      end
+    end)
+  else
+    ply:ChatPrint("Cannot craft: " .. (err or "unknown error"))
   end
 end)
 

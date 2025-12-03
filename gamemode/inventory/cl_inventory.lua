@@ -47,7 +47,9 @@ local State = {
   dragQuantity = nil,
   mouseDownSlot = nil,
   tooltipItem = nil,
-  tooltipPos = {x = 0, y = 0}
+  tooltipPos = {x = 0, y = 0},
+  activeTab = "Inventory", -- Track active tab
+  mixturesScroll = nil, -- Store mixtures scroll panel
 }
 
 --- Receive inventory sync
@@ -130,6 +132,7 @@ function IonRP.InventoryUI:Open()
   content:SetPos(0, Config.TabHeight)
   content:SetSize(frameW, frameH - Config.TabHeight)
   content.Paint = function() end
+  State.contentPanel = content
   
   -- Inventory grid (left side)
   local gridContainer = vgui.Create("DPanel", content)
@@ -151,6 +154,10 @@ function IonRP.InventoryUI:Open()
   frame.PaintOver = function(self, w, h)
     draw.SimpleText("Left Click: Use | Drag: Move | Right Drag: Move 1", "DermaDefault", w / 2, h - 15, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
+  
+  -- Initialize with Inventory tab
+  State.activeTab = "Inventory"
+  self:SwitchTab("Inventory")
 end
 
 --- Create tab bar
@@ -177,9 +184,8 @@ function IonRP.InventoryUI:CreateTabBar(parent, width)
     tab:SetSize(tabWidth, Config.TabHeight - 10)
     tab:SetText("")
     
-    local isActive = (i == 1) -- First tab is active
-    
     tab.Paint = function(self, w, h)
+      local isActive = (State.activeTab == tabName)
       local bgColor = isActive and Config.Colors.TabActive or Config.Colors.TabInactive
       
       if self:IsHovered() and not isActive then
@@ -200,13 +206,225 @@ function IonRP.InventoryUI:CreateTabBar(parent, width)
     end
     
     tab.DoClick = function()
-      -- Only Inventory tab is functional for now
-      if i ~= 1 then
-        chat.AddText(Color(255, 200, 100), "[Inventory] ", Color(255, 255, 255), tabName .. " coming soon!")
-      end
+      State.activeTab = tabName
+      IonRP.InventoryUI:SwitchTab(tabName)
     end
     
     tabX = tabX + tabWidth + 5
+  end
+end
+
+--- Switch between tabs
+function IonRP.InventoryUI:SwitchTab(tabName)
+  if not IsValid(State.contentPanel) then return end
+  
+  -- Clear content panel
+  State.contentPanel:Clear()
+  
+  if tabName == "Inventory" then
+    self:ShowInventoryTab()
+  elseif tabName == "Mixtures" then
+    self:ShowMixturesTab()
+  else
+    -- Coming soon tabs
+    local label = vgui.Create("DLabel", State.contentPanel)
+    label:SetText(tabName .. " coming soon!")
+    label:SetFont("DermaLarge")
+    label:SetTextColor(Config.Colors.TextDim)
+    label:SizeToContents()
+    label:Center()
+  end
+end
+
+--- Show inventory tab content
+function IonRP.InventoryUI:ShowInventoryTab()
+  if not State.inventory then return end
+  
+  local inv = State.inventory
+  local gridWidth = inv.width * (Config.SlotSize + Config.SlotGap) + Config.SlotGap
+  local gridHeight = inv.height * (Config.SlotSize + Config.SlotGap) + Config.SlotGap
+  
+  -- Inventory grid (left side)
+  local gridContainer = vgui.Create("DPanel", State.contentPanel)
+  gridContainer:SetPos(Config.Padding, Config.Padding)
+  gridContainer:SetSize(gridWidth, gridHeight)
+  gridContainer.Paint = function(self, w, h)
+    draw.SimpleText("Scroll over an item to see it's description.", "DermaDefault", w / 2, -25, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+  end
+  
+  State.gridContainer = gridContainer
+  self:CreateGrid(gridContainer)
+  
+  -- Equipment panel (right side)
+  self:CreateEquipmentPanel(State.contentPanel, gridWidth + Config.Padding * 2, Config.Padding, Config.EquipmentWidth, gridHeight)
+end
+
+--- Show mixtures tab content
+function IonRP.InventoryUI:ShowMixturesTab()
+  if not State.inventory then return end
+  
+  local inv = State.inventory
+  local gridHeight = inv.height * (Config.SlotSize + Config.SlotGap) + Config.SlotGap
+  local contentWidth = State.contentPanel:GetWide() - Config.Padding * 2
+  
+  -- Mixtures scroll panel
+  local scroll = vgui.Create("DScrollPanel", State.contentPanel)
+  scroll:SetPos(Config.Padding, Config.Padding)
+  scroll:SetSize(contentWidth, gridHeight)
+  State.mixturesScroll = scroll
+  
+  -- Style the scrollbar
+  local sbar = scroll:GetVBar()
+  sbar:SetWide(8)
+  sbar.Paint = function(self, w, h)
+    draw.RoundedBox(4, 0, 0, w, h, Color(15, 15, 18, 200))
+  end
+  sbar.btnGrip.Paint = function(self, w, h)
+    draw.RoundedBox(4, 0, 0, w, h, Config.Colors.Border)
+  end
+  
+  -- Get all recipes
+  local recipes = IonRP.Recipes and IonRP.Recipes.List or {}
+  local yPos = 0
+  
+  for identifier, recipe in pairs(recipes) do
+    self:CreateRecipeEntry(scroll, recipe, yPos, contentWidth - 10)
+    yPos = yPos + 90 -- Height of each entry + spacing
+  end
+end
+
+--- Create a recipe entry panel
+function IonRP.InventoryUI:CreateRecipeEntry(parent, recipe, yPos, width)
+  local entry = vgui.Create("DPanel", parent)
+  entry:SetPos(0, yPos)
+  entry:SetSize(width, 85)
+  
+  -- Check if craftable (client-side guess based on inventory)
+  local canCraft = true
+  local missingItems = {}
+  
+  if recipe.ingredients then
+    for itemId, amount in pairs(recipe.ingredients) do
+      local hasAmount = State.inventory:CountItem(itemId)
+      if hasAmount < amount then
+        canCraft = false
+        table.insert(missingItems, {id = itemId, need = amount, have = hasAmount})
+      end
+    end
+  end
+  
+  local borderColor = canCraft and Color(80, 200, 100, 255) or Color(200, 80, 80, 255)
+  
+  entry.Paint = function(self, w, h)
+    -- Background
+    draw.RoundedBox(4, 0, 0, w, h, Color(22, 24, 28, 240))
+    
+    -- Border with color based on craftability
+    surface.SetDrawColor(borderColor)
+    surface.DrawOutlinedRect(0, 0, w, h, 2)
+    
+    -- Inner darker border
+    surface.SetDrawColor(Config.Colors.BorderDark)
+    surface.DrawOutlinedRect(2, 2, w - 4, h - 4, 1)
+  end
+  
+  -- Icon (left side)
+  local iconSize = 60
+  if recipe.result then
+    local resultItem = IonRP.Items.List[recipe.result]
+    if resultItem and resultItem.model then
+      local icon = vgui.Create("DModelPanel", entry)
+      icon:SetPos(8, 12)
+      icon:SetSize(iconSize, iconSize)
+      icon:SetModel(resultItem.model)
+      icon:SetFOV(45)
+      icon:SetMouseInputEnabled(false)
+      
+      local ent = icon:GetEntity()
+      if IsValid(ent) then
+        local mins, maxs = ent:GetRenderBounds()
+        local size = maxs - mins
+        local radius = math.max(size.x, size.y, size.z)
+        local offset = size / 2 + mins
+        icon:SetCamPos(Vector(radius * 1.2, radius * 1.2, radius * 0.8))
+        icon:SetLookAt(offset)
+      end
+    end
+  end
+  
+  -- Name and price (top)
+  local nameX = iconSize + 20
+  
+  local nameLabel = vgui.Create("DLabel", entry)
+  nameLabel:SetPos(nameX, 8)
+  nameLabel:SetFont("DermaDefaultBold")
+  nameLabel:SetText(recipe.name or "Unknown Recipe")
+  nameLabel:SetTextColor(Config.Colors.TextBright)
+  nameLabel:SizeToContents()
+  
+  -- Required items (middle)
+  local reqText = "Required Items: "
+  if recipe.ingredients then
+    local items = {}
+    for itemId, amount in pairs(recipe.ingredients) do
+      local item = IonRP.Items.List[itemId]
+      local itemName = item and item.name or itemId
+      table.insert(items, itemName .. " x " .. amount)
+    end
+    reqText = reqText .. table.concat(items, ", ")
+  end
+  
+  local reqLabel = vgui.Create("DLabel", entry)
+  reqLabel:SetPos(nameX, 28)
+  reqLabel:SetFont("DermaDefault")
+  reqLabel:SetText(reqText)
+  reqLabel:SetTextColor(Config.Colors.Text)
+  reqLabel:SetWide(width - nameX - 120)
+  reqLabel:SetWrap(true)
+  reqLabel:SetAutoStretchVertical(true)
+  
+  -- Required skills (bottom)
+  if recipe.description then
+    local descLabel = vgui.Create("DLabel", entry)
+    descLabel:SetPos(nameX, 50)
+    descLabel:SetFont("DermaDefault")
+    descLabel:SetText(recipe.description)
+    descLabel:SetTextColor(Config.Colors.TextDim)
+    descLabel:SetWide(width - nameX - 120)
+    descLabel:SetWrap(true)
+  end
+  
+  -- Craft button (right side)
+  local btn = vgui.Create("DButton", entry)
+  btn:SetPos(width - 110, 25)
+  btn:SetSize(100, 35)
+  btn:SetText("")
+  
+  btn.Paint = function(self, w, h)
+    local bgColor = canCraft and Color(60, 140, 80, 255) or Color(100, 100, 110, 255)
+    
+    if canCraft and self:IsHovered() then
+      bgColor = Color(80, 180, 100, 255)
+    end
+    
+    draw.RoundedBox(4, 0, 0, w, h, bgColor)
+    
+    -- Border
+    surface.SetDrawColor(Config.Colors.BorderDark)
+    surface.DrawOutlinedRect(0, 0, w, h, 1)
+    
+    -- Text
+    local btnText = canCraft and "CRAFT" or "LOCKED"
+    draw.SimpleText(btnText, "DermaDefaultBold", w / 2, h / 2, Config.Colors.TextBright, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+  end
+  
+  btn.DoClick = function()
+    if canCraft then
+      -- Send craft request to server
+      net.Start("IonRP_Inventory_Craft")
+      net.WriteString(recipe.identifier)
+      net.SendToServer()
+    end
   end
 end
 
@@ -365,17 +583,56 @@ function IonRP.InventoryUI:CreateGrid(parent)
   grid:Center()
   grid.Paint = function() end
   
-  -- Create slot grid
-  grid.slots = {}
-  for y = 0, inv.height - 1 do
-    grid.slots[y] = {}
-    for x = 0, inv.width - 1 do
-      local slot = self:CreateSlot(grid, x, y)
-      grid.slots[y][x] = slot
+  State.gridPanel = grid
+  
+  -- Background layer - paint slot backgrounds FIRST (bottom layer)
+  local bgLayer = vgui.Create("DPanel", grid)
+  bgLayer:SetSize(gridW, gridH)
+  bgLayer:SetMouseInputEnabled(false)
+  
+  bgLayer.Paint = function(self, w, h)
+    -- Draw slot backgrounds
+    for y = 0, inv.height - 1 do
+      for x = 0, inv.width - 1 do
+        local slotX = Config.SlotGap + x * (Config.SlotSize + Config.SlotGap)
+        local slotY = Config.SlotGap + y * (Config.SlotSize + Config.SlotGap)
+        
+        local bgColor = Config.Colors.SlotEmpty
+        
+        -- Check if mouse is hovering this slot
+        local mx, my = self:CursorPos()
+        if mx >= slotX and mx <= slotX + Config.SlotSize and 
+           my >= slotY and my <= slotY + Config.SlotSize then
+          bgColor = Config.Colors.SlotHover
+        end
+        
+        -- Drag preview
+        if State.draggedItem then
+          local invItem = inv:GetItemAt(x, y)
+          if not (invItem and invItem == State.draggedItem) then
+            local canPlace = inv:IsAreaFree(x, y, State.draggedItem.item.size[1], State.draggedItem.item.size[2], State.draggedItem)
+            if canPlace then
+              bgColor = Config.Colors.SlotValid
+            elseif mx >= slotX and mx <= slotX + Config.SlotSize and 
+                   my >= slotY and my <= slotY + Config.SlotSize then
+              bgColor = Config.Colors.SlotInvalid
+            end
+          end
+        end
+        
+        draw.RoundedBox(0, slotX, slotY, Config.SlotSize, Config.SlotSize, bgColor)
+        
+        -- Border
+        surface.SetDrawColor(Config.Colors.BorderDark)
+        surface.DrawOutlinedRect(slotX, slotY, Config.SlotSize, Config.SlotSize, 1)
+      end
     end
   end
   
-  -- Create slots FIRST (bottom layer - clickable)
+  -- Force background layer to redraw
+  bgLayer:InvalidateLayout(true)
+  
+  -- Create slots (interactive layer - transparent)
   grid.slots = {}
   for y = 0, inv.height - 1 do
     grid.slots[y] = {}
@@ -555,6 +812,10 @@ function IonRP.InventoryUI:CreateGrid(parent)
   
   grid.overlay = overlay
   State.gridPanel = grid
+  
+  -- Force overlay to redraw immediately
+  overlay:InvalidateLayout(true)
+  overlay:InvalidateParent(true)
 end
 
 --- Create slot
@@ -569,40 +830,18 @@ function IonRP.InventoryUI:CreateSlot(parent, x, y)
   slot.gridY = y
   
   slot.Paint = function(self, w, h)
+    -- Don't paint anything - let the background grid and models show through
+    -- Only handle hover state for tooltips
     local inv = State.inventory
     if not inv then return end
     
     local invItem = inv:GetItemAt(x, y)
     local isOrigin = invItem and invItem.x == x and invItem.y == y
     
-    -- Background - very dark slot
-    local bgColor = Config.Colors.SlotEmpty
-    
-    if self:IsHovered() then
-      bgColor = Config.Colors.SlotHover
-      
-      -- Show tooltip
-      if isOrigin then
-        State.tooltipItem = invItem
-        State.tooltipPos.x, State.tooltipPos.y = gui.MouseX(), gui.MouseY()
-      end
+    if self:IsHovered() and isOrigin then
+      State.tooltipItem = invItem
+      State.tooltipPos.x, State.tooltipPos.y = gui.MouseX(), gui.MouseY()
     end
-    
-    -- Drag preview
-    if State.draggedItem and not (invItem and invItem == State.draggedItem) then
-      local canPlace = inv:IsAreaFree(x, y, State.draggedItem.item.size[1], State.draggedItem.item.size[2], State.draggedItem)
-      if canPlace then
-        bgColor = Config.Colors.SlotValid
-      else
-        bgColor = Config.Colors.SlotInvalid
-      end
-    end
-    
-    draw.RoundedBox(0, 0, 0, w, h, bgColor)
-    
-    -- Darker border
-    surface.SetDrawColor(Config.Colors.BorderDark)
-    surface.DrawOutlinedRect(0, 0, w, h, 1)
   end
   
   slot.OnMousePressed = function(self, mouse)
@@ -725,8 +964,8 @@ function IonRP.InventoryUI:Close()
   State.gridPanel = nil
 end
 
---- Draw tooltip
-hook.Add("HUDPaint", "IonRP_Inventory_Tooltip", function()
+--- Draw tooltip (on top of everything)
+hook.Add("DrawOverlay", "IonRP_Inventory_Tooltip", function()
   if not State.tooltipItem then return end
   
   local item = State.tooltipItem.item
