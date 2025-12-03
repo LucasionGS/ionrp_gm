@@ -375,15 +375,117 @@ function IonRP.InventoryUI:CreateGrid(parent)
     end
   end
   
-  -- Overlay for items and drag preview
+  -- Create slots FIRST (bottom layer - clickable)
+  grid.slots = {}
+  for y = 0, inv.height - 1 do
+    grid.slots[y] = {}
+    for x = 0, inv.width - 1 do
+      local slot = self:CreateSlot(grid, x, y)
+      grid.slots[y][x] = slot
+    end
+  end
+  
+  -- Store model panels for cleanup
+  State.modelPanels = State.modelPanels or {}
+  
+  -- Clean up old model panels
+  for _, mdl in pairs(State.modelPanels) do
+    if IsValid(mdl) then
+      mdl:Remove()
+    end
+  end
+  State.modelPanels = {}
+  
+  -- Create model panels for each item (middle layer - visual)
+  for _, invItem in ipairs(inv:GetItems()) do
+    if invItem.item and invItem.item.model then
+      local item = invItem.item
+      local x = Config.SlotGap + invItem.x * (Config.SlotSize + Config.SlotGap)
+      local y = Config.SlotGap + invItem.y * (Config.SlotSize + Config.SlotGap)
+      local w = item.size[1] * (Config.SlotSize + Config.SlotGap) - Config.SlotGap
+      local h = item.size[2] * (Config.SlotSize + Config.SlotGap) - Config.SlotGap
+      
+      local modelPanel = vgui.Create("DModelPanel", grid)
+      modelPanel:SetPos(x + 4, y + 4)
+      modelPanel:SetSize(w - 8, h - 8)
+      modelPanel:SetModel(item.model)
+      modelPanel:SetMouseInputEnabled(false)
+      modelPanel:SetKeyboardInputEnabled(false)
+      modelPanel:SetFOV(45)
+      modelPanel:SetPaintedManually(false) -- Make sure it renders normally
+      
+      -- Store item reference
+      modelPanel.ItemX = invItem.x
+      modelPanel.ItemY = invItem.y
+      modelPanel.Item = item
+      
+      -- Auto-fit the model
+      local ent = modelPanel:GetEntity()
+      if IsValid(ent) then
+        local mins, maxs = ent:GetRenderBounds()
+        local size = maxs - mins
+        local radius = math.max(size.x, size.y, size.z)
+        local offset = size / 2 + mins
+        
+        local distanceMultiplier = 1.3
+        modelPanel:SetCamPos(Vector(radius * distanceMultiplier, radius * distanceMultiplier, radius * 0.8))
+        modelPanel:SetLookAt(offset)
+      end
+      
+      table.insert(State.modelPanels, modelPanel)
+    end
+  end
+  
+  -- Overlay for text/badges/drag preview (top layer - non-interactive)
   local overlay = vgui.Create("DPanel", grid)
   overlay:SetSize(gridW, gridH)
   overlay:SetMouseInputEnabled(false)
   
   overlay.Paint = function(self, w, h)
-    -- Draw items
+    -- Draw item overlays (quantity badges, type bars, borders)
     for _, invItem in ipairs(inv:GetItems()) do
-      self:DrawItem(invItem, false)
+      -- Hide model panel if being dragged
+      local isDragged = State.draggedItem == invItem
+      
+      for _, mdl in pairs(State.modelPanels or {}) do
+        if IsValid(mdl) and mdl.ItemX == invItem.x and mdl.ItemY == invItem.y then
+          mdl:SetVisible(not isDragged)
+        end
+      end
+      
+      -- Draw only text/badges/bars, not backgrounds
+      local item = invItem.item
+      if not item or not item.size then continue end
+      
+      local x = Config.SlotGap + invItem.x * (Config.SlotSize + Config.SlotGap)
+      local y = Config.SlotGap + invItem.y * (Config.SlotSize + Config.SlotGap)
+      local w = item.size[1] * (Config.SlotSize + Config.SlotGap) - Config.SlotGap
+      local h = item.size[2] * (Config.SlotSize + Config.SlotGap) - Config.SlotGap
+      
+      if not isDragged then
+        -- Quantity badge (top-left corner)
+        if invItem.quantity > 1 then
+          local qtyText = tostring(invItem.quantity)
+          surface.SetFont("DermaDefaultBold")
+          local tw, th = surface.GetTextSize(qtyText)
+          
+          draw.RoundedBox(0, x + 4, y + 4, tw + 6, th + 4, Color(0, 0, 0, 220))
+          draw.SimpleText(qtyText, "DermaDefaultBold", x + 7, y + 6, Config.Colors.TextBright, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+        end
+        
+        -- Item type indicator (bottom bar)
+        local typeColor = Color(100, 100, 110, 180)
+        if item.type == "weapon" then
+          typeColor = Color(200, 80, 80, 200)
+        elseif item.type == "consumable" then
+          typeColor = Color(80, 200, 100, 200)
+        elseif item.type == "drug" then
+          typeColor = Color(150, 80, 200, 200)
+        elseif item.type == "material" then
+          typeColor = Color(80, 150, 200, 200)
+        end
+        draw.RoundedBox(0, x + 2, y + h - 4, w - 4, 2, typeColor)
+      end
     end
     
     -- Draw dragged item
@@ -404,24 +506,12 @@ function IonRP.InventoryUI:CreateGrid(parent)
     
     local alpha = ghost and 120 or 255
     
-    -- Slightly darker background for occupied slots
-    draw.RoundedBox(2, x, y, w, h, ColorAlpha(Config.Colors.SlotOccupied, alpha))
+    -- Background for occupied slots
+    draw.RoundedBox(2, x + 2, y + 2, w - 4, h - 4, ColorAlpha(Config.Colors.SlotOccupied, alpha))
     
-    -- Darker inner border
-    surface.SetDrawColor(ColorAlpha(Config.Colors.BorderDark, alpha))
-    surface.DrawOutlinedRect(x, y, w, h, 1)
-    
-    -- Light outer border
+    -- Border
     surface.SetDrawColor(ColorAlpha(Config.Colors.Border, alpha))
-    surface.DrawOutlinedRect(x + 1, y + 1, w - 2, h - 2, 1)
-    
-    -- Model preview placeholder (dark area in center)
-    local iconPad = 8
-    local iconW = w - iconPad * 2
-    local iconH = h - iconPad * 2
-    if iconH > 20 then
-      draw.RoundedBox(2, x + iconPad, y + iconPad, iconW, iconH, ColorAlpha(Color(12, 12, 15), alpha))
-    end
+    surface.DrawOutlinedRect(x + 2, y + 2, w - 4, h - 4, 1)
     
     -- Quantity badge (top-left corner like reference image)
     if invItem.quantity > 1 then
@@ -430,9 +520,22 @@ function IonRP.InventoryUI:CreateGrid(parent)
       local tw, th = surface.GetTextSize(qtyText)
       
       -- Small dark background
-      draw.RoundedBox(0, x + 2, y + 2, tw + 6, th + 4, ColorAlpha(Color(0, 0, 0, 200), alpha))
-      draw.SimpleText(qtyText, "DermaDefaultBold", x + 5, y + 4, ColorAlpha(Config.Colors.TextBright, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
+      draw.RoundedBox(0, x + 4, y + 4, tw + 6, th + 4, ColorAlpha(Color(0, 0, 0, 220), alpha))
+      draw.SimpleText(qtyText, "DermaDefaultBold", x + 7, y + 6, ColorAlpha(Config.Colors.TextBright, alpha), TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
     end
+    
+    -- Item type indicator (bottom bar)
+    local typeColor = Color(100, 100, 110, 180)
+    if item.type == "weapon" then
+      typeColor = Color(200, 80, 80, 200)
+    elseif item.type == "consumable" then
+      typeColor = Color(80, 200, 100, 200)
+    elseif item.type == "drug" then
+      typeColor = Color(150, 80, 200, 200)
+    elseif item.type == "material" then
+      typeColor = Color(80, 150, 200, 200)
+    end
+    draw.RoundedBox(0, x + 2, y + h - 4, w - 4, 2, ColorAlpha(typeColor, alpha))
   end
   
   overlay.DrawDraggedItem = function(self, invItem, mx, my)
@@ -600,6 +703,16 @@ end
 
 --- Close inventory
 function IonRP.InventoryUI:Close()
+  -- Clean up model panels
+  if State.modelPanels then
+    for _, mdl in pairs(State.modelPanels) do
+      if IsValid(mdl) then
+        mdl:Remove()
+      end
+    end
+    State.modelPanels = {}
+  end
+  
   if IsValid(State.frame) then
     State.frame:Remove()
     State.frame = nil
@@ -608,6 +721,8 @@ function IonRP.InventoryUI:Close()
   State.draggedItem = nil
   State.mouseDownSlot = nil
   State.tooltipItem = nil
+  State.gridContainer = nil
+  State.gridPanel = nil
 end
 
 --- Draw tooltip
