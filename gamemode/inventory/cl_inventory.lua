@@ -155,9 +155,9 @@ function IonRP.InventoryUI:Open()
     draw.SimpleText("Left Click: Use | Drag: Move | Right Drag: Move 1", "DermaDefault", w / 2, h - 15, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
   end
   
-  -- Initialize with Inventory tab
-  State.activeTab = "Inventory"
-  self:SwitchTab("Inventory")
+  -- Initialize with last active tab (default to Inventory if none set)
+  local lastTab = State.activeTab or "Inventory"
+  self:SwitchTab(lastTab)
 end
 
 --- Create tab bar
