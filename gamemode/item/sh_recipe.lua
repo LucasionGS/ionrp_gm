@@ -74,14 +74,20 @@ function RECIPE:SV_Craft(ply)
     return false, reason
   end
 
+  -- for ingredient, amount in pairs(self.ingredients) do
+  --   ply:TakeItem(ingredient, amount)
+  -- end
+  local items = {}
   for ingredient, amount in pairs(self.ingredients) do
-    ply:TakeItem(ingredient, amount)
+    table.insert(items, {itemIdentifier = ingredient, quantity = amount})
   end
+
+  ply:TakeItems(items)
 
   if self:SV_OnCraft(ply) and self.result then
     ply:GiveItem(self.result, self.resultAmount)
   end
-  
+
   return true
 end
 

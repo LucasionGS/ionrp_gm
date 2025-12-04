@@ -22,8 +22,5 @@ function recipe:SV_OnCraft(ply)
   -- Spawn the drug entity
   local drugEnt = IonRP.Drug:Spawn("drug_weed", spawnPos, spawnAng)
   
-  -- Give the pot item back to the player (not consumed)
-  ply:GiveItem(ITEM_WEED_POT.identifier)
-  
   return true
 end

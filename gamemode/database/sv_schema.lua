@@ -95,8 +95,8 @@ end
 --- Execute a prepared query safely
 --- @param sql string - SQL query with ? placeholders
 --- @param params table - Parameters to bind
---- @param onSuccess fun(data: table, query: Query) - Callback on success
---- @param onError fun(err: string, sql: string) - Callback on error
+--- @param onSuccess fun(data: table, query: Query)|nil - Callback on success
+--- @param onError fun(err: string, sql: string)|nil - Callback on error
 function IonRP.Database:PreparedQuery(sql, params, onSuccess, onError)
   local query = self:prepare(sql)
 

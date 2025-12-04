@@ -8,7 +8,11 @@ DRUG_WEED.model = "models/props_c17/pottery06a.mdl" -- Pot model
 
 -- Plant-specific properties
 DRUG_WEED.customData.plantModel = "models/props/pi_fern.mdl"
-DRUG_WEED.customData.growthTime = 300 -- 5 minutes (300 seconds)
+DRUG_WEED.customData.growthTime = 10 -- 5 minutes (300 seconds)
+-- Amount of weed produced when harvested
+DRUG_WEED.customData.outputAmountMin = 3
+DRUG_WEED.customData.outputAmountMax = 8
+
 DRUG_WEED.customData.glowWhenReady = true
 DRUG_WEED.customData.glowColor = Color(20, 200, 0)
 
@@ -113,7 +117,7 @@ function DRUG_WEED:Harvest(ent, ply)
   end
   
   -- Give random weed products (1-2)
-  local weedCount = math.random(1, 2)
+  local weedCount = math.random(DRUG_WEED.customData.outputAmountMin, DRUG_WEED.customData.outputAmountMax)
   local weedItem = IonRP.Items.List["item_weed"]
   if weedItem then
     local ownedWeed = weedItem:MakeOwnedInstance(ply)
@@ -141,8 +145,8 @@ function DRUG_WEED:Pickup(ent, ply)
   -- Give the pot back
   local potItem = IonRP.Items.List["item_weed_pot"]
   if potItem then
-    local ownedPot = potItem:MakeOwnedInstance(ply)
-    inv:AddItem(ownedPot, 1)
+    -- local ownedPot = potItem:MakeOwnedInstance(ply)
+    inv:AddItem(potItem, 1)
     ply:ChatPrint("[IonRP] You picked up the weed pot")
   end
   

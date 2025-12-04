@@ -567,9 +567,9 @@ end
 
 --- Create grid
 function IonRP.InventoryUI:CreateGrid(parent)
-  if not State.inventory then return end
-  
   local inv = State.inventory
+  if not inv then return end
+  
   local gridW = inv.width * (Config.SlotSize + Config.SlotGap) + Config.SlotGap
   local gridH = inv.height * (Config.SlotSize + Config.SlotGap) + Config.SlotGap
   
@@ -851,7 +851,8 @@ function IonRP.InventoryUI:CreateSlot(parent, x, y)
     local invItem = inv:GetItemAt(x, y)
     if not invItem then return end
     
-    State.mouseDownSlot = {x = x, y = y, item = invItem, button = mouse}
+    local mx, my = input.GetCursorPos()
+    State.mouseDownSlot = {x = x, y = y, item = invItem, button = mouse, startX = mx, startY = my}
   end
   
   slot.OnMouseReleased = function(self, mouse)
@@ -891,11 +892,12 @@ function IonRP.InventoryUI:CreateSlot(parent, x, y)
   slot.Think = function(self)
     if State.mouseDownSlot and State.mouseDownSlot.x == x and State.mouseDownSlot.y == y then
       local mx, my = input.GetCursorPos()
-      local sx, sy = self:LocalToScreen(0, 0)
-      local dist = math.sqrt((mx - sx)^2 + (my - sy)^2)
+      local startX = State.mouseDownSlot.startX or mx
+      local startY = State.mouseDownSlot.startY or my
+      local dist = math.sqrt((mx - startX)^2 + (my - startY)^2)
       
-      if dist > 10 and not State.draggedItem then
-        -- Start drag
+      if dist > 15 and not State.draggedItem then
+        -- Start drag only after moving 15 pixels from initial position
         State.draggedItem = State.mouseDownSlot.item
         State.dragStartX = x
         State.dragStartY = y
@@ -1018,9 +1020,14 @@ end)
 local keyHeld = false
 hook.Add("Think", "IonRP_Inventory_Key", function()
   if input.IsKeyDown(KEY_Q) then
-    if not keyHeld and not vgui.CursorVisible() then
+    if not keyHeld then
       keyHeld = true
-      RunConsoleCommand("ionrp_inventory")
+      -- Toggle inventory
+      if IsValid(State.frame) then
+        IonRP.InventoryUI:Close()
+      else
+        RunConsoleCommand("ionrp_inventory")
+      end
     end
   else
     if keyHeld then

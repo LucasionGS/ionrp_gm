@@ -325,8 +325,10 @@ timer.Create("IonRP_Inventory_AutoSave", 300, 0, function()
 end)
 
 -- Player meta functions
+--- @class Player
 local plyMeta = FindMetaTable("Player")
 
+---@return Inventory|nil
 function plyMeta:GetInventory()
   return self.IonRP_Inventory
 end
