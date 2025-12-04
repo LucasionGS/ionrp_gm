@@ -37,6 +37,9 @@ local Config = {
   }
 }
 
+IonRP.InventoryUI.Config = Config
+
+
 -- State
 local State = {
   inventory = nil,
@@ -51,6 +54,8 @@ local State = {
   activeTab = "Inventory", -- Track active tab
   mixturesScroll = nil, -- Store mixtures scroll panel
 }
+
+IonRP.InventoryUI.State = State
 
 --- Receive inventory sync
 net.Receive("IonRP_Inventory_Sync", function()
@@ -225,6 +230,8 @@ function IonRP.InventoryUI:SwitchTab(tabName)
     self:ShowInventoryTab()
   elseif tabName == "Mixtures" then
     self:ShowMixturesTab()
+  elseif tabName == "Genetics" then
+    self:ShowGeneticsTab()
   else
     -- Coming soon tabs
     local label = vgui.Create("DLabel", State.contentPanel)
@@ -434,7 +441,136 @@ function IonRP.InventoryUI:CreateEquipmentPanel(parent, x, y, w, h)
   panel:SetPos(x, y)
   panel:SetSize(w, h)
   
+  -- Store weapon model panels
+  local mainModelPanel = nil
+  local sidearmModelPanel = nil
+  local lastMainWeapon = nil
+  local lastSidearm = nil
+  
+  panel.Think = function(self)
+    local mainWeapon, sidearm = IonRP.Inventory:GetEquippedWeapons()
+    
+    -- Update main weapon model panel
+    if mainWeapon ~= lastMainWeapon then
+      if IsValid(mainModelPanel) then
+        mainModelPanel:Remove()
+        mainModelPanel = nil
+      end
+      
+      if mainWeapon and mainWeapon.model then
+        local weaponY = 10
+        local mainSlotY = weaponY + 25
+        local slotH = 120
+        
+        mainModelPanel = vgui.Create("DModelPanel", self)
+        mainModelPanel:SetPos(14, mainSlotY + 28)
+        mainModelPanel:SetSize(w - 28, slotH - 36)
+        mainModelPanel:SetModel(mainWeapon.model)
+        mainModelPanel:SetFOV(45)
+        mainModelPanel:SetMouseInputEnabled(false)
+        
+        local ent = mainModelPanel:GetEntity()
+        if IsValid(ent) then
+          local mins, maxs = ent:GetRenderBounds()
+          local size = maxs - mins
+          local radius = math.max(size.x, size.y, size.z)
+          local offset = size / 2 + mins
+          mainModelPanel:SetCamPos(Vector(radius * 1.2, radius * 1.2, radius * 0.8))
+          mainModelPanel:SetLookAt(offset)
+        end
+      end
+      
+      lastMainWeapon = mainWeapon
+    end
+    
+    -- Update sidearm model panel
+    if sidearm ~= lastSidearm then
+      if IsValid(sidearmModelPanel) then
+        sidearmModelPanel:Remove()
+        sidearmModelPanel = nil
+      end
+      
+      if sidearm and sidearm.model then
+        local weaponY = 10
+        local slotH = 120
+        local mainSlotY = weaponY + 25
+        local sidearmY = mainSlotY + slotH + 30
+        local sidearmSlotY = sidearmY + 25
+        
+        sidearmModelPanel = vgui.Create("DModelPanel", self)
+        sidearmModelPanel:SetPos(14, sidearmSlotY + 28)
+        sidearmModelPanel:SetSize(w - 28, slotH - 36)
+        sidearmModelPanel:SetModel(sidearm.model)
+        sidearmModelPanel:SetFOV(45)
+        sidearmModelPanel:SetMouseInputEnabled(false)
+        
+        local ent = sidearmModelPanel:GetEntity()
+        if IsValid(ent) then
+          local mins, maxs = ent:GetRenderBounds()
+          local size = maxs - mins
+          local radius = math.max(size.x, size.y, size.z)
+          local offset = size / 2 + mins
+          sidearmModelPanel:SetCamPos(Vector(radius * 1.2, radius * 1.2, radius * 0.8))
+          sidearmModelPanel:SetLookAt(offset)
+        end
+      end
+      
+      lastSidearm = sidearm
+    end
+  end
+  
+  panel.OnMousePressed = function(self, mouse)
+    if mouse ~= MOUSE_LEFT then return end
+
+    local ply = LocalPlayer()
+    
+    local mx, my = self:CursorPos()
+    local pw, ph = self:GetSize()
+    
+    local weaponY = 10
+    local slotH = 120
+    local mainSlotY = weaponY + 25
+    local sidearmY = mainSlotY + slotH + 30
+    local sidearmSlotY = sidearmY + 25
+    
+    -- Check if clicked on main weapon slot
+    if mx >= 10 and mx <= pw - 10 and my >= mainSlotY and my <= mainSlotY + slotH then
+      -- Find equipped main weapon
+      for wepClass, data in pairs(IonRP.Inventory.weaponSlots) do
+        local slot = data[1]
+        local item = data[2]
+        if slot == 1 and ply:HasWeapon(wepClass) then
+          -- Request to unequip and add to inventory
+          net.Start("IonRP_Inventory_UnequipWeapon")
+            net.WriteString(item.identifier)
+          net.SendToServer()
+          surface.PlaySound("ui/buttonclick.wav")
+          return
+        end
+      end
+    end
+    
+    -- Check if clicked on sidearm slot
+    if mx >= 10 and mx <= pw - 10 and my >= sidearmSlotY and my <= sidearmSlotY + slotH then
+      -- Find equipped sidearm
+      for wepClass, data in pairs(IonRP.Inventory.weaponSlots) do
+        local slot = data[1]
+        local item = data[2]
+        if slot == 2 and ply:HasWeapon(wepClass) then
+          -- Request to unequip and add to inventory
+          net.Start("IonRP_Inventory_UnequipWeapon")
+            net.WriteString(item.identifier)
+          net.SendToServer()
+          surface.PlaySound("ui/buttonclick.wav")
+          return
+        end
+      end
+    end
+  end
+  
   panel.Paint = function(self, pw, ph)
+    local mainWeapon, sidearm = IonRP.Inventory:GetEquippedWeapons()
+    
     -- Background
     draw.RoundedBox(0, 0, 0, pw, ph, Color(12, 12, 15, 240))
     
@@ -450,24 +586,44 @@ function IonRP.InventoryUI:CreateEquipmentPanel(parent, x, y, w, h)
     draw.SimpleText("MAIN", "DermaDefaultBold", pw / 2, weaponY, Config.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
     
     local mainSlotY = weaponY + 25
-    draw.RoundedBox(4, 10, mainSlotY, pw - 20, slotH, Config.Colors.SlotEmpty)
+    local mainSlotBg = mainWeapon and Config.Colors.SlotOccupied or Config.Colors.SlotEmpty
+    draw.RoundedBox(4, 10, mainSlotY, pw - 20, slotH, mainSlotBg)
     surface.SetDrawColor(Config.Colors.Border)
     surface.DrawOutlinedRect(10, mainSlotY, pw - 20, slotH, 1)
     
-    -- Weapon silhouette placeholder
-    draw.SimpleText("No weapon", "DermaDefault", pw / 2, mainSlotY + slotH / 2, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    if mainWeapon then
+      -- Draw weapon name
+      draw.SimpleText(mainWeapon.name, "DermaDefaultBold", pw / 2, mainSlotY + 8, Config.Colors.TextBright, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      
+      -- Draw type indicator bar
+      local typeColor = Color(200, 80, 80, 200)
+      draw.RoundedBox(0, 12, mainSlotY + slotH - 6, pw - 24, 2, typeColor)
+    else
+      -- No weapon placeholder
+      draw.SimpleText("No weapon", "DermaDefault", pw / 2, mainSlotY + slotH / 2, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
     
     -- SIDEARM weapon slot
     local sidearmY = mainSlotY + slotH + 30
     draw.SimpleText("SIDEARM", "DermaDefaultBold", pw / 2, sidearmY, Config.Colors.Text, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
     
     local sidearmSlotY = sidearmY + 25
-    draw.RoundedBox(4, 10, sidearmSlotY, pw - 20, slotH, Config.Colors.SlotEmpty)
+    local sidearmSlotBg = sidearm and Config.Colors.SlotOccupied or Config.Colors.SlotEmpty
+    draw.RoundedBox(4, 10, sidearmSlotY, pw - 20, slotH, sidearmSlotBg)
     surface.SetDrawColor(Config.Colors.Border)
     surface.DrawOutlinedRect(10, sidearmSlotY, pw - 20, slotH, 1)
     
-    -- Weapon silhouette placeholder
-    draw.SimpleText("No weapon", "DermaDefault", pw / 2, sidearmSlotY + slotH / 2, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    if sidearm then
+      -- Draw weapon name
+      draw.SimpleText(sidearm.name, "DermaDefaultBold", pw / 2, sidearmSlotY + 8, Config.Colors.TextBright, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+      
+      -- Draw type indicator bar
+      local typeColor = Color(200, 80, 80, 200)
+      draw.RoundedBox(0, 12, sidearmSlotY + slotH - 6, pw - 24, 2, typeColor)
+    else
+      -- No weapon placeholder
+      draw.SimpleText("No weapon", "DermaDefault", pw / 2, sidearmSlotY + slotH / 2, Config.Colors.TextDim, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
     
     -- Weight info at bottom
     if State.inventory then

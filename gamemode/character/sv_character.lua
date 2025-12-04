@@ -61,6 +61,17 @@ function IonRP.Character:Load(ply)
         end)
       end
 
+      -- Load genetics
+      if IonRP.Genetics then
+        IonRP.Genetics:Load(ply, function(genetics)
+          if genetics then
+            print(string.format("[IonRP] Loaded genetics for %s", ply:Nick()))
+          else
+            print(string.format("[IonRP] Failed to load genetics for %s", ply:Nick()))
+          end
+        end)
+      end
+
       GAMEMODE:PlayerLoadout(ply)
       -- Notify client that character is loaded
       net.Start("IonRP_CharacterLoaded")

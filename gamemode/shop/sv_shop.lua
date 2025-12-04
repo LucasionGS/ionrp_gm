@@ -77,6 +77,7 @@ net.Receive("IonRP_Shop_Buy", function(len, ply)
   end
   
   -- Get player's inventory
+  --- @type Inventory
   local inv = ply.IonRP_Inventory
   if not inv then
     ply:ChatPrint("[IonRP] Inventory not loaded")

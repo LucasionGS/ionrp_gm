@@ -4,6 +4,8 @@
 ]]--
 
 IonRP.Inventory = IonRP.Inventory or {}
+IonRP.Inventory.DefaultWidth = 9
+IonRP.Inventory.DefaultHeight = 6
 IonRP.Inventory.DefaultWeight = 100 -- Default max weight in KG
 
 --- @class InventoryItem
@@ -313,9 +315,159 @@ function InventoryMeta:CountItem(identifier)
   return total
 end
 
+--- Check if an item can fit at a specific position
+--- @param item ITEM
+--- @param x number
+--- @param y number
+--- @param ignoreItemAt table|nil {x, y} position of item to ignore (for moving)
+--- @return boolean, string|nil
+function InventoryMeta:CanFitItem(item, x, y, ignoreItemAt)
+  if not item then return false, "No item specified" end
+  if not item.size or #item.size ~= 2 then return false, "Invalid item size" end
+  
+  local width, height = item.size[1], item.size[2]
+  
+  -- Check if item fits within grid bounds
+  if not self:IsValidPos(x, y) then
+    return false, "Position out of bounds"
+  end
+  
+  if x + width > self.width or y + height > self.height then
+    return false, "Item too large for position"
+  end
+  
+  -- Check if the area is free
+  for ix = x, x + width - 1 do
+    for iy = y, y + height - 1 do
+      local occupyingItem = self:GetItemAt(ix, iy)
+      if occupyingItem then
+        -- If we have an ignoreItemAt position, check if this is the item we're moving
+        if ignoreItemAt then
+          if occupyingItem.x == ignoreItemAt.x and occupyingItem.y == ignoreItemAt.y then
+            -- This is the item we're moving, ignore it
+            continue
+          end
+        end
+        
+        -- Check if we can stack with this item
+        if occupyingItem.item.identifier == item.identifier and
+           occupyingItem.quantity < (item.stackSize or 1) then
+          -- Can stack, allow placement
+          continue
+        end
+        
+        return false, "Slot occupied"
+      end
+    end
+  end
+  
+  return true
+end
+
+--- Check if a quantity of items can fit in the inventory
+--- @param item ITEM
+--- @param quantity number
+--- @return boolean, string|nil
+function InventoryMeta:CanFitQuantity(item, quantity)
+  if not item or quantity <= 0 then
+    return false, "Invalid item or quantity"
+  end
+  
+  -- Check weight limit
+  local newWeight = self:GetWeight() + (item.weight or 0) * quantity
+  if self.maxWeight > 0 and newWeight > self.maxWeight then
+    return false, "Would exceed weight limit"
+  end
+  
+  local remainingQuantity = quantity
+  
+  -- Check existing stacks first
+  if item.stackSize and item.stackSize > 1 then
+    for _, invItem in ipairs(self.items) do
+      if invItem.item.identifier == item.identifier and invItem.quantity < item.stackSize then
+        local canAdd = item.stackSize - invItem.quantity
+        remainingQuantity = remainingQuantity - canAdd
+        if remainingQuantity <= 0 then
+          return true
+        end
+      end
+    end
+  end
+  
+  -- Check how many new slots we need
+  local stackSize = item.stackSize or 1
+  local slotsNeeded = math.ceil(remainingQuantity / stackSize)
+  local availableSlots = 0
+  
+  -- Count available positions
+  for y = 0, self.height - 1 do
+    for x = 0, self.width - 1 do
+      local canFit, _ = self:CanFitItem(item, x, y)
+      if canFit then
+        availableSlots = availableSlots + 1
+        if availableSlots >= slotsNeeded then
+          return true
+        end
+      end
+    end
+  end
+  
+  return false, "Not enough space"
+end
+
 --- Clear inventory
 function InventoryMeta:Clear()
   self.items = {}
+end
+
+--- @type table<string, table<number, ITEM>>
+IonRP.Inventory.weaponSlots = {}
+
+--- Get currently equipped weapons
+--- @param ply Player|nil
+function IonRP.Inventory:GetEquippedWeapons(ply)
+  ply = ply or (CLIENT and LocalPlayer() or nil);
+  if not ply or not IsValid(ply) then
+    print("[IonRP Inventory] GetEquippedWeapons called without valid player")
+    return nil, nil
+  end
+  
+  local weaponsSlots = IonRP.Inventory.weaponSlots or {}
+
+  if #weaponsSlots == 0 then
+    for key, item in pairs(IonRP.Items.List) do
+      if item.type == "weapon" and item.weaponClass then
+        if item.weaponSlot == 1 then
+          weaponsSlots[item.weaponClass] = { 1, item }
+        elseif item.weaponSlot == 2 then
+          weaponsSlots[item.weaponClass] = { 2, item }
+        end
+      end
+    end
+  end
+  
+  
+  --- @type ITEM|nil
+  local mainWeapon = nil
+  --- @type ITEM|nil
+  local sidearm = nil
+    
+  -- Determine current equipped weapons
+  for wepClass, data in pairs(weaponsSlots) do
+    local slot = data[1]
+    local item = data[2]
+    if ply:HasWeapon(wepClass) then
+      if slot == 1 then
+        mainWeapon = item
+      elseif slot == 2 then
+        sidearm = item
+      end
+    end
+  end
+
+  IonRP.Inventory.weaponSlots = weaponsSlots
+
+  return mainWeapon, sidearm
 end
 
 print("[IonRP Inventory] Shared inventory system loaded")

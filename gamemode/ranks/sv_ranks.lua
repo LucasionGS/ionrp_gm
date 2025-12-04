@@ -85,6 +85,9 @@ IonRP.Ranks.Permissions = {
 
   -- Management
   ["manage_money"] = { minRank = RANK_ADMIN, description = "Manage player money" },
+  
+  -- Genetics
+  ["genetics.give"] = { minRank = RANK_ADMIN, description = "Give genetic points to players" },
 }
 
 --- Get rank data by ID

@@ -95,9 +95,9 @@ if SERVER then
     if not ply or not IsValid(ply) then return false end
 
     if self.type == "weapon" and self.weaponClass then
-      self:_SV_EquipAsWeapon();
+      return self:_SV_EquipAsWeapon();
       -- return false -- Don't consume the item, it's now equipped
-      return true -- For now, we consume it until a better equipment system is in place
+      -- return true -- For now, we consume it until a better equipment system is in place
     end
 
     print("Using misc item: " .. self.name .. " - Not implemented.")
@@ -114,11 +114,15 @@ if SERVER then
       return false
     end
 
-    if not ply:HasWeapon(self.weaponClass) then
-      ply:SV_EquipWeapon(self)
+    local mainWeapon, sidearm = IonRP.Inventory:GetEquippedWeapons(ply)
+    
+    print("Weapon status:", (not mainWeapon and self.weaponSlot == 1), (not sidearm and self.weaponSlot == 2))
+    -- if not ply:HasWeapon(self.weaponClass) then
+    if (not mainWeapon and self.weaponSlot == 1) or (not sidearm and self.weaponSlot == 2) then
+      return ply:SV_EquipWeapon(self)
     end
 
-    return true
+    return false
   end
 end
 

@@ -51,6 +51,9 @@ AddCSLuaFile("physgun/sh_physgun.lua")
 -- Garage System
 AddCSLuaFile("garage/sh_garage.lua")
 AddCSLuaFile("garage/cl_garage.lua")
+-- Genetics System
+AddCSLuaFile("genetics/sh_genetics.lua")
+AddCSLuaFile("genetics/cl_genetics.lua")
 -- IonSys (Admin Panel)
 AddCSLuaFile("ionsys/sh_ionsys.lua")
 AddCSLuaFile("ionsys/cl_ionsys.lua")
@@ -88,6 +91,7 @@ include("commands/sv_shop_commands.lua")
 include("commands/sv_garage_commands.lua")
 include("commands/sv_admin_commands.lua")
 include("commands/sv_drug_commands.lua")
+include("commands/sv_genetics_commands.lua")
 
 -- Items
 include("item/sh_item.lua")
@@ -112,6 +116,9 @@ include("vehicle/sv_vehicle_interaction.lua")
 
 -- Inventory
 include("inventory/sv_inventory.lua")
+
+-- Genetics System
+include("genetics/sv_genetics.lua")
 
 -- Shop System
 include("shop/sh_shop.lua")
@@ -140,6 +147,9 @@ AddCSLuaFile("garage/cl_garage_vehicles.lua")
 include("garage/sh_garage.lua")
 include("garage/sv_garage.lua")
 include("garage/sv_garage_vehicles.lua")
+
+-- Genetics System
+include("genetics/sv_genetics.lua")
 
 -- License System
 AddCSLuaFile("license/sh_license.lua")

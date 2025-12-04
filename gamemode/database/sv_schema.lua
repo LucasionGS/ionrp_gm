@@ -22,6 +22,11 @@ function IonRP.Database:InitializeTables()
     IonRP.Inventory:InitializeTables()
   end
 
+  -- Initialize genetics tables if available
+  if IonRP.Genetics and IonRP.Genetics.InitializeTables then
+    IonRP.Genetics:InitializeTables()
+  end
+
   -- Initialize vehicle tables if available
   if IonRP.Vehicles and IonRP.Vehicles.InitializeTables then
     IonRP.Vehicles:InitializeTables()

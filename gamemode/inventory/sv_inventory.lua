@@ -15,6 +15,7 @@ util.AddNetworkString("IonRP_Inventory_Move")
 util.AddNetworkString("IonRP_Inventory_Use")
 util.AddNetworkString("IonRP_Inventory_Drop")
 util.AddNetworkString("IonRP_Inventory_Craft")
+util.AddNetworkString("IonRP_Inventory_UnequipWeapon")
 
 --- Initialize database tables
 function IonRP.Inventory:InitializeTables()
@@ -90,8 +91,8 @@ function IonRP.Inventory:Load(ply, callback)
       if data and #data > 0 then
         local invData = data[1]
         local inv = IonRP.Inventory.New(
-          tonumber(invData.width) or 10,
-          tonumber(invData.height) or 10,
+          tonumber(invData.width) or IonRP.Inventory.DefaultWidth,
+          tonumber(invData.height) or IonRP.Inventory.DefaultHeight,
           tonumber(invData.max_weight) or IonRP.Inventory.DefaultWeight
         )
         inv.id = tonumber(invData.id)
@@ -409,7 +410,7 @@ function plyMeta:SV_EquipWeapon(item)
   end
   
   if not self:HasWeapon(item.weaponClass) then
-    self:Give(item.weaponClass)
+    self:Give(item.weaponClass, true)
     self:ChatPrint("Equipped " .. item.name)
     return true
   else
@@ -417,5 +418,55 @@ function plyMeta:SV_EquipWeapon(item)
     return false
   end
 end
+
+-- Network handler: Unequip weapon and add back to inventory
+net.Receive("IonRP_Inventory_UnequipWeapon", function(len, ply)
+  local itemIdentifier = net.ReadString()
+  
+  if not IsValid(ply) then return end
+  
+  local item = IonRP.Items.List[itemIdentifier]
+  if not item or item.type ~= "weapon" or not item.weaponClass then
+    ply:ChatPrint("[IonRP] Invalid weapon item")
+    return
+  end
+  
+  -- Check if player has the weapon equipped
+  if not ply:HasWeapon(item.weaponClass) then
+    ply:ChatPrint("[IonRP] You don't have this weapon equipped")
+    return
+  end
+  
+  local inv = ply:GetInventory()
+  if not inv then
+    ply:ChatPrint("[IonRP] No inventory available")
+    return
+  end
+  
+  -- Check if there's space in inventory
+  if not inv:CanFitQuantity(item, 1) then
+    ply:ChatPrint("[IonRP] Not enough space in inventory")
+    return
+  end
+  
+  -- Remove weapon from player
+  ply:StripWeapon(item.weaponClass)
+  
+  -- Add to inventory
+  local success, err = inv:AddItem(item, 1)
+  if success then
+    ply:ChatPrint("Unequipped " .. item.name)
+    IonRP.Inventory:SendToClient(ply)
+    timer.Simple(0.5, function()
+      if IsValid(ply) then
+        IonRP.Inventory:Save(ply)
+      end
+    end)
+  else
+    -- If adding to inventory failed, give weapon back
+    ply:Give(item.weaponClass)
+    ply:ChatPrint("[IonRP] Failed to add weapon to inventory: " .. (err or "Unknown error"))
+  end
+end)
 
 print("[IonRP Inventory] Server-side inventory system loaded")

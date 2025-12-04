@@ -45,6 +45,8 @@ include("vehicle/sh_vehicle.lua")
 include("vehicle/cl_vehicle_interaction.lua")
 -- Inventory
 include("inventory/cl_inventory.lua")
+-- Genetics System
+include("genetics/cl_genetics.lua")
 -- Shop System
 include("shop/sh_shop.lua")
 include("shop/cl_shop.lua")

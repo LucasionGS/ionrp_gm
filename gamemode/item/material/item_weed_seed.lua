@@ -7,5 +7,3 @@ ITEM_WEED_SEED.weight = 0.01
 ITEM_WEED_SEED.size = { 1, 1 }
 ITEM_WEED_SEED.stackSize = 200
 ITEM_WEED_SEED.type = "material"
-
-print("[IonRP Item] Weed Seed loaded: " .. ITEM_WEED_SEED.name)

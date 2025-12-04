@@ -7,5 +7,3 @@ ITEM_WOOD_PLANKS.weight = 1.5
 ITEM_WOOD_PLANKS.size = { 1, 1 }
 ITEM_WOOD_PLANKS.stackSize = 50
 ITEM_WOOD_PLANKS.type = "material"
-
-print("[IonRP Item] Wood Planks loaded: " .. ITEM_WOOD_PLANKS.name)

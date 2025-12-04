@@ -19,5 +19,3 @@ function ITEM_WEED:SV_Use(ply)
   
   return true -- Consume the item
 end
-
-print("[IonRP Item] Weed loaded: " .. ITEM_WEED.name)
