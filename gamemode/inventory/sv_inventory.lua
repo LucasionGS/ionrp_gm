@@ -92,7 +92,7 @@ function IonRP.Inventory:Load(ply, callback)
         local inv = IonRP.Inventory.New(
           tonumber(invData.width) or 10,
           tonumber(invData.height) or 10,
-          tonumber(invData.max_weight) or 50
+          tonumber(invData.max_weight) or IonRP.Inventory.DefaultWeight
         )
         inv.id = tonumber(invData.id)
         inv.owner = ply

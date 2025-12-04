@@ -4,6 +4,7 @@
 ]]--
 
 IonRP.Inventory = IonRP.Inventory or {}
+IonRP.Inventory.DefaultWeight = 100 -- Default max weight in KG
 
 --- @class InventoryItem
 --- @field item ITEM Item definition
@@ -30,7 +31,7 @@ function IonRP.Inventory.New(width, height, maxWeight)
   local inv = setmetatable({}, InventoryMeta)
   inv.width = width or 10
   inv.height = height or 10
-  inv.maxWeight = maxWeight or 50
+  inv.maxWeight = maxWeight or IonRP.Inventory.DefaultWeight
   inv.items = {}
   inv.owner = nil
   inv.id = nil

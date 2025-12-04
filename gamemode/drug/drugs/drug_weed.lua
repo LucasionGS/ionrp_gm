@@ -99,30 +99,18 @@ function DRUG_WEED:Harvest(ent, ply)
   local inv = ply:GetInventory()
   if not inv then return false end
   -- Give weed pot back
-  local potItem = IonRP.Items.List["item_weed_pot"]
-  if potItem then
-    local ownedPot = potItem:MakeOwnedInstance(ply)
-    inv:AddItem(ownedPot, 1)
-  end
+  inv:AddItem(ITEM_WEED_POT, 1)
   
   -- Give random weed seeds (0-2)
   local seedCount = math.random(0, 2)
   if seedCount > 0 then
-    local seedItem = IonRP.Items.List["item_weed_seed"]
-    if seedItem then
-      local ownedSeeds = seedItem:MakeOwnedInstance(ply)
-      inv:AddItem(ownedSeeds, seedCount)
-      ply:ChatPrint("[IonRP] You also got " .. seedCount .. " weed seed(s)!")
-    end
+    inv:AddItem(ITEM_WEED_SEED, seedCount)
+    ply:ChatPrint("[IonRP] You also got " .. seedCount .. " weed seed(s)!")
   end
   
   -- Give random weed products (1-2)
   local weedCount = math.random(DRUG_WEED.customData.outputAmountMin, DRUG_WEED.customData.outputAmountMax)
-  local weedItem = IonRP.Items.List["item_weed"]
-  if weedItem then
-    local ownedWeed = weedItem:MakeOwnedInstance(ply)
-    inv:AddItem(ownedWeed, weedCount)
-  end
+  inv:AddItem(ITEM_WEED, weedCount)
   
   ply:ChatPrint("[IonRP] You harvested a " .. self.name .. "!")
   
@@ -143,12 +131,8 @@ function DRUG_WEED:Pickup(ent, ply)
   if not inv then return end
   
   -- Give the pot back
-  local potItem = IonRP.Items.List["item_weed_pot"]
-  if potItem then
-    -- local ownedPot = potItem:MakeOwnedInstance(ply)
-    inv:AddItem(potItem, 1)
-    ply:ChatPrint("[IonRP] You picked up the weed pot")
-  end
+  inv:AddItem(ITEM_WEED_POT, 1)
+  ply:ChatPrint("[IonRP] You picked up the weed pot")
   
   ent:Remove()
 end

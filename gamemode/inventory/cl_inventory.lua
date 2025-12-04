@@ -69,9 +69,9 @@ net.Receive("IonRP_Inventory_Sync", function()
   State.inventory = inv
   LocalPlayer().IonRP_ClientInventory = inv
   
-  -- Refresh UI if open - recreate grid to show changes
-  if IsValid(State.frame) and IsValid(State.gridContainer) then
-    IonRP.InventoryUI:CreateGrid(State.gridContainer)
+  -- Refresh UI if open - update the active tab
+  if IsValid(State.frame) and State.activeTab then
+    IonRP.InventoryUI:SwitchTab(State.activeTab)
   end
 end)
 
@@ -174,7 +174,7 @@ function IonRP.InventoryUI:CreateTabBar(parent, width)
     surface.DrawLine(0, h - 1, w, h - 1)
   end
   
-  local tabs = {"Inventory", "Mixtures", "Soda", "Genetics"}
+  local tabs = {"Inventory", "Mixtures", "Skills", "Genetics"}
   local tabWidth = 120
   local tabX = 10
   
